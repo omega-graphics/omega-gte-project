@@ -3,26 +3,31 @@ declare_args(){
 }
 
 include_dir = "//include"
-vulkan_include_dir = "/usr/local/include"
+if(is_linux){
+    vulkan_include_dir = "/usr/local/include"
+}
 rhi_srcs = []
 
 if(is_windows){
     rhi_srcs +=[
-
+         # Headers
+         "src/d3d12/GED3D12.h",
+         # Sources
+         "src/d3d12/GED3D12.cpp"
     ]
 }
-# else if(is_mac){
+else if(is_mac){
 
-#     rhi_srcs +=[
-#         # Headers
-#         "src/metal/GEMetal.h",
-#         "src/metal/GEMetalCommandQueue.h",
-#         # Sources
-#         "src/metal/GEMetal.mm",
-#         "src/metal/GEMetalCommandQueue.mm"
-#     ]
-# }
-# else if(is_linux){
+    rhi_srcs +=[
+        # Headers
+        "src/metal/GEMetal.h",
+        "src/metal/GEMetalCommandQueue.h",
+        # Sources
+        "src/metal/GEMetal.mm",
+        "src/metal/GEMetalCommandQueue.mm"
+    ]
+}
+else if(is_linux){
 
     rhi_srcs +=[
         # Headers
@@ -30,12 +35,11 @@ if(is_windows){
         # Sources
         "src/vulkan/GEVulkan.cpp"
     ]
-# }
+}
 
 shared_library("OmegaGE"){
     include_dirs = [
         include_dir,
-        vulkan_include_dir
     ]
     sources = [
         # Headers 

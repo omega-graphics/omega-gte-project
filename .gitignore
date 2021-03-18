@@ -1,3 +1,12 @@
+.cache
+.clangd
+compile_commands.json
+*.sh
+out 
+dist
+build
+
+
 # Prerequisites
 *.d
 

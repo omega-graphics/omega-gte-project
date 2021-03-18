@@ -1,0 +1,48 @@
+declare_args(){
+    d3d11 = false
+}
+
+include_dir = "//include"
+vulkan_include_dir = "/usr/local/include"
+rhi_srcs = []
+
+if(is_windows){
+    rhi_srcs +=[
+
+    ]
+}
+# else if(is_mac){
+
+#     rhi_srcs +=[
+#         # Headers
+#         "src/metal/GEMetal.h",
+#         "src/metal/GEMetalCommandQueue.h",
+#         # Sources
+#         "src/metal/GEMetal.mm",
+#         "src/metal/GEMetalCommandQueue.mm"
+#     ]
+# }
+# else if(is_linux){
+
+    rhi_srcs +=[
+        # Headers
+        "src/vulkan/GEVulkan.h",
+        # Sources
+        "src/vulkan/GEVulkan.cpp"
+    ]
+# }
+
+shared_library("OmegaGE"){
+    include_dirs = [
+        include_dir,
+        vulkan_include_dir
+    ]
+    sources = [
+        # Headers 
+        "$include_dir/GE.h",
+        "$include_dir/GECommandQueue.h",
+        # Sources
+        "src/GE.cpp",
+        "src/GECommandQueue.cpp"
+    ] + rhi_srcs
+}

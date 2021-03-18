@@ -7,6 +7,7 @@ namespace OmegaGE {
         GEVulkanCommandQueue *parentQueue;
         vk::CommandBuffer & commandBuffer;
     public:
+        void commitToQueue();
         GEVulkanCommandBuffer(vk::CommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue);
     };
 

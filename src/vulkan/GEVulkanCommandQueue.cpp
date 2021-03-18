@@ -3,7 +3,19 @@
 
 namespace OmegaGE {
     GEVulkanCommandBuffer::GEVulkanCommandBuffer(vk::CommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue):commandBuffer(commandBuffer),parentQueue(parentQueue){
-        
+        vk::CommandBufferBeginInfo beginInfo;
+        // vk::CommandBufferInheritanceInfo inheritanceInfo;
+        beginInfo.pInheritanceInfo = nullptr;
+        beginInfo.flags = {};
+        commandBuffer.begin(beginInfo);
+    };
+
+    void GEVulkanCommandBuffer::commitToQueue(){
+        commandBuffer.end();
+        vk::SubmitInfo submission;
+        submission.commandBufferCount = 1;
+        submission.pCommandBuffers = &commandBuffer;
+        // parentQueue->commandQueue.submit(1,&submission);
     };
 
    SharedHandle<GECommandBuffer> GEVulkanCommandQueue::getAvailableBuffer(){

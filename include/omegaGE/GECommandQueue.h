@@ -5,7 +5,9 @@
 
 namespace OmegaGE {
     class GECommandBuffer {
-        
+    public:
+
+        virtual void commitToBuffer() = 0;
     };
     class GECommandQueue {
         unsigned size;
@@ -13,7 +15,8 @@ namespace OmegaGE {
         GECommandQueue(unsigned size);
     public:
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;
-        virtual unsigned getSize() = 0;
+        unsigned getSize();
+        virtual void present() = 0;
     };
 };
 

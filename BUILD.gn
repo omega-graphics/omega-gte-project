@@ -1,5 +1,6 @@
 declare_args(){
     d3d11 = false
+    omega_sl = false
 }
 
 include_dir = "//include"
@@ -12,8 +13,12 @@ if(is_windows){
     rhi_srcs +=[
          # Headers
          "src/d3d12/GED3D12.h",
+         "src/d3d12/GED3D12CommandQueue.h",
+         "src/d3d12/GED3D12RenderTarget.h",
          # Sources
-         "src/d3d12/GED3D12.cpp"
+         "src/d3d12/GED3D12.cpp",
+         "src/d3d12/GED3D12CommandQueue.cpp",
+         "src/d3d12/GED3D12RenderTarget.cpp"
     ]
 }
 else if(is_mac){
@@ -49,4 +54,12 @@ shared_library("OmegaGE"){
         "src/GE.cpp",
         "src/GECommandQueue.cpp"
     ] + rhi_srcs
+}
+
+if(omega_sl){
+    executable("omega-slc"){
+        sources = [
+            "omega-sl/main.cpp"
+        ]
+    }
 }

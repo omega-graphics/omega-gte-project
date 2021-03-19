@@ -1,0 +1,18 @@
+
+
+struct Hello {
+    
+}
+
+
+@compute myKernel(Texture2D data,Hello * otherData) -> void {
+
+}
+
+@vertex v() -> Hello {
+
+}
+
+@fragment p() -> Float4x1 {
+
+}

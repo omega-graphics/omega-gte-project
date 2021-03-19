@@ -7,14 +7,18 @@
 namespace OmegaGE {
     class GED3D12NativeRenderTarget : public GENativeRenderTarget {
         GED3D12Engine *engine;
+        ComPtr<ID3D12Resource> renderTarget;
         ComPtr<IDXGISwapChain3> swapChain;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
         HWND hwnd;
     public:
-
+        GED3D12NativeRenderTarget(HWND hwnd);
     };
 
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {
-        
+        GED3D12Engine *engine;
+        ComPtr<ID3D12Resource> renderTarget;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
     };
 };
 

@@ -1,9 +1,10 @@
-#include "GEBase.h"
+#include "GTEBase.h"
+
 
 #ifndef OMEGAGRAPHICSENGINE_GERENDERTARGET_H
 #define OMEGAGRAPHICSENGINE_GERENDERTARGET_H
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
 
     class GENativeRenderTarget {
         public:
@@ -12,6 +13,6 @@ namespace OmegaGE {
          public:
      };
 
-};
+_NAMESPACE_END_
 
 #endif

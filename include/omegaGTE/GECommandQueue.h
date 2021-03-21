@@ -1,9 +1,9 @@
-#include "GEBase.h"
+#include "GTEBase.h"
 
 #ifndef OMEGAGRAPHICSENGINE_GECOMMANDQUEUE_H
 #define OMEGAGRAPHICSENGINE_GECOMMANDQUEUE_H
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     class GECommandBuffer {
     public:
 
@@ -18,6 +18,6 @@ namespace OmegaGE {
         unsigned getSize();
         virtual void present() = 0;
     };
-};
+_NAMESPACE_END_
 
 #endif

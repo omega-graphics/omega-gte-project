@@ -43,6 +43,15 @@ else if(is_linux){
 }
 
 shared_library("OmegaGE"){
+    if(is_mac){
+        defines = ["TARGET_METAL"]
+    }
+    else if(is_windows){
+        defines = ["TARGET_DIRECTX"]
+    }
+    else if(is_linux){
+        defines = ["TARGET_VULKAN"]
+    }
     include_dirs = [
         include_dir,
     ]
@@ -50,9 +59,13 @@ shared_library("OmegaGE"){
         # Headers 
         "$include_dir/GE.h",
         "$include_dir/GECommandQueue.h",
+        "$include_dir/GERenderTarget.h",
+        "$include_dir/GERenderPass.h",
         # Sources
         "src/GE.cpp",
-        "src/GECommandQueue.cpp"
+        "src/GECommandQueue.cpp",
+        "src/GERenderTarget.cpp",
+        "src/GERenderPass.cpp"
     ] + rhi_srcs
 }
 

@@ -42,9 +42,15 @@ else if(is_linux){
     ]
 }
 
-shared_library("OmegaGE"){
+shared_library("OmegaGTE"){
     if(is_mac){
         defines = ["TARGET_METAL"]
+        libs = [
+            "c",
+            "c++"
+        ]
+        frameworks = ["Metal.framework"]
+        output_extension = "dylib"
     }
     else if(is_windows){
         defines = ["TARGET_DIRECTX"]
@@ -57,15 +63,17 @@ shared_library("OmegaGE"){
     ]
     sources = [
         # Headers 
+        "$include_dir/GTEBase.h",
         "$include_dir/GE.h",
         "$include_dir/GECommandQueue.h",
         "$include_dir/GERenderTarget.h",
         "$include_dir/GERenderPass.h",
+        "$include_dir/GETexture.h",
         # Sources
         "src/GE.cpp",
         "src/GECommandQueue.cpp",
         "src/GERenderTarget.cpp",
-        "src/GERenderPass.cpp"
+        "src/GERenderPass.cpp",
     ] + rhi_srcs
 }
 

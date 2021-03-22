@@ -2,7 +2,8 @@
 #include <windows.h>
 #endif
 
-#if defined(TARGET_METAL) || defined(__OBJC__)
+#if defined(TARGET_METAL) && defined(__OBJC__)
+@class CAMetalLayer;
 #endif
 
 #include "GTEBase.h"
@@ -92,7 +93,7 @@ _NAMESPACE_BEGIN_
         */
         virtual SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor & desc) = 0;
         virtual SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor & desc) = 0;
-        virtual SharedHandle<GETextureRenderTarget> makeNativeTextureTarget(const TextureRenderTargetDescriptor & desc) = 0;
+        virtual SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor & desc) = 0;
         virtual SharedHandle<GECommandQueue> makeCommandQueue(unsigned maxBufferCount) = 0;
     };
 
@@ -105,7 +106,7 @@ _NAMESPACE_BEGIN_
 
     #endif
 
-    #if defined(TARGET_METAL) || defined(__OBJC__)
+    #if defined(TARGET_METAL) && defined(__OBJC__)
     struct NativeRenderTargetDescriptor {
         CAMetalLayer *metalLayer;
     };

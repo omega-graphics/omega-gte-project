@@ -96,7 +96,7 @@ toolchain("llvm") {
     tool("solink") {
         outfile = "{{target_output_name}}{{output_extension}}"
         if(is_mac){
-            command = "$lld_command -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
+            command = "$lld_command -dylib -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
         # Link MSVC Runtime
         else {

@@ -1,4 +1,4 @@
-#include "omegaGE/GE.h"
+#include "omegaGTE/GE.h"
 
 namespace OmegaGE {
     

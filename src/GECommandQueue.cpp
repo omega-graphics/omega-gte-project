@@ -1,9 +1,9 @@
-#include "omegaGE/GECommandQueue.h"
+#include "omegaGTE/GECommandQueue.h"
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     GECommandQueue::GECommandQueue(unsigned size):size(size){};
 
     unsigned GECommandQueue::getSize(){
         return size;
     };
-};
+_NAMESPACE_END_

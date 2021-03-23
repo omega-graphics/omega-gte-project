@@ -12,6 +12,7 @@ _NAMESPACE_BEGIN_
     class GECommandQueue {
         unsigned size;
     protected:
+        unsigned currentlyOccupied = 0;
         GECommandQueue(unsigned size);
     public:
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;

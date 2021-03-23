@@ -1,4 +1,4 @@
-#include "omegaGE/GE.h"
+#include "omegaGTE/GE.h"
 
 #include "d3dx12.h"
 #include <dxgi1_4.h>
@@ -17,7 +17,7 @@
 #ifndef OMEGAGRAPHICSENGINE_GED3D12_H
 #define OMEGAGRAPHICSENGINE_GED3D12_H
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     using Microsoft::WRL::ComPtr;
 
     class GED3D12Engine : public OmegaGraphicsEngine {
@@ -26,10 +26,14 @@ namespace OmegaGE {
         ComPtr<IDXGIFactory4> dxgi_factory;
         ComPtr<ID3D12Device8> d3d12_device;
         ComPtr<ID3D12CommandAllocator> bufferAllocator;
+        ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
+        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount);
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
+        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc);
     };
-}
-
+_NAMESPACE_END_
 #endif
 
 

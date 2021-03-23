@@ -1,10 +1,10 @@
-#include "omegaGE/GECommandQueue.h"
+#include "omegaGTE/GECommandQueue.h"
 #include "GED3D12.h"
 
 #ifndef OMEGAGRAPHICSENGINE_GED3D12COMMANDQUEUE_H
 #define OMEGAGRAPHICSENGINE_GED3D12COMMANDQUEUE_H
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     class GED3D12CommandQueue;
 
     class GED3D12CommandBuffer : public GECommandBuffer {
@@ -22,6 +22,5 @@ namespace OmegaGE {
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
     };
-}
-
+_NAMESPACE_END_
 #endif

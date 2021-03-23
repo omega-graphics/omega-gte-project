@@ -1,6 +1,6 @@
 #include "GED3D12CommandQueue.h"
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     // GED3D12CommandBuffer::GED3D12CommandBuffer(){};
     // void GED3D12CommandBuffer::commitToBuffer(){};
     GED3D12CommandQueue::GED3D12CommandQueue(GED3D12Engine *engine,unsigned size):GECommandQueue(size),engine(engine),currentCount(0){
@@ -31,4 +31,4 @@ namespace OmegaGE {
         return std::make_shared<GED3D12CommandBuffer>(commandList,this);
 
     };
-};
+_NAMESPACE_END_

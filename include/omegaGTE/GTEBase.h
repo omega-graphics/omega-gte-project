@@ -1,7 +1,7 @@
 #include <memory>
 
-#ifndef OMEGAGRAPHICSENGINE_GEBASE_H
-#define OMEGAGRAPHICSENGINE_GEBASE_H
+#ifndef OMEGAGTE_GTEBASE_H
+#define OMEGAGTE_GTEBASE_H
 
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {
 #define _NAMESPACE_END_ }

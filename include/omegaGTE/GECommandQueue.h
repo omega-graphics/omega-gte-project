@@ -6,7 +6,6 @@
 _NAMESPACE_BEGIN_
     class GECommandBuffer {
     public:
-
         virtual void commitToQueue() = 0;
     };
     class GECommandQueue {

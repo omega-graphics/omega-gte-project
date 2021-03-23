@@ -7,15 +7,30 @@
 #endif
 
 #include "GTEBase.h"
-#include "GECommandQueue.h"
-#include "GERenderTarget.h"
-#include "GETexture.h"
-#include "GEPipeline.h"
 
 #ifndef OMEGAGRAPHICSENGINE_GE_H
 #define OMEGAGRAPHICSENGINE_GE_H
 
 _NAMESPACE_BEGIN_
+    typedef enum : uint8_t {
+        Private,
+        Managed,
+        Shared
+    } StorageOpts;
+
+    typedef struct __GEFunctionInternal GEFunction;
+    class GETexture;
+    class GEComputePipelineState;
+    class GERenderPipelineState;
+    class GENativeRenderTarget;
+    class GETextureRenderTarget;
+    class GECommandQueue;
+
+    struct TextureDescriptor;
+    struct TextureRenderTargetDescriptor;
+    struct RenderPipelineDescriptor;
+    struct ComputePipelineDescriptor;
+
     struct NativeRenderTargetDescriptor;
     struct TextureRenderTargetDescriptor {
         GRect rect;

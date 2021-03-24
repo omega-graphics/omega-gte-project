@@ -46,9 +46,23 @@ _NAMESPACE_BEGIN_
         };
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+        swapChainDesc.BufferCount = 2;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.Flags = 0;
+        swapChainDesc.Stereo = FALSE;
+        swapChainDesc.Width = 0;
+        swapChainDesc.Height = 0;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
         IDXGISwapChain1 *swapChain;
-        hr = dxgi_factory->CreateSwapChainForHwnd(d3d12_device.Get(),desc.hwnd,&swapChainDesc,NULL,NULL,&swapChain);
+
+        auto commandQueue = std::make_shared<GED3D12CommandQueue>(this,64);
+
+        hr = dxgi_factory->CreateSwapChainForHwnd(commandQueue->commandQueue.Get(),desc.hwnd,&swapChainDesc,NULL,NULL,&swapChain);
         if(FAILED(hr)){
 
         };

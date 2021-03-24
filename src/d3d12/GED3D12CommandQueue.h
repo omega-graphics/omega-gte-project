@@ -18,6 +18,7 @@ _NAMESPACE_BEGIN_
         GED3D12Engine *engine;
         ComPtr<ID3D12CommandQueue> commandQueue;
         unsigned currentCount;
+        friend class GED3D12Engine;
     public:
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);

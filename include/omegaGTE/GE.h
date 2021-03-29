@@ -38,6 +38,7 @@ _NAMESPACE_BEGIN_
 
     struct BufferDescriptor {
         size_t len;
+        StorageOpts opts;
     };
 
     class GEBuffer {

@@ -37,6 +37,8 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GECommandBuffer> GEMetalCommandQueue::getAvailableBuffer(){
         ++currentlyOccupied;
-        return std::make_shared<GEMetalCommandBuffer>([commandQueue commandBuffer],this);
+        id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+        auto s = this;
+        return std::make_shared<GEMetalCommandBuffer>(commandBuffer,s);
     };
 _NAMESPACE_END_

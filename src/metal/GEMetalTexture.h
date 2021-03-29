@@ -10,7 +10,7 @@ class GEMetalTexture : public GETexture {
     id<MTLTexture> texture;
     TextureDescriptor desc;
 public:
-    GEMetalTexture(id<MTLTexture> texture,TextureDescriptor & desc);
+    GEMetalTexture(id<MTLTexture> texture,const TextureDescriptor & desc);
 };
 
 _NAMESPACE_END_

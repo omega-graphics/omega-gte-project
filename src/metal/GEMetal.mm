@@ -9,12 +9,13 @@ _NAMESPACE_BEGIN_
     class GEMetalBuffer : public GEBuffer {
         id<MTLBuffer> metalBuffer;
     public:
+        GEMetalBuffer(id<MTLBuffer> buffer):GEBuffer(),metalBuffer(buffer){};
     };
     
     class GEMetalFence : public GEFence {
         id<MTLFence> metalFence;
     public:
-        GEMetalFence(id<MTLFence> fence);
+        GEMetalFence(id<MTLFence> fence):GEFence(),metalFence(fence){};
     };
 
     class GEMetalEngine : public OmegaGraphicsEngine {
@@ -28,11 +29,15 @@ _NAMESPACE_BEGIN_
             return std::make_shared<GEMetalCommandQueue>(commandQueue,maxBufferCount);
         };
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc){
+            id<MTLBuffer> buffer = [metalDevice newBufferWithLength:desc.len options:MTLResourceStorageModeShared];
+            return std::make_shared<GEMetalBuffer>(buffer);
+        };
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc){
             
         };
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc){};
         SharedHandle<GEFence> makeFence(){
-            return std::make_shared<GEMetalFence>([metalDevice newFence]);
+            auto fence = [metalDevice newFence];
+            return std::make_shared<GEMetalFence>(fence);
         };
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc){
             MTLHeapDescriptor *heapDesc = [[MTLHeapDescriptor alloc]init];

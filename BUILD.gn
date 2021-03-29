@@ -71,6 +71,7 @@ shared_library("OmegaGTE"){
         "$include_dir/GETexture.h",
         # Sources
         "src/GE.cpp",
+        "src/GTEBase.cpp",
         "src/GECommandQueue.cpp",
         "src/GERenderTarget.cpp",
         "src/GERenderPass.cpp",

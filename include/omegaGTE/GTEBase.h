@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #ifndef OMEGAGTE_GTEBASE_H
 #define OMEGAGTE_GTEBASE_H
@@ -15,7 +16,7 @@ _NAMESPACE_BEGIN_
         std::array<std::array<_Ty,columns>,rows> data;
     public:
         static Matrix Identity();
-        static Matrix Create(std::initializer_list<std::initializer_list<_Ty>> data);
+//        static Matrix Create(std::initializer_list<std::initializer_list<_Ty>> data);
     };
 
 

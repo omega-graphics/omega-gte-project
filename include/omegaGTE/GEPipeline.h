@@ -8,17 +8,17 @@ _NAMESPACE_BEGIN_
     typedef struct __GEFunctionInternal GEFunction;
 
     struct RenderPipelineDescriptor {
-        
+        SharedHandle<GEFunction> vertexFunc;
+        SharedHandle<GEFunction> fragmentFunc;
     };
 
     struct ComputePipelineDescriptor {
-        GEFunction *computeFunc;
+        SharedHandle<GEFunction> computeFunc;
 
     };
 
     class GERenderPipelineState {
-        GEFunction *vertexFunc;
-        GEFunction *fragmentFunc;
+        
     };
 
     class GEComputePipelineState {

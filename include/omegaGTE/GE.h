@@ -8,8 +8,8 @@
 
 #include "GTEBase.h"
 
-#ifndef OMEGAGRAPHICSENGINE_GE_H
-#define OMEGAGRAPHICSENGINE_GE_H
+#ifndef OMEGAGTE_GE_H
+#define OMEGAGTE_GE_H
 
 _NAMESPACE_BEGIN_
     typedef enum : uint8_t {
@@ -63,7 +63,7 @@ _NAMESPACE_BEGIN_
     class OmegaGraphicsEngine {
     public:
         /**
-         Creates an Instance of OmegaGE
+         Creates an Instance of the Omega Graphics Engine
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();

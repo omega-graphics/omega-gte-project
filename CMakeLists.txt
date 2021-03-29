@@ -66,3 +66,5 @@ FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE")
 endif()
 target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
 target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND})
+
+add_subdirectory("tests")

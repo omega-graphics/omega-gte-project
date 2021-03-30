@@ -20,8 +20,8 @@ _NAMESPACE_BEGIN_
 
     typedef struct __GEFunctionInternal GEFunction;
     class GETexture;
-    class GEComputePipelineState;
-    class GERenderPipelineState;
+    typedef class __GEComputePipelineState GEComputePipelineState;
+    typedef class __GERenderPipelineState  GERenderPipelineState;
     class GENativeRenderTarget;
     class GETextureRenderTarget;
     class GECommandQueue;

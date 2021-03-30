@@ -17,6 +17,8 @@ if(WIN32)
     "src/d3d12/GED3D12.cpp"
     "src/d3d12/GED3D12CommandQueue.h"
     "src/d3d12/GED3D12CommandQueue.cpp"
+    "src/d3d12/GED3D12Pipeline.h"
+    "src/d3d12/GED3D12Pipeline.cpp"
     "src/d3d12/GED3D12RenderTarget.h"
     "src/d3d12/GED3D12RenderTarget.cpp"
     "src/d3d12/GED3D12Texture.h"

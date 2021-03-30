@@ -16,14 +16,10 @@ _NAMESPACE_BEGIN_
         SharedHandle<GEFunction> computeFunc;
 
     };
+    typedef class __GERenderPipelineState  GERenderPipelineState;
+    typedef class __GEComputePipelineState GEComputePipelineState;
 
-    class GERenderPipelineState {
-        
-    };
 
-    class GEComputePipelineState {
-
-    };
 _NAMESPACE_END_
 
 #endif

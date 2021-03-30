@@ -2,6 +2,7 @@
 #include "GED3D12CommandQueue.h"
 #include "GED3D12Texture.h"
 #include "GED3D12RenderTarget.h"
+#include "GED3D12Pipeline.h"
 _NAMESPACE_BEGIN_
 
     class GED3D12Buffer : public GEBuffer {
@@ -55,10 +56,24 @@ _NAMESPACE_BEGIN_
     };
 
     SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(const RenderPipelineDescriptor &desc){
-        return nullptr;
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC d;
+        HRESULT hr;
+        GED3D12Function *vertexFunc = (GED3D12Function *)desc.vertexFunc.get();
+        GED3D12Function *fragmentFunc = (GED3D12Function *)desc.fragmentFunc.get();
+        d.VS = CD3DX12_SHADER_BYTECODE(vertexFunc->funcData.Get());
+        d.PS = CD3DX12_SHADER_BYTECODE(fragmentFunc->funcData.Get());
+        ID3D12PipelineState *state;
+        hr = d3d12_device->CreateGraphicsPipelineState(&d,IID_PPV_ARGS(&state));
+        return std::make_shared<GED3D12RenderPipelineState>(state);
     };
     SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(const ComputePipelineDescriptor &desc){
-        return nullptr;
+        D3D12_COMPUTE_PIPELINE_STATE_DESC d;
+        HRESULT hr;
+        ID3D12PipelineState *state;
+        GED3D12Function *computeFunc = (GED3D12Function *)desc.computeFunc.get();
+        d.CS = CD3DX12_SHADER_BYTECODE(computeFunc->funcData.Get());
+        hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
+        return std::make_shared<GED3D12ComputePipelineState>(state);
     };
 
     SharedHandle<GENativeRenderTarget> GED3D12Engine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){

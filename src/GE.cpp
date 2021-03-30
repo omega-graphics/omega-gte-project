@@ -8,6 +8,10 @@
 #include "metal/GEMetal.h"
 #endif
 
+#ifdef TARGET_VULKAN
+#include "vulkan/GEVulkan.h"
+#endif
+
 _NAMESPACE_BEGIN_
 
 SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){
@@ -16,6 +20,9 @@ SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){
 #endif
 #ifdef TARGET_DIRECTX
     return GED3D12Engine::Create();
+#endif
+#ifdef TARGET_VULKAN
+    return GEVulkanEngine::Create();
 #endif
 };
 

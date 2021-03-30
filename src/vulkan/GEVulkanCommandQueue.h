@@ -1,6 +1,11 @@
 #include "GEVulkan.h"
+#include "omegaGTE/GECommandQueue.h"
 
-namespace OmegaGE {
+#ifndef OMEGAGTE_VULKAN_GEVULKANCOMMANDQUEUE_H
+#define OMEGAGTE_VULKAN_GEVULKANCOMMANDQUEUE_H
+
+
+_NAMESPACE_BEGIN_
     class GEVulkanCommandQueue;
 
     class GEVulkanCommandBuffer : public GECommandBuffer {
@@ -19,7 +24,10 @@ namespace OmegaGE {
         unsigned currentBufferIndex;
         friend class GEVulkanCommandBuffer;
     public:
+        void present();
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size);
     };
-};
+_NAMESPACE_END_
+
+#endif

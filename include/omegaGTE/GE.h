@@ -6,6 +6,10 @@
 @class CAMetalLayer;
 #endif
 
+#if defined(TARGET_VULKAN)
+#include <X11/Xlib.h>
+#endif
+
 #include "GTEBase.h"
 
 #ifndef OMEGAGTE_GE_H
@@ -123,8 +127,14 @@ _NAMESPACE_BEGIN_
     #endif
 
     #if defined(TARGET_METAL) && defined(__OBJC__)
-    struct NativeRenderTargetDescriptor {
+    struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
         CAMetalLayer *metalLayer;
+    };
+    #endif
+
+    #if defined(TARGET_VULKAN)
+    struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
+        Window w;
     };
     #endif
 _NAMESPACE_END_

@@ -41,6 +41,11 @@ if(CMAKE_HOST_APPLE)
     )
 endif()
 
+if(CMAKE_HOST_UNIX AND NOT CMAKE_HOST_APPLE)
+    set(TARGET_VULKAN TRUE)
+    
+endif()
+
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 if(TARGET_METAL)
     find_library(METAL_FOUND "Metal")

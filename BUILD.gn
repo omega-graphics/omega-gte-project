@@ -1,11 +1,17 @@
 declare_args(){
     d3d11 = false
     omega_sl = false
+    libcxx_dir = ""
+    libcxx_include = ""
 }
+
 
 include_dir = "//include"
 if(is_linux){
     vulkan_include_dir = "/usr/local/include"
+    vulkan_link_flags = exec_script("//gn/pkg-conf.py",["--name","vulkan","-L"],"value")
+    gtk_c_flags = exec_script("//gn/pkg-conf.py",["--name","gtk+-3.0","-F"],"value")
+    gtk_link_flags = exec_script("//gn/pkg-conf.py",["--name","gtk+-3.0","-L"],"value")
 }
 rhi_srcs = []
 
@@ -37,8 +43,14 @@ else if(is_linux){
     rhi_srcs +=[
         # Headers
         "src/vulkan/GEVulkan.h",
+        "src/vulkan/GEVulkanCommandQueue.h",
+        "src/vulkan/GEVulkanPipeline.h",
+        "src/vulkan/GEVulkanTexture.h",
         # Sources
-        "src/vulkan/GEVulkan.cpp"
+        "src/vulkan/GEVulkan.cpp",
+        "src/vulkan/GEVulkanCommandQueue.cpp",
+        "src/vulkan/GEVulkanPipeline.cpp",
+        "src/vulkan/GEVulkanTexture.cpp",
     ]
 }
 
@@ -57,25 +69,58 @@ shared_library("OmegaGTE"){
     }
     else if(is_linux){
         defines = ["TARGET_VULKAN"]
+        cflags_cc = gtk_c_flags + ["-fPIC","-gdwarf"]
+        ldflags = gtk_link_flags + vulkan_link_flags
+        output_extension = "so"
     }
     include_dirs = [
         include_dir,
     ]
+    if(is_linux){
+        include_dirs += [
+            vulkan_include_dir
+        ]
+    }
     sources = [
         # Headers 
         "$include_dir/GTEBase.h",
         "$include_dir/GE.h",
         "$include_dir/GECommandQueue.h",
         "$include_dir/GERenderTarget.h",
-        "$include_dir/GERenderPass.h",
         "$include_dir/GETexture.h",
+        "$include_dir/TE.h",
         # Sources
         "src/GE.cpp",
         "src/GTEBase.cpp",
         "src/GECommandQueue.cpp",
         "src/GERenderTarget.cpp",
-        "src/GERenderPass.cpp",
+        "src/TE.cpp",
     ] + rhi_srcs
+}
+
+if(is_linux){
+    # Compile Test Suite
+
+    executable("2DTest"){
+        sources = [
+            "tests/vulkan/2DTest/main.cpp"
+        ]
+        include_dirs = [
+            libcxx_include,
+            include_dir
+        ]
+        lib_dirs = [
+            libcxx_dir
+        ]
+        libs = [
+            "c",
+            "c++",
+            "c++abi",
+        ]
+        cflags_cc = gtk_c_flags 
+        ldflags = gtk_link_flags
+    }
+
 }
 
 if(omega_sl){

@@ -1,7 +1,7 @@
 #include "GEVulkanCommandQueue.h"
 #include "vulkan/vulkan.hpp"
 
-namespace OmegaGE {
+_NAMESPACE_BEGIN_
     GEVulkanCommandBuffer::GEVulkanCommandBuffer(vk::CommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue):commandBuffer(commandBuffer),parentQueue(parentQueue){
         vk::CommandBufferBeginInfo beginInfo;
         // vk::CommandBufferInheritanceInfo inheritanceInfo;
@@ -15,7 +15,11 @@ namespace OmegaGE {
         vk::SubmitInfo submission;
         submission.commandBufferCount = 1;
         submission.pCommandBuffers = &commandBuffer;
-        // parentQueue->commandQueue.submit(1,&submission);
+        vk::Fence fence;
+        auto res = parentQueue->commandQueue.submit(1,&submission,fence);
+        if(res == vk::Result::eSuccess){
+            
+        };
     };
 
    SharedHandle<GECommandBuffer> GEVulkanCommandQueue::getAvailableBuffer(){
@@ -45,4 +49,4 @@ namespace OmegaGE {
         engine->device.getQueue2(&queueInfo,&commandQueue);
 
    };
-};
+_NAMESPACE_END_

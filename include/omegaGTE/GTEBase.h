@@ -6,6 +6,8 @@
 
 #ifdef TARGET_DIRECTX
 #define OMEGAGTE_EXPORT __declspec( dllexport ) 
+#else 
+#define OMEGAGTE_EXPORT 
 #endif
 
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {

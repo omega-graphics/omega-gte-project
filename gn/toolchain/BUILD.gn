@@ -16,6 +16,10 @@ toolchain("llvm") {
         lld_command = "lld-link"
     }
 
+    if(is_linux){
+        lld_command = "ld.lld"
+    }
+
     if(is_mac){
         lld_command = "ld"
     }
@@ -77,7 +81,7 @@ toolchain("llvm") {
         if(is_windows){
             command = "llvm-lib /out:{{output}} /machine:x64 ucrt.lib User32.lib  {{inputs}} {{arflags}}"
         }
-        else if(is_mac) {
+        else if(is_mac || is_linux) {
             command = "llvm-ar --format=darwin -rs {{output}} {{inputs}} {{arflags}}"
         }
         outputs = [
@@ -98,6 +102,9 @@ toolchain("llvm") {
         if(is_mac){
             command = "$lld_command -dylib -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
+        else if(is_linux){
+            command = "$lld_command --shared -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
+        }
         # Link MSVC Runtime
         else {
             command = "$lld_command /subsystem:CONSOLE /machine:x64 /dll /out:$outfile  {{inputs}} {{solibs}} msvcrt.lib {{libs}} {{ldflags}}"
@@ -108,8 +115,11 @@ toolchain("llvm") {
     }
     tool("link") {
         outfile = "{{target_output_name}}{{output_extension}}"
-        if(is_mac || is_linux){
-            command = "$lld_command -execute -o $outfile {{ldflags}} {{inputs}} {{solibs}} {{frameworks}}  {{libs}} " 
+        if(is_mac){
+            command = "$lld_command -execute -o $outfile {{ldflags}} {{inputs}} {{solibs}} {{frameworks}} {{libs}} " 
+        }
+        else if(is_linux){
+            command = "$lld_command -emain  -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
         # Link MSVC Runtime
         else {

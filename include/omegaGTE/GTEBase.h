@@ -4,6 +4,10 @@
 #ifndef OMEGAGTE_GTEBASE_H
 #define OMEGAGTE_GTEBASE_H
 
+#ifdef TARGET_DIRECTX
+#define OMEGAGTE_EXPORT __declspec( dllexport ) 
+#endif
+
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {
 #define _NAMESPACE_END_ }
 

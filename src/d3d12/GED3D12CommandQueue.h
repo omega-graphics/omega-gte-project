@@ -11,6 +11,7 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12GraphicsCommandList4> commandList;
         GED3D12CommandQueue *parentQueue;
     public:
+        void commitToQueue();
         GED3D12CommandBuffer(ID3D12GraphicsCommandList4 *commandList,GED3D12CommandQueue *parentQueue);
     };
 
@@ -20,6 +21,7 @@ _NAMESPACE_BEGIN_
         unsigned currentCount;
         friend class GED3D12Engine;
     public:
+        void present();
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
     };

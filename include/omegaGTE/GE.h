@@ -60,7 +60,7 @@ _NAMESPACE_BEGIN_
     /**
      The Omega GE Main Class
     */
-    class OmegaGraphicsEngine {
+    class OMEGAGTE_EXPORT OmegaGraphicsEngine {
     public:
         /**
          Creates an Instance of the Omega Graphics Engine
@@ -116,7 +116,7 @@ _NAMESPACE_BEGIN_
 
 
     #ifdef TARGET_DIRECTX
-    struct NativeRenderTargetDescriptor {
+    struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
         HWND hwnd;
     };
 

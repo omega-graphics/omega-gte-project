@@ -2,15 +2,26 @@ cmake_minimum_required(VERSION 3.15)
 
 project(OmegaGTE C CXX)
 
-if(CMAKE_GENERATOR STREQUAL "Ninja")
-    message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
-endif()
+# if(CMAKE_GENERATOR STREQUAL "Ninja")
+#     message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
+# endif()
 
 set(_TARGET_SOURCES)
 
 if(WIN32)
     set(TARGET_DIRECTX TRUE)
     add_compile_definitions("TARGET_DIRECTX")
+
+    set(_TARGET_SOURCES
+    "src/d3d12/GED3D12.h"
+    "src/d3d12/GED3D12.cpp"
+    "src/d3d12/GED3D12CommandQueue.h"
+    "src/d3d12/GED3D12CommandQueue.cpp"
+    "src/d3d12/GED3D12RenderTarget.h"
+    "src/d3d12/GED3D12RenderTarget.cpp"
+    "src/d3d12/GED3D12Texture.h"
+    "src/d3d12/GED3D12Texture.cpp"
+    )
 endif()
 
 if(CMAKE_HOST_APPLE)
@@ -29,10 +40,11 @@ if(CMAKE_HOST_APPLE)
 endif()
 
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
-
-find_library(METAL_FOUND "Metal")
-if(METAL_FOUND)
-    message("Found Metal.framework (Path:${METAL_FOUND})")
+if(TARGET_METAL)
+    find_library(METAL_FOUND "Metal")
+    if(METAL_FOUND)
+        message("Found Metal.framework (Path:${METAL_FOUND})")
+    endif()
 endif()
 
 add_library("OmegaGTE" SHARED 
@@ -63,8 +75,12 @@ FRAMEWORK TRUE
 FRAMEWORK_VERSION "0.1"
 FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE")
 
-endif()
-target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
 target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND})
+endif()
+
+
+
+target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
+
 
 add_subdirectory("tests")

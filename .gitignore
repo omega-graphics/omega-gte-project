@@ -3,6 +3,7 @@
 .clangd
 compile_commands.json
 *.sh
+*.bat
 out 
 dist
 build

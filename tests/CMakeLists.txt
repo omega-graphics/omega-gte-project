@@ -1,1 +1,5 @@
-add_subdirectory("metal")
+if(TARGET_DIRECTX)
+    add_subdirectory("directx")
+elseif(TARGET_METAL)
+    add_subdirectory("metal")
+endif()

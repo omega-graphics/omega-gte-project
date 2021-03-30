@@ -14,6 +14,9 @@ SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){
 #ifdef TARGET_METAL
     return CreateMetalEngine();
 #endif
+#ifdef TARGET_DIRECTX
+    return GED3D12Engine::Create();
+#endif
 };
 
 _NAMESPACE_END_

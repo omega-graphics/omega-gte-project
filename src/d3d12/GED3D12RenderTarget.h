@@ -8,13 +8,12 @@
 _NAMESPACE_BEGIN_
     class GED3D12NativeRenderTarget : public GENativeRenderTarget {
         GED3D12Engine *engine;
-        ComPtr<ID3D12Resource> renderTarget;
         ComPtr<IDXGISwapChain3> swapChain;
         ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
         SharedHandle<GED3D12CommandQueue> commandQueue;
         HWND hwnd;
     public:
-        GED3D12NativeRenderTarget(HWND hwnd);
+        GED3D12NativeRenderTarget(HWND hwnd,IDXGISwapChain3 * swapChain,ID3D12DescriptorHeap * descriptorHeapForRenderTarget,SharedHandle<GED3D12CommandQueue> & commandQueue);
     };
 
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {

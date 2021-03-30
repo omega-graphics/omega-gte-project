@@ -21,6 +21,14 @@ _NAMESPACE_BEGIN_
         
     };
 
+    void GED3D12CommandBuffer::commitToQueue(){
+
+    };
+
+    void GED3D12CommandQueue::present(){
+
+    };
+
     SharedHandle<GECommandBuffer> GED3D12CommandQueue::getAvailableBuffer(){
         HRESULT hr;
         ID3D12GraphicsCommandList4 *commandList;

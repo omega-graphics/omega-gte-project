@@ -1,12 +1,19 @@
 #include "GED3D12.h"
 #include "GED3D12CommandQueue.h"
 #include "GED3D12Texture.h"
+#include "GED3D12RenderTarget.h"
 _NAMESPACE_BEGIN_
 
     class GED3D12Buffer : public GEBuffer {
         ComPtr<ID3D12Resource> buffer;
     public:
         GED3D12Buffer(ID3D12Resource *buffer):buffer(buffer){};
+    };
+
+    class GED3D12Fence : public GEFence {
+        ComPtr<ID3D12Fence> fence;
+    public:
+        GED3D12Fence(ID3D12Fence *fence):fence(fence){};
     };
 
     GED3D12Engine::GED3D12Engine(){
@@ -21,16 +28,37 @@ _NAMESPACE_BEGIN_
             exit(1);
         };
 
-        D3D12_DESCRIPTOR_HEAP_DESC desc;
-        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        desc.NodeMask = d3d12_device->GetNodeCount();
-        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        // D3D12_DESCRIPTOR_HEAP_DESC desc;
+        // desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        // desc.NodeMask = d3d12_device->GetNodeCount();
+        // desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-        hr = d3d12_device->CreateDescriptorHeap(&desc,IID_PPV_ARGS(&descriptorHeapForRes));
-        if(FAILED(hr)){
+        // hr = d3d12_device->CreateDescriptorHeap(&desc,IID_PPV_ARGS(&descriptorHeapForRes));
+        // if(FAILED(hr)){
+        //     exit(1);
+        // };
 
-        };
+    };
 
+    SharedHandle<OmegaGraphicsEngine> GED3D12Engine::Create(){
+        return std::make_shared<GED3D12Engine>();
+    };
+
+    SharedHandle<GEFence> GED3D12Engine::makeFence(){
+        ID3D12Fence *f;
+        d3d12_device->CreateFence(0,D3D12_FENCE_FLAG_SHARED,IID_PPV_ARGS(&f));
+        return std::make_shared<GED3D12Fence>(f);
+    };
+
+    SharedHandle<GEHeap> GED3D12Engine::makeHeap(const HeapDescriptor &desc){
+        return nullptr;
+    };
+
+    SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(const RenderPipelineDescriptor &desc){
+        return nullptr;
+    };
+    SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(const ComputePipelineDescriptor &desc){
+        return nullptr;
     };
 
     SharedHandle<GENativeRenderTarget> GED3D12Engine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
@@ -72,6 +100,11 @@ _NAMESPACE_BEGIN_
 
         };
         
+        return std::make_shared<GED3D12NativeRenderTarget>(desc.hwnd,swapChain_,renderTargetHeap,commandQueue);
+    };
+
+    SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
+     return nullptr;   
     };
 
     SharedHandle<GECommandQueue> GED3D12Engine::makeCommandQueue(unsigned int maxBufferCount){

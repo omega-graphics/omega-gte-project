@@ -7,7 +7,23 @@
 
 _NAMESPACE_BEGIN_
     struct GERenderPassDescriptor {
-        GERenderTarget *renderTarget;
+        GENativeRenderTarget *nRenderTarget = nullptr;
+        GETextureRenderTarget *tRenderTarget = nullptr;
+        struct ColorAttachment {
+            typedef enum {
+                Load,
+                LoadPreserve,
+                Clear,
+                Discard
+            } LoadAction;
+            LoadAction loadAction;
+            struct ClearColor { 
+                float r,g,b,a;
+                ClearColor(float r,float g,float b,float a);
+            };
+            ClearColor clearColor;
+        };
+        ColorAttachment colorAttachment;
     };
 
 
@@ -35,7 +51,6 @@ _NAMESPACE_BEGIN_
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
         virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
-        virtual void notifyForFramePresentation() = 0;
         virtual void commitToQueue() = 0;
     };
     class GECommandQueue {

@@ -11,14 +11,14 @@ struct GED3D12Function : public __GEFunctionInternal {
 };
 
 class GED3D12RenderPipelineState : public __GERenderPipelineState {
-    ComPtr<ID3D12PipelineState> pipelineState;
 public:
+     ComPtr<ID3D12PipelineState> pipelineState;
     GED3D12RenderPipelineState(ID3D12PipelineState *state);
 };
 
 class GED3D12ComputePipelineState : public __GEComputePipelineState {
-    ComPtr<ID3D12PipelineState> pipelineState;
 public: 
+    ComPtr<ID3D12PipelineState> pipelineState;
     GED3D12ComputePipelineState(ID3D12PipelineState *state);
 };
 

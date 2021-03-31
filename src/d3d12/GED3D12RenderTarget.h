@@ -9,16 +9,24 @@ _NAMESPACE_BEGIN_
     class GED3D12NativeRenderTarget : public GENativeRenderTarget {
         GED3D12Engine *engine;
         ComPtr<IDXGISwapChain3> swapChain;
-        ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
         SharedHandle<GED3D12CommandQueue> commandQueue;
-        HWND hwnd;
     public:
-        GED3D12NativeRenderTarget(HWND hwnd,IDXGISwapChain3 * swapChain,ID3D12DescriptorHeap * descriptorHeapForRenderTarget,SharedHandle<GED3D12CommandQueue> & commandQueue);
+         ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
+          unsigned frameIndex;
+        std::vector<ID3D12Resource *> renderTargets;
+        GED3D12NativeRenderTarget(IDXGISwapChain3 * swapChain,
+                                 ID3D12DescriptorHeap * descriptorHeapForRenderTarget,
+                                 SharedHandle<GED3D12CommandQueue> & commandQueue,
+                                 unsigned frameIndex,
+                                 ID3D12Resource *const *renderTargetViews,
+                                 size_t renderTargetViewCount);
     };
 
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {
         GED3D12Engine *engine;
         ComPtr<ID3D12Resource> renderTarget;
+    public:
+        ComPtr<ID3D12Resource> renderTargetView;
         ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
     };
 _NAMESPACE_END_

@@ -10,6 +10,7 @@ _NAMESPACE_BEGIN_
     class GED3D12CommandBuffer : public GECommandBuffer {
         ComPtr<ID3D12GraphicsCommandList6> commandList;
         GED3D12CommandQueue *parentQueue;
+        bool inComputePass;
     public:
         void startRenderPass(const GERenderPassDescriptor &desc);
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);

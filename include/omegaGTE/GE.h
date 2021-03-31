@@ -1,5 +1,6 @@
 #if defined(TARGET_DIRECTX)
 #include <windows.h>
+#include <dxgi1_6.h>
 #define DEBUG_ENGINE_PREFIX "GED3D12Engine_Internal"
 #endif
 
@@ -130,7 +131,7 @@ _NAMESPACE_BEGIN_
 
     #ifdef TARGET_DIRECTX
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
-        HWND hwnd;
+        IDXGISwapChain3 *swapChain;
     };
 
     #endif

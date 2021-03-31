@@ -103,4 +103,4 @@ target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
 
 
 add_subdirectory("tests")
-add_subdirectory("omegasl")
+# add_subdirectory("omegasl")

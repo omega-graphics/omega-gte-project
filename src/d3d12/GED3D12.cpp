@@ -78,44 +78,36 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GENativeRenderTarget> GED3D12Engine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
         HRESULT hr;
+
+        /// Swap Chain must have 2 Frames
+        auto rtv_desc_size = d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc;
         heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         heap_desc.NodeMask = d3d12_device->GetNodeCount();
         heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        heap_desc.NumDescriptors = 2;
         ID3D12DescriptorHeap *renderTargetHeap;
         hr = d3d12_device->CreateDescriptorHeap(&heap_desc,IID_PPV_ARGS(&renderTargetHeap));
         if(FAILED(hr)){
 
         };
 
-        DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
-        swapChainDesc.BufferCount = 2;
-        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
-        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.SampleDesc.Quality = 0;
-        swapChainDesc.Flags = 0;
-        swapChainDesc.Stereo = FALSE;
-        swapChainDesc.Width = 0;
-        swapChainDesc.Height = 0;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_cpu_handle (renderTargetHeap->GetCPUDescriptorHandleForHeapStart());
+        
 
-        IDXGISwapChain1 *swapChain;
+        ID3D12Resource *rtv_1;
+        d3d12_device->CreateRenderTargetView(rtv_1,nullptr,rtv_cpu_handle);
+        rtv_cpu_handle.Offset(1,rtv_desc_size);
+        ID3D12Resource *rtv_2;
+        d3d12_device->CreateRenderTargetView(rtv_2,nullptr,rtv_cpu_handle);
+        rtv_cpu_handle.Offset(1,rtv_desc_size);
+
+        std::initializer_list<ID3D12Resource *> rtvs = {rtv_1,rtv_2};
 
         auto commandQueue = std::make_shared<GED3D12CommandQueue>(this,64);
 
-        hr = dxgi_factory->CreateSwapChainForHwnd(commandQueue->commandQueue.Get(),desc.hwnd,&swapChainDesc,NULL,NULL,&swapChain);
-        if(FAILED(hr)){
-
-        };
-        IDXGISwapChain3 * swapChain_;
-        hr = swapChain->QueryInterface(&swapChain_);
-        if(FAILED(hr)){
-
-        };
-        
-        return std::make_shared<GED3D12NativeRenderTarget>(desc.hwnd,swapChain_,renderTargetHeap,commandQueue);
+        return std::make_shared<GED3D12NativeRenderTarget>(desc.swapChain,renderTargetHeap,commandQueue,desc.swapChain->GetCurrentBackBufferIndex(),rtvs.begin(),rtvs.size());
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){

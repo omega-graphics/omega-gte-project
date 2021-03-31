@@ -27,6 +27,11 @@ _NAMESPACE_BEGIN_
        ++currentBufferIndex;
        return res;
    };
+
+   void GEVulkanCommandQueue::present(){
+
+   };
+   
    GEVulkanCommandQueue::GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size):GECommandQueue(size){
        vk::Result res;
        vk::CommandPoolCreateInfo poolCreateInfo;

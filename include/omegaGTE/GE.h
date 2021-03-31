@@ -1,14 +1,19 @@
 #if defined(TARGET_DIRECTX)
 #include <windows.h>
+#define DEBUG_ENGINE_PREFIX "GED3D12Engine_Internal"
 #endif
 
 #if defined(TARGET_METAL) && defined(__OBJC__)
 @class CAMetalLayer;
+#define DEBUG_ENGINE_PREFIX "GEMetalEngine_Internal"
 #endif
 
 #if defined(TARGET_VULKAN)
 #include <X11/Xlib.h>
+#define DEBUG_ENGINE_PREFIX "GEVulkanEngine_Internal"
 #endif
+
+#define DEBUG_STREAM(message) std::cout << "[" << DEBUG_ENGINE_PREFIX << "] - " << message << std::endl
 
 #include "GTEBase.h"
 

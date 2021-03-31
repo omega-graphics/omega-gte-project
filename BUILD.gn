@@ -69,8 +69,8 @@ shared_library("OmegaGTE"){
     }
     else if(is_linux){
         defines = ["TARGET_VULKAN"]
-        cflags_cc = gtk_c_flags + ["-fPIC","-gdwarf"]
-        ldflags = gtk_link_flags + vulkan_link_flags
+        cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags + ["-fPIC","-gdwarf"]
+        ldflags =  gtk_link_flags + vulkan_link_flags
         output_extension = "so"
     }
     include_dirs = [
@@ -84,8 +84,10 @@ shared_library("OmegaGTE"){
     sources = [
         # Headers 
         "$include_dir/GTEBase.h",
+        "$include_dir/GTEShaderTypes.h",
         "$include_dir/GE.h",
         "$include_dir/GECommandQueue.h",
+        "$include_dir/GEPipeline.h",
         "$include_dir/GERenderTarget.h",
         "$include_dir/GETexture.h",
         "$include_dir/TE.h",
@@ -100,27 +102,51 @@ shared_library("OmegaGTE"){
 
 if(is_linux){
     # Compile Test Suite
-
-    executable("2DTest"){
-        sources = [
-            "tests/vulkan/2DTest/main.cpp"
-        ]
-        include_dirs = [
-            libcxx_include,
-            include_dir
-        ]
-        lib_dirs = [
-            libcxx_dir
-        ]
-        libs = [
+    test_out_dir = root_out_dir + "/tests"
+    template("vulkan_test"){
+        if(defined(invoker.include_dirs)){
+            invoker.include_dirs += [include_dir]
+        }
+        else {
+            invoker.include_dirs = [include_dir]
+        }
+        invoker.cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags
+        invoker.ldflags =
+        gtk_link_flags + ["-rpath",rebase_path("$root_out_dir/tests")]
+        invoker.output_name = "tests/$target_name"
+        invoker.libs = [
             "c",
             "c++",
             "c++abi",
         ]
-        cflags_cc = gtk_c_flags 
-        ldflags = gtk_link_flags
+        invoker.public_deps = [
+            ":OmegaGTE"
+        ]
+        executable(target_name){
+            forward_variables_from(invoker,"*")
+        }
+        exe_name = target_name
+        copy("${target_name}__copy_so"){
+            sources = [
+                "$root_out_dir/OmegaGTE.so",
+                "$libcxx_dir/libc++.so.1",
+                "$libcxx_dir/libc++abi.so.1"
+            ]
+            public_deps = [
+                ":$exe_name"
+            ]
+            outputs = [
+                "$test_out_dir/{{source_file_part}}"
+            ]
+        }
     }
 
+    vulkan_test("2DTest"){
+        sources = [
+            "tests/vulkan/2DTest/main.cpp"
+        ]
+    }
+    
 }
 
 if(omega_sl){

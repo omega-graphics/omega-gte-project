@@ -3,8 +3,7 @@
 #include "GEVulkanTexture.h"
 #include "GEVulkanPipeline.h"
 #include <initializer_list>
-#include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_core.h>
+#include <iostream>
 _NAMESPACE_BEGIN_
     class GEVulkanBuffer : public GEBuffer {
         vk::UniqueBuffer buffer;
@@ -38,7 +37,7 @@ _NAMESPACE_BEGIN_
        if(!VK_RESULT_SUCCEEDED(res)){
           exit(1);
        }
-     
+        DEBUG_STREAM("Successfully Created GEVulkanEngine");
     };
 
     SharedHandle<OmegaGraphicsEngine> GEVulkanEngine::Create(){
@@ -148,6 +147,18 @@ _NAMESPACE_BEGIN_
             exit(1);
         };
         return std::make_shared<GEVulkanComputePipelineState>(pipeline.value,pipeline_layout);
+    };
+
+    SharedHandle<GEFence> GEVulkanEngine::makeFence(){
+        return nullptr;
+    };
+
+    SharedHandle<GENativeRenderTarget> GEVulkanEngine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
+        return nullptr;
+    };
+
+    SharedHandle<GETextureRenderTarget> GEVulkanEngine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
+        return nullptr;
     };
 
 _NAMESPACE_END_

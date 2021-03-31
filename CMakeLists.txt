@@ -43,7 +43,16 @@ endif()
 
 if(CMAKE_HOST_UNIX AND NOT CMAKE_HOST_APPLE)
     set(TARGET_VULKAN TRUE)
-    
+    find_package(PkgConfig REQUIRED)
+
+    pkg_check_modules(GTK REQUIRED "gtk+-3.0")
+    if(GTK_FOUND)
+
+    endif()
+    find_package(Vulkan REQUIRED)
+    if(VULKAN_FOUND)
+
+    endif()
 endif()
 
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
@@ -60,15 +69,14 @@ add_library("OmegaGTE" SHARED
 "${INCLUDE_DIR}/omegaGTE/GECommandQueue.h" 
 "${INCLUDE_DIR}/omegaGTE/GEPipeline.h" 
 "${INCLUDE_DIR}/omegaGTE/GTEBase.h"
-"${INCLUDE_DIR}/omegaGTE/GERenderPass.h"
 "${INCLUDE_DIR}/omegaGTE/GERenderTarget.h"
+"${INCLUDE_DIR}/omegaGTE/GETexture.h"
 "${INCLUDE_DIR}/omegaGTE/GTEShaderTypes.h"
 "${INCLUDE_DIR}/omegaGTE/TE.h"      
 # Sources
 "src/GE.cpp"
 "src/GECommandQueue.cpp"
 "src/GEPipeline.cpp"
-"src/GERenderPass.cpp"
 "src/GERenderTarget.cpp"
 "src/GTEBase.cpp"
 "src/TE.cpp"
@@ -83,6 +91,10 @@ FRAMEWORK_VERSION "0.1"
 FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE")
 
 target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND})
+endif()
+
+if(TARGET_VULKAN)
+set_target_properties("OmegaGTE" PROPERTIES INCLUDE_DIRECTORIES ${GTK_INCLUDE_DIRS} LINK_DIRECTORIES ${GTK_LIBRARY_DIRS} COMPILE_FLAGS ${GTK_CFLAGS_OTHER} LINK_LIBRARIES ${GTK_LIBRARIES})
 endif()
 
 

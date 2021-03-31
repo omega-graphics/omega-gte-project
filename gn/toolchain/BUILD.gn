@@ -17,7 +17,7 @@ toolchain("llvm") {
     }
 
     if(is_linux){
-        lld_command = "ld.lld"
+        lld_command = "clang++"
     }
 
     if(is_mac){
@@ -103,7 +103,7 @@ toolchain("llvm") {
             command = "$lld_command -dylib -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
         else if(is_linux){
-            command = "$lld_command --shared -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
+            command = "$lld_command --shared -o $outfile -Wl {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
         # Link MSVC Runtime
         else {
@@ -119,7 +119,7 @@ toolchain("llvm") {
             command = "$lld_command -execute -o $outfile {{ldflags}} {{inputs}} {{solibs}} {{frameworks}} {{libs}} " 
         }
         else if(is_linux){
-            command = "$lld_command -emain  -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
+            command = "$lld_command -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{libs}}"  
         }
         # Link MSVC Runtime
         else {

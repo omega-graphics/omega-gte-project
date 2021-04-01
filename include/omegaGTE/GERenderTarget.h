@@ -10,13 +10,16 @@
 
 _NAMESPACE_BEGIN_
 
-    class GENativeRenderTarget {
+    class GERenderTarget {
+        
+    };
+    class GENativeRenderTarget : public GERenderTarget {
         // #ifdef TARGET_DIRECTX
         // static SharedHandle<GENativeRenderTarget> Create(HWND hwnd);
         // #endif
         public:
      };
-     class GETextureRenderTarget {
+     class GETextureRenderTarget : public GERenderTarget {
          public:
      };
 

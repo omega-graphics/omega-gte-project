@@ -1,0 +1,6 @@
+
+
+#ifndef OMEGASL_OMEGASLGEN_H
+#define OMEGASL_OMEGASLGEN_H
+
+#endif

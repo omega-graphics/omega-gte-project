@@ -45,6 +45,10 @@ _NAMESPACE_BEGIN_
         GRect rect;
     };
 
+    struct GEViewport {
+
+    };
+
     struct BufferDescriptor {
         size_t len;
         StorageOpts opts;

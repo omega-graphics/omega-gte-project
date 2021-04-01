@@ -2,4 +2,4 @@ buildconfig = "//gn//BUILDCONFIG.gn"
 
 
 # Only set this variable when on linux
-script_executable = "python3"
+# script_executable = "python3"

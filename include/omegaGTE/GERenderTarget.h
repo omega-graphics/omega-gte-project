@@ -32,17 +32,28 @@ _NAMESPACE_BEGIN_
                 ClearColor clearColor;
                 ColorAttachment(ClearColor clearColor,LoadAction loadAction);
             };
-            ColorAttachment colorAttachment;
+            ColorAttachment * colorAttachment;
         };
         class CommandBuffer {
             GERenderTarget *renderTargetPtr;
+            SharedHandle<GECommandBuffer> commandBuffer;
+#ifdef TARGET_DIRECTX
+#endif
+            
+#ifdef TARGET_METAL
+            friend class GEMetalNativeRenderTarget;
+            friend class GEMetalTextureRenderTarget;
+#endif
+        
+            /// Do NOT CALL THESE CONSTRUCTORS!!!
             typedef enum : uint8_t {
                 Native,
                 Texture
             } GERTType;
             GERTType renderTargetTy;
-            SharedHandle<GECommandBuffer> commandBuffer;
+            CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
         public:
+            friend SharedHandle<CommandBuffer> commandBuffer();
             void startRenderPass(const RenderPassDesc & desc);
             typedef enum : uint8_t {
                 Triangle,

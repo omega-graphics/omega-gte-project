@@ -18,7 +18,7 @@ struct Test {
 
 
 struct MyData {
-    Position<float4x1> pos;
+    float4x1 pos [Position];
     float4x1 color;
 }
 

@@ -13,9 +13,9 @@ _NAMESPACE_BEGIN_
         renderPassDesc.renderTargetArrayLength = 1;
         if(desc.nRenderTarget){
             GEMetalNativeRenderTarget *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
-            metalDrawable = [n_rt->metalLayer nextDrawable];
-            renderPassDesc.renderTargetWidth = n_rt->metalLayer.drawableSize.width;
-            renderPassDesc.renderTargetHeight = n_rt->metalLayer.drawableSize.height;
+            id<CAMetalDrawable> metalDrawable = n_rt->currentDrawable;
+            renderPassDesc.renderTargetWidth = n_rt->drawableSize->width;
+            renderPassDesc.renderTargetHeight = n_rt->drawableSize->height;
             renderPassDesc.colorAttachments[0].texture = metalDrawable.texture;
         }
         else if(desc.tRenderTarget){
@@ -29,7 +29,7 @@ _NAMESPACE_BEGIN_
             exit(1);
         };
         
-        switch (desc.colorAttachment.loadAction) {
+        switch (desc.colorAttachment->loadAction) {
             case GERenderPassDescriptor::ColorAttachment::Load : {
                 renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionLoad;
                 renderPassDesc.colorAttachments[0].storeAction = MTLStoreActionDontCare;
@@ -62,10 +62,10 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx){
         assert((rp && (cp == nil)) && "Cannot Draw Polygons when not in render pass");
         MTLPrimitiveType primativeType;
-        if(polygonType == Triangle){
+        if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::Triangle){
             primativeType = MTLPrimitiveTypeTriangle;
         }
-        else if(polygonType == TriangleStrip){
+        else if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::TriangleStrip){
             primativeType = MTLPrimitiveTypeTriangleStrip;
         };
         [rp drawPrimitives:primativeType vertexStart:startIdx vertexCount:vertexCount instanceCount:1];
@@ -73,8 +73,6 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishRenderPass(){
         [rp endEncoding];
-//        if(metalDrawable != nil)
-//            [buffer presentDrawable:metalDrawable];
     };
 
     void GEMetalCommandBuffer::startComputePass(const GEComputePassDescriptor & desc){
@@ -99,20 +97,13 @@ _NAMESPACE_BEGIN_
         commandBuffers = [[NSMutableArray alloc] init];
     };
 
-    void GEMetalCommandQueue::present(){
-//        @autoreleasepool {
-//            CAMetalLayer * metalLayer;
-//            id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
-//
-//            auto lastBuffer = [commandQueue commandBuffer];
-//            [lastBuffer presentDrawable:drawable];
-//            [lastBuffer enqueue];
-//            [commandBuffers addObject:lastBuffer];
-//            for(id<MTLCommandBuffer> buffer in commandBuffers){
-//                [buffer commit];
-//                [buffer waitUntilScheduled];
-//            };
-//        };
+    void GEMetalCommandQueue::commitToGPU(){
+        @autoreleasepool {
+            for(id<MTLCommandBuffer> commandBuffer in commandBuffers){
+                [commandBuffer commit];
+                // [commandBuffer waitUntilScheduled];
+            };
+        };
     };
 
     GEMetalCommandQueue::~GEMetalCommandQueue(){

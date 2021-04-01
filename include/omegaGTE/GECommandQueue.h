@@ -10,7 +10,7 @@ _NAMESPACE_BEGIN_
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
         typedef GERenderTarget::RenderPassDesc::ColorAttachment ColorAttachment;
-        ColorAttachment colorAttachment;
+        ColorAttachment *colorAttachment;
     };
 
 
@@ -21,13 +21,14 @@ _NAMESPACE_BEGIN_
 
     class GECommandBuffer {
         friend class GERenderTarget::CommandBuffer;
+    protected:
+        typedef GERenderTarget::CommandBuffer::RenderPassDrawPolygonType RenderPassDrawPolygonType;
     private:
          /**
          Render Pass
         */
         virtual void startRenderPass(const GERenderPassDescriptor & desc) = 0;
         virtual void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState) = 0;
-        typedef GERenderTarget::CommandBuffer::RenderPassDrawPolygonType RenderPassDrawPolygonType;
         virtual void drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx) = 0;
         virtual void finishRenderPass() = 0;
         /**
@@ -47,7 +48,7 @@ _NAMESPACE_BEGIN_
     public:
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;
         unsigned getSize();
-        virtual void present() = 0;
+        virtual void commitToGPU() = 0;
     };
 _NAMESPACE_END_
 

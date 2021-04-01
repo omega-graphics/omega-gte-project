@@ -4,7 +4,15 @@
 
 _NAMESPACE_BEGIN_
 
+GERenderTarget::RenderPassDesc::ColorAttachment::ClearColor::ClearColor(float r,float g,float b,float a):r(r),g(g),b(b),a(a){
+    
+};
+
 GERenderTarget::RenderPassDesc::ColorAttachment::ColorAttachment(GERenderTarget::RenderPassDesc::ColorAttachment::ClearColor clearColor,GERenderTarget::RenderPassDesc::ColorAttachment::LoadAction loadAction):clearColor(clearColor.r,clearColor.g,clearColor.b,clearColor.a),loadAction(loadAction){
+    
+};
+
+GERenderTarget::CommandBuffer::CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer):renderTargetPtr(renderTarget),renderTargetTy(type),commandBuffer(commandBuffer){
     
 };
 
@@ -16,7 +24,7 @@ void GERenderTarget::CommandBuffer::startRenderPass(const GERenderTarget::Render
     else if(renderTargetTy == Texture){
         renderPassDesc.tRenderTarget = (GETextureRenderTarget *)renderTargetPtr;
     };
-    renderPassDesc.colorAttachment = std::move(desc.colorAttachment);
+    renderPassDesc.colorAttachment = desc.colorAttachment;
     
     commandBuffer->startRenderPass(renderPassDesc);
 };

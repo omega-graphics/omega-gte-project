@@ -11,7 +11,6 @@ _NAMESPACE_BEGIN_
     class GEMetalCommandQueue;
     class GEMetalCommandBuffer : public GECommandBuffer {
         id<MTLCommandBuffer> buffer;
-        id<CAMetalDrawable> metalDrawable = nil;
         id<MTLRenderCommandEncoder> rp = nil;
         id<MTLComputeCommandEncoder> cp = nil;
         GEMetalCommandQueue *parentQueue;
@@ -32,11 +31,12 @@ _NAMESPACE_BEGIN_
         id<MTLCommandQueue> commandQueue;
         NSMutableArray<id<MTLCommandBuffer>> * commandBuffers;
         friend class GEMetalCommandBuffer;
+        friend class GEMetalNativeRenderTarget;
     public:
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size);
         ~GEMetalCommandQueue();
-        void present();
+        void commitToGPU();
     };
 _NAMESPACE_END_
 

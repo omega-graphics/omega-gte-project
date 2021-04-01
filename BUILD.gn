@@ -3,6 +3,7 @@ declare_args(){
     omega_sl = false
     libcxx_dir = ""
     libcxx_include = ""
+    llvm_dir = ""
 }
 
 
@@ -160,6 +161,20 @@ if(omega_sl){
             "omegasl/OmegaSLGen.cpp",
             "omegasl/OmegaSLSyntax.h",
             "omegasl/OmegaSLSyntax.cpp"
+        ]
+        include_dirs = [
+            "${llvm_dir}/include"
+        ]
+        lib_dirs = [
+            "${llvm_dir}/libs"
+        ]
+        defines = [
+            "__STDC_CONSTANT_MACROS",
+            "__STDC_FORMAT_MACROS",
+            "__STDC_LIMIT_MACROS"
+        ]
+        libs = [
+            "clangParse"
         ]
     }
 }

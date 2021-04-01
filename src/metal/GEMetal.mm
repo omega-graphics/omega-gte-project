@@ -22,7 +22,7 @@ _NAMESPACE_BEGIN_
         id<MTLDevice> metalDevice;
     public:
         GEMetalEngine():metalDevice(MTLCreateSystemDefaultDevice()){
-            
+            DEBUG_STREAM("GEMetalEngine Successfully Created");
         };
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount){
             id<MTLCommandQueue> commandQueue = [metalDevice newCommandQueueWithMaxCommandBufferCount:maxBufferCount+1];

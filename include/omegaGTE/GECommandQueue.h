@@ -9,20 +9,7 @@ _NAMESPACE_BEGIN_
     struct GERenderPassDescriptor {
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
-        struct ColorAttachment {
-            typedef enum {
-                Load,
-                LoadPreserve,
-                Clear,
-                Discard
-            } LoadAction;
-            LoadAction loadAction;
-            struct ClearColor { 
-                float r,g,b,a;
-                ClearColor(float r,float g,float b,float a);
-            };
-            ClearColor clearColor;
-        };
+        typedef GERenderTarget::RenderPassDesc::ColorAttachment ColorAttachment;
         ColorAttachment colorAttachment;
     };
 
@@ -33,21 +20,20 @@ _NAMESPACE_BEGIN_
 
 
     class GECommandBuffer {
-    public:
+        friend class GERenderTarget::CommandBuffer;
+    private:
          /**
          Render Pass
         */
         virtual void startRenderPass(const GERenderPassDescriptor & desc) = 0;
         virtual void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState) = 0;
-        typedef enum : uint8_t {
-            Triangle,
-            TriangleStrip
-        } RenderPassDrawPolygonType;
+        typedef GERenderTarget::CommandBuffer::RenderPassDrawPolygonType RenderPassDrawPolygonType;
         virtual void drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx) = 0;
         virtual void finishRenderPass() = 0;
         /**
          Compute Pass
         */
+    public:
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
         virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;

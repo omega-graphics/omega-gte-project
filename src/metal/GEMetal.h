@@ -1,7 +1,8 @@
 #include "omegaGTE/GE.h"
+#include <iostream>
 
-#ifndef OMEGAGRAPHICSENGINE_METAL_GEMETAL_H
-#define OMEGAGRAPHICSENGINE_METAL_GEMETAL_H
+#ifndef OMEGAGTE_METAL_GEMETAL_H
+#define OMEGAGTE_METAL_GEMETAL_H
 
 _NAMESPACE_BEGIN_
     SharedHandle<OmegaGraphicsEngine> CreateMetalEngine();

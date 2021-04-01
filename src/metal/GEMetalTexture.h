@@ -9,6 +9,7 @@ _NAMESPACE_BEGIN_
 class GEMetalTexture : public GETexture {
     id<MTLTexture> texture;
     TextureDescriptor desc;
+    friend class GEMetalCommandBuffer;
 public:
     GEMetalTexture(id<MTLTexture> texture,const TextureDescriptor & desc);
 };

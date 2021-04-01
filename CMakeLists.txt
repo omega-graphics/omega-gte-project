@@ -36,6 +36,10 @@ if(CMAKE_HOST_APPLE)
     "src/metal/GEMetal.mm"
     "src/metal/GEMetalCommandQueue.h"
     "src/metal/GEMetalCommandQueue.mm"
+    "src/metal/GEMetalPipeline.h"
+    "src/metal/GEMetalPipeline.mm"
+    "src/metal/GEMetalRenderTarget.h"
+    "src/metal/GEMetalRenderTarget.mm"
     "src/metal/GEMetalTexture.h"
     "src/metal/GEMetalTexture.mm"
     )

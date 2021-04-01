@@ -2,6 +2,9 @@
 #include <thread>
 #include <future>
 
+#ifndef OMEGAGTE_TE_H
+#define OMEGAGTE_TE_H
+
 _NAMESPACE_BEGIN_
 
 class TECoordinateSpaceContext {
@@ -25,3 +28,5 @@ public:
 };
 
 _NAMESPACE_END_
+
+#endif

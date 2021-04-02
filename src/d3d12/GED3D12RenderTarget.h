@@ -2,8 +2,8 @@
 #include "omegaGTE/GERenderTarget.h"
 #include "GED3D12CommandQueue.h"
 
-#ifndef OMEGAGRAPHICSENGINE_D3D12_GED3D12RENDERTARGET_H
-#define OMEGAGRAPHICSENGINE_D3D12_GED3D12RENDERTARGET_H
+#ifndef OMEGAGTE_D3D12_GED3D12RENDERTARGET_H
+#define OMEGAGTE_D3D12_GED3D12RENDERTARGET_H
 
 _NAMESPACE_BEGIN_
     class GED3D12NativeRenderTarget : public GENativeRenderTarget {
@@ -11,6 +11,8 @@ _NAMESPACE_BEGIN_
         ComPtr<IDXGISwapChain3> swapChain;
         SharedHandle<GED3D12CommandQueue> commandQueue;
     public:
+        SharedHandle<CommandBuffer> commandBuffer();
+        void commitAndPresent();
          ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
           unsigned frameIndex;
         std::vector<ID3D12Resource *> renderTargets;
@@ -25,7 +27,10 @@ _NAMESPACE_BEGIN_
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {
         GED3D12Engine *engine;
         ComPtr<ID3D12Resource> renderTarget;
+        SharedHandle<GED3D12CommandQueue> commandQueue;
     public:
+        void commit();
+        SharedHandle<CommandBuffer> commandBuffer();
         ComPtr<ID3D12Resource> renderTargetView;
         ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
     };

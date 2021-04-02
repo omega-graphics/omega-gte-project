@@ -6,6 +6,12 @@ _NAMESPACE_BEGIN_
     // void GED3D12CommandBuffer::commitToBuffer(){};
     GED3D12CommandQueue::GED3D12CommandQueue(GED3D12Engine *engine,unsigned size):GECommandQueue(size),engine(engine),currentCount(0){
         HRESULT hr;
+        hr = engine->d3d12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,IID_PPV_ARGS(bufferAllocator.GetAddressOf()));
+
+        if(FAILED(hr)){
+            exit(1);
+        };
+
         D3D12_COMMAND_QUEUE_DESC desc;
         desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         desc.NodeMask = engine->d3d12_device->GetNodeCount();
@@ -40,7 +46,7 @@ _NAMESPACE_BEGIN_
             commandList->ResourceBarrier(1,&barrier);
         };
         rt_desc.cpuDescriptor = cpu_handle;
-        switch (desc.colorAttachment.loadAction) {
+        switch (desc.colorAttachment->loadAction) {
             case GERenderPassDescriptor::ColorAttachment::Load : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
                 rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
@@ -58,7 +64,7 @@ _NAMESPACE_BEGIN_
             }
             case GERenderPassDescriptor::ColorAttachment::Clear : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-                std::initializer_list<FLOAT> colors = {desc.colorAttachment.clearColor.r,desc.colorAttachment.clearColor.g,desc.colorAttachment.clearColor.b,desc.colorAttachment.clearColor.a};
+                std::initializer_list<FLOAT> colors = {desc.colorAttachment->clearColor.r,desc.colorAttachment->clearColor.g,desc.colorAttachment->clearColor.b,desc.colorAttachment->clearColor.a};
                 rt_desc.BeginningAccess.Clear.ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM,colors.begin());
                 /// Same as StoreAction in Metal
                 rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
@@ -78,10 +84,10 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx){
         assert(!inComputePass && "Cannot Draw Polygons while in Compute Pass");
         D3D12_PRIMITIVE_TOPOLOGY topology;
-        if(polygonType == Triangle){
+        if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::Triangle){
             topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         }
-        else if(polygonType == TriangleStrip){
+        else if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::TriangleStrip){
             topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
         };
         commandList->IASetPrimitiveTopology(topology);
@@ -108,21 +114,34 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::commitToQueue(){
         HRESULT hr;
         hr = commandList->Close();
-        // parentQueue->commandQueue->ExecuteCommandLists(1,(ID3D12CommandList * const *)commandList.GetAddressOf());
+        
+        parentQueue->commandLists.push_back(commandList.Get());
     };
 
-    void GED3D12CommandQueue::present(){
+    void GED3D12CommandBuffer::reset(){
+        commandList->Reset(parentQueue->bufferAllocator.Get(),nullptr);
+    };
 
+    void GED3D12CommandQueue::commitToGPU(){
+        commandQueue->ExecuteCommandLists(commandLists.size(),(ID3D12CommandList *const *)commandLists.data());
     };
 
     SharedHandle<GECommandBuffer> GED3D12CommandQueue::getAvailableBuffer(){
         HRESULT hr;
         ID3D12GraphicsCommandList6 *commandList;
-        hr = engine->d3d12_device->CreateCommandList(engine->d3d12_device->GetNodeCount(),D3D12_COMMAND_LIST_TYPE_DIRECT,engine->bufferAllocator.Get(),NULL,IID_PPV_ARGS(&commandList));
+        hr = engine->d3d12_device->CreateCommandList(engine->d3d12_device->GetNodeCount(),D3D12_COMMAND_LIST_TYPE_DIRECT,bufferAllocator.Get(),NULL,IID_PPV_ARGS(&commandList));
         if(FAILED(hr)){
             exit(1);
         };
         return std::make_shared<GED3D12CommandBuffer>(commandList,this);
 
+    };
+
+    void GED3D12CommandQueue::reset(){
+        HRESULT hr;
+        hr = bufferAllocator->Reset();
+        if(FAILED(hr)){
+            exit(1);
+        };
     };
 _NAMESPACE_END_

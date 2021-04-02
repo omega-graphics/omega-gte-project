@@ -1,8 +1,8 @@
 #include "omegaGTE/GECommandQueue.h"
 #include "GED3D12.h"
 
-#ifndef OMEGAGRAPHICSENGINE_GED3D12COMMANDQUEUE_H
-#define OMEGAGRAPHICSENGINE_GED3D12COMMANDQUEUE_H
+#ifndef OMEGAGTE_GED3D12COMMANDQUEUE_H
+#define OMEGAGTE_GED3D12COMMANDQUEUE_H
 
 _NAMESPACE_BEGIN_
     class GED3D12CommandQueue;
@@ -23,16 +23,20 @@ _NAMESPACE_BEGIN_
 
         void commitToQueue();
         GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
+        void reset();
     };
 
     class GED3D12CommandQueue : public GECommandQueue {
         GED3D12Engine *engine;
+        std::vector<ID3D12GraphicsCommandList6 *> commandLists;
         ComPtr<ID3D12CommandQueue> commandQueue;
+        ComPtr<ID3D12CommandAllocator> bufferAllocator;
         unsigned currentCount;
         friend class GED3D12Engine;
         friend class GED3D12CommandBuffer;
     public:
-        void present();
+        void commitToGPU();
+        void reset();
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
     };

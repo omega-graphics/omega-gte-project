@@ -24,10 +24,6 @@ _NAMESPACE_BEGIN_
         if(FAILED(hr)){
             exit(1);
         };
-        hr = d3d12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,IID_PPV_ARGS(bufferAllocator.GetAddressOf()));
-        if(FAILED(hr)){
-            exit(1);
-        };
 
         // D3D12_DESCRIPTOR_HEAP_DESC desc;
         // desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;

@@ -37,13 +37,15 @@ _NAMESPACE_BEGIN_
         class CommandBuffer {
             GERenderTarget *renderTargetPtr;
             SharedHandle<GECommandBuffer> commandBuffer;
-#ifdef TARGET_DIRECTX
-#endif
+            #ifdef TARGET_DIRECTX
+            friend class GED3D12NativeRenderTarget;
+            friend class GED3D12TextureRenderTarget;
+            #endif
             
-#ifdef TARGET_METAL
+            #ifdef TARGET_METAL
             friend class GEMetalNativeRenderTarget;
             friend class GEMetalTextureRenderTarget;
-#endif
+            #endif
         
             /// Do NOT CALL THESE CONSTRUCTORS!!!
             typedef enum : uint8_t {

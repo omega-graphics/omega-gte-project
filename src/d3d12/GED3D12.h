@@ -7,6 +7,7 @@
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
 #include <pix.h>
+#include <iostream>
 
 #include <wrl.h>
 
@@ -14,8 +15,8 @@
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"runtimeobject.lib")
 
-#ifndef OMEGAGRAPHICSENGINE_GED3D12_H
-#define OMEGAGRAPHICSENGINE_GED3D12_H
+#ifndef OMEGAGTE_GED3D12_H
+#define OMEGAGTE_GED3D12_H
 
 _NAMESPACE_BEGIN_
     using Microsoft::WRL::ComPtr;
@@ -25,8 +26,7 @@ _NAMESPACE_BEGIN_
         GED3D12Engine();
         ComPtr<IDXGIFactory4> dxgi_factory;
         ComPtr<ID3D12Device8> d3d12_device;
-        ComPtr<ID3D12CommandAllocator> bufferAllocator;
-        ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
+        // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
         SharedHandle<GEFence> makeFence();
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);

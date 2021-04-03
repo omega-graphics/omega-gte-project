@@ -95,7 +95,7 @@ _NAMESPACE_BEGIN_
         layout_info.setLayoutCount = 0;
         layout_info.pushConstantRangeCount = 0;
         layout_info.pPushConstantRanges = nullptr;
-
+    
         vk::UniquePipelineLayout pipeline_layout = device.createPipelineLayoutUnique(layout_info);
 
         vk::GraphicsPipelineCreateInfo pipeline_desc;
@@ -114,7 +114,7 @@ _NAMESPACE_BEGIN_
         fragmentStage.pName = "main";
         
         std::initializer_list<vk::PipelineShaderStageCreateInfo> stages = {vertexStage,fragmentStage};
-
+        
         pipeline_desc.pStages = stages.begin();
         pipeline_desc.stageCount = 2;
         auto pipeline = device.createGraphicsPipelineUnique(nullptr,pipeline_desc);

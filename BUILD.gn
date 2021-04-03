@@ -4,6 +4,8 @@ declare_args(){
     libcxx_dir = ""
     libcxx_include = ""
     llvm_dir = ""
+    glm_include_dir = ""
+    glm_lib = ""
 }
 
 

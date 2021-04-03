@@ -46,8 +46,15 @@ _NAMESPACE_BEGIN_
         GRect rect;
     };
 
-    struct GEViewport {
+    struct OMEGAGTE_EXPORT GEViewport {
+        float x,y;
+        float width,height;
+        float nearDepth,farDepth;
+    };
 
+    struct OMEGAGTE_EXPORT GEScissorRect {
+        float x,y;
+        float width,height;
     };
 
     struct BufferDescriptor {
@@ -56,15 +63,34 @@ _NAMESPACE_BEGIN_
     };
 
     class GEBuffer {
-
+        virtual size_t size() = 0;
+        virtual void *data() = 0;
     };
 
     struct HeapDescriptor {
-
+        typedef enum : uint8_t {
+            Shared,
+            Automatic
+        } HeapType;
+        size_t len;
     };
 
     class GEHeap {
+    public:
+        virtual size_t currentSize() = 0;
+        /**
+         Creates a GEBuffer from a BufferDescriptor.
+         @param[in] desc The Buffer Descriptor, which could describe a buffer at any length with any object.
+         @returns SharedHandle<GEBuffer>
+        */
+        virtual SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor & desc) = 0;
 
+        /**
+          Creates a GETexture from a TextureDescriptor.
+         @param[in] desc The Texture Descriptor,  which could describe a 2D, 3D, 2D-Multisampled,or 3D-Multisampled texture with any given width, height (and depth).
+         @returns SharedHandle<GETexture>
+        */
+        virtual SharedHandle<GETexture> makeTexture(const TextureDescriptor & desc) = 0;
     };
 
     class GEFence {

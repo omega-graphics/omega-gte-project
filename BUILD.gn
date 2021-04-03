@@ -22,10 +22,14 @@ if(is_windows){
          "src/d3d12/GED3D12.h",
          "src/d3d12/GED3D12CommandQueue.h",
          "src/d3d12/GED3D12RenderTarget.h",
+         "src/d3d12/GED3D12Pipeline.h",
+         "src/d3d12/GED3D12Texture.h",
          # Sources
          "src/d3d12/GED3D12.cpp",
          "src/d3d12/GED3D12CommandQueue.cpp",
-         "src/d3d12/GED3D12RenderTarget.cpp"
+         "src/d3d12/GED3D12RenderTarget.cpp",
+         "src/d3d12/GED3D12Pipeline.cpp",
+         "src/d3d12/GED3D12Texture.cpp"
     ]
 }
 else if(is_mac){
@@ -67,6 +71,12 @@ shared_library("OmegaGTE"){
     }
     else if(is_windows){
         defines = ["TARGET_DIRECTX"]
+        output_extension = "dll"
+        ldflags = [
+            # "/WHOLEARCHIVE",
+            "/INCREMENTAL",
+            "/opt:noref"
+        ]
     }
     else if(is_linux){
         defines = ["TARGET_VULKAN"]

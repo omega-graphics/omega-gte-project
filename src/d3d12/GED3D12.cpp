@@ -7,14 +7,86 @@ _NAMESPACE_BEGIN_
 
     class GED3D12Buffer : public GEBuffer {
         ComPtr<ID3D12Resource> buffer;
+        D3D12_VERTEX_BUFFER_VIEW bufferView;
     public:
-        GED3D12Buffer(ID3D12Resource *buffer):buffer(buffer){};
+        size_t size(){
+            return buffer->GetDesc().Width;
+        };
+        void * data(){
+            void *ptr;
+            CD3DX12_RANGE readRange(0,0);
+            buffer->Map(0,&readRange,&ptr);
+            return ptr;
+        };
+         void removePtrRef(){
+             buffer->Unmap(0,nullptr);
+         };
+         void setStride(size_t stride){
+             bufferView.StrideInBytes = stride;
+         };
+        GED3D12Buffer(ID3D12Resource *buffer):buffer(buffer){
+            bufferView.BufferLocation = buffer->GetGPUVirtualAddress();
+            bufferView.SizeInBytes = buffer->GetDesc().Width;
+        };
     };
 
     class GED3D12Fence : public GEFence {
         ComPtr<ID3D12Fence> fence;
     public:
         GED3D12Fence(ID3D12Fence *fence):fence(fence){};
+    };
+
+    class GED3D12Heap : public GEHeap {
+        GED3D12Engine *engine;
+        ComPtr<ID3D12Heap> heap;
+        size_t currentOffset;
+    public:
+        GED3D12Heap(GED3D12Engine *engine,ID3D12Heap * heap):engine(engine),heap(heap),currentOffset(0){};
+        size_t currentSize(){
+            return heap->GetDesc().SizeInBytes;
+        };
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc){
+            HRESULT hr;
+            D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
+            ID3D12Resource *buffer;
+            hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_GENERIC_READ,NULL,IID_PPV_ARGS(&buffer));
+            if(FAILED(hr)){
+                exit(1);
+            };
+            auto alloc_info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
+            currentOffset += alloc_info.SizeInBytes;
+            return std::make_shared<GED3D12Buffer>(buffer);
+        };
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc){
+            HRESULT hr;
+            D3D12_RESOURCE_DESC d3d12_desc;
+            D3D12_RESOURCE_STATES res_states;
+
+            if(desc.usage & GETexture::RenderTarget){
+                res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+            }
+            else if(desc.usage & GETexture::GPURead){
+                res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
+            }   
+            else if(desc.usage & GETexture::GPUWrite){
+                res_states |= D3D12_RESOURCE_STATE_COPY_DEST;
+            };
+
+            if(desc.type == GETexture::Texture2D){
+                d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height);
+            }
+            else if(desc.type == GETexture::Texture3D){
+            d3d12_desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,desc.depth);
+            };
+            ID3D12Resource *texture;
+            hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_GENERIC_READ,NULL,IID_PPV_ARGS(&texture));
+            if(FAILED(hr)){
+                exit(1);
+            };
+            auto alloc_info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
+            currentOffset += alloc_info.SizeInBytes;
+            return std::make_shared<GED3D12Texture>(texture);
+        };
     };
 
     GED3D12Engine::GED3D12Engine(){
@@ -107,7 +179,7 @@ _NAMESPACE_BEGIN_
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
-     return nullptr;   
+        return nullptr;   
     };
 
     SharedHandle<GECommandQueue> GED3D12Engine::makeCommandQueue(unsigned int maxBufferCount){

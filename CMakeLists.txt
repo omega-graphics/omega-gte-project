@@ -86,6 +86,7 @@ add_library("OmegaGTE" SHARED
 "src/TE.cpp"
 ${_TARGET_SOURCES})
 
+# set_target_properties("OmegaGTE" PROPERTIES LINK_FLAGS "")
 
 if(TARGET_METAL)
 

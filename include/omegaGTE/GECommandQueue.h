@@ -18,7 +18,9 @@ _NAMESPACE_BEGIN_
 
     };
 
-
+    /**
+     A Reusable interface for directly uploading commands to a GPU.
+     */
     class GECommandBuffer {
         friend class GERenderTarget::CommandBuffer;
     protected:
@@ -39,6 +41,7 @@ _NAMESPACE_BEGIN_
         virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
         virtual void commitToQueue() = 0;
+        virtual void reset() = 0;
     };
     class GECommandQueue {
         unsigned size;

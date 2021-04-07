@@ -25,6 +25,7 @@ _NAMESPACE_BEGIN_
         void finishComputePass();
         GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue);
         void commitToQueue();
+        void reset();
     };
 
     class GEMetalCommandQueue : public GECommandQueue {

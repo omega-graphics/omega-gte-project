@@ -93,6 +93,10 @@ _NAMESPACE_BEGIN_
         [parentQueue->commandBuffers addObject:buffer];
     };
 
+    void GEMetalCommandBuffer::reset(){
+        buffer = [parentQueue->commandQueue commandBuffer];
+    };
+
     GEMetalCommandQueue::GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size):GECommandQueue(size),commandQueue(queue){
         commandBuffers = [[NSMutableArray alloc] init];
     };
@@ -101,8 +105,8 @@ _NAMESPACE_BEGIN_
         @autoreleasepool {
             for(id<MTLCommandBuffer> commandBuffer in commandBuffers){
                 [commandBuffer commit];
-                // [commandBuffer waitUntilScheduled];
             };
+            [commandBuffers removeAllObjects];
         };
     };
 

@@ -8,17 +8,17 @@
 
 _NAMESPACE_BEGIN_
 
-    class GEMetalBuffer : public GEBuffer {
-        id<MTLBuffer> metalBuffer;
-    public:
-        GEMetalBuffer(id<MTLBuffer> buffer):GEBuffer(),metalBuffer(buffer){};
-    };
+    GEMetalBuffer::GEMetalBuffer(id<MTLBuffer> buffer):metalBuffer(buffer){};
     
-    class GEMetalFence : public GEFence {
-        id<MTLFence> metalFence;
-    public:
-        GEMetalFence(id<MTLFence> fence):GEFence(),metalFence(fence){};
+    size_t GEMetalBuffer::size(){
+        return metalBuffer.length;
     };
+
+    void * GEMetalBuffer::data(){
+        return [metalBuffer contents];
+    };
+
+    GEMetalFence::GEMetalFence(id<MTLFence> fence):metalFence(fence){};
 
     class GEMetalEngine : public OmegaGraphicsEngine {
         id<MTLDevice> metalDevice;

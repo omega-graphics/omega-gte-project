@@ -7,10 +7,6 @@
 
 _NAMESPACE_BEGIN_
 
-class TECoordinateSpaceContext {
-
-};
-
 struct TETessalationParams {
     
 };

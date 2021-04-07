@@ -1,11 +1,14 @@
 #include "GTEBase.h"
 #include "GEPipeline.h"
 #include "GERenderTarget.h"
+#include "GETexture.h"
 
 #ifndef OMEGAGTE_GECOMMANDQUEUE_H
 #define OMEGAGTE_GECOMMANDQUEUE_H
 
 _NAMESPACE_BEGIN_
+    class GEBuffer;
+
     struct GERenderPassDescriptor {
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
@@ -31,6 +34,13 @@ _NAMESPACE_BEGIN_
         */
         virtual void startRenderPass(const GERenderPassDescriptor & desc) = 0;
         virtual void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState) = 0;
+        
+        virtual void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index) = 0;
+        virtual void setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index) = 0;
+        
+        virtual void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index) = 0;
+        virtual void setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index) = 0;
+        
         virtual void drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx) = 0;
         virtual void finishRenderPass() = 0;
         /**

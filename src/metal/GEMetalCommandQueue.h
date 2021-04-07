@@ -17,7 +17,11 @@ _NAMESPACE_BEGIN_
     public:
         void startRenderPass(const GERenderPassDescriptor &desc);
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
-        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx) ;
+        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx);
+        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
+        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned index);
+        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
+        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned index);
         void finishRenderPass();
         
         void startComputePass(const GEComputePassDescriptor &desc);

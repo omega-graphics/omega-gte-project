@@ -1,6 +1,7 @@
 #import "GEMetalCommandQueue.h"
 #import "GEMetalRenderTarget.h"
 #import "GEMetalPipeline.h"
+#import "GEMetal.h"
 
 #import <QuartzCore/QuartzCore.h>
 _NAMESPACE_BEGIN_
@@ -59,6 +60,30 @@ _NAMESPACE_BEGIN_
         [rp setRenderPipelineState:ps->renderPipelineState];
     };
 
+    void GEMetalCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index){
+        assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
+        GEMetalBuffer *metalBuffer = (GEMetalBuffer *)buffer.get();
+        [rp setVertexBuffer:metalBuffer->metalBuffer offset:0 atIndex:index];
+    };
+
+    void GEMetalCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index){
+        assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
+        GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
+        [rp setVertexTexture:metalTexture->texture atIndex:index];
+    };
+
+    void GEMetalCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index){
+        assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
+        GEMetalBuffer *metalBuffer = (GEMetalBuffer *)buffer.get();
+        [rp setFragmentBuffer:metalBuffer->metalBuffer offset:0 atIndex:index];
+    };
+
+    void GEMetalCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index){
+        assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
+        GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
+        [rp setFragmentTexture:metalTexture->texture atIndex:index];
+    };
+    
     void GEMetalCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx){
         assert((rp && (cp == nil)) && "Cannot Draw Polygons when not in render pass");
         MTLPrimitiveType primativeType;

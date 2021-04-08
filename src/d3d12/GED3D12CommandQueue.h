@@ -11,10 +11,21 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12GraphicsCommandList6> commandList;
         GED3D12CommandQueue *parentQueue;
         bool inComputePass;
+        bool inBlitPass;
+        std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
     public:
+        void startBlitPass();
+        void finishBlitPass();
+
         void startRenderPass(const GERenderPassDescriptor &desc);
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
+        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
+        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index);
+        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
+        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index);
         void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx);
+        void setViewports(std::vector<GEViewport> viewports);
+        void setScissorRects(std::vector<GEScissorRect> scissorRects);
         void finishRenderPass();
 
         void startComputePass(const GEComputePassDescriptor &desc);

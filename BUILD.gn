@@ -96,6 +96,7 @@ shared_library("OmegaGTE"){
             "/INCREMENTAL",
             "/opt:noref"
         ]
+        output_dir = "$root_out_dir/libs"
     }
     else if(is_linux){
         defines = ["TARGET_VULKAN"]
@@ -186,9 +187,49 @@ if(is_mac){
     }
 }
 
+test_out_dir = root_out_dir + "/tests"
+
+if(is_windows){
+    template("directx_test"){
+
+        if(defined(invoker.include_dirs)){
+            invoker.include_dirs += [include_dir]
+        }
+        else {
+            invoker.include_dirs = [include_dir]
+        }
+        invoker.ldflags = [
+           "User32.lib"
+        ]
+        invoker.public_deps = [
+            ":OmegaGTE"
+        ]
+        invoker.output_dir = "$root_out_dir/tests"
+        executable(target_name){
+            forward_variables_from(invoker,"*")
+        }
+        exe_name = target_name
+       
+        copy("${target_name}__copy_dll"){
+            sources = ["$root_out_dir/libs/OmegaGTE.dll"]
+            public_deps = [
+                ":$exe_name"
+            ]
+            outputs = [
+                "${test_out_dir}/{{source_file_part}}"
+            ]
+        }
+    }
+
+    directx_test("2DTest"){
+        sources = [
+            "tests/directx/2DTest/main.cpp"
+        ]
+    }
+}
+
 if(is_linux){
     # Compile Test Suite
-    test_out_dir = root_out_dir + "/tests"
     template("vulkan_test"){
         if(defined(invoker.include_dirs)){
             invoker.include_dirs += [include_dir]
@@ -199,7 +240,7 @@ if(is_linux){
         invoker.cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags
         invoker.ldflags =
         gtk_link_flags + ["-rpath",rebase_path("$root_out_dir/tests")]
-        invoker.output_name = "tests/$target_name"
+        invoker.output_name = "$target_name"
         invoker.libs = [
             "c",
             "c++",

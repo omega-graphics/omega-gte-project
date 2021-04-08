@@ -123,7 +123,7 @@ _NAMESPACE_BEGIN_
 
 
     template<class _Pt_Ty>
-    class VectorPath_Base {
+    class GVectorPath_Base {
         public:
         struct Node {
             _Pt_Ty *pt;
@@ -229,9 +229,9 @@ _NAMESPACE_BEGIN_
             };
             return out_.str();
         };
-        VectorPath_Base(const _Pt_Ty & start):first(new Node(new _Pt_Ty(std::move(start)))),len(0),numPoints(1){};
-        VectorPath_Base(_Pt_Ty &&start):first(new Node(new _Pt_Ty(std::move(start)))),len(0),numPoints(1){};
-        VectorPath_Base(VectorPath_Base<_Pt_Ty> & other){
+        GVectorPath_Base(const _Pt_Ty & start):first(new Node(new _Pt_Ty(std::move(start)))),len(0),numPoints(1){};
+        GVectorPath_Base(_Pt_Ty &&start):first(new Node(new _Pt_Ty(std::move(start)))),len(0),numPoints(1){};
+        GVectorPath_Base(GVectorPath_Base<_Pt_Ty> & other){
             Node *& pt_a = other.first;
             first = new Node(new _Pt_Ty(*(pt_a->pt)));
             Node *&next = first->next;
@@ -250,16 +250,16 @@ _NAMESPACE_BEGIN_
             len = other.len;
             
         };
-        VectorPath_Base() = delete;
-        VectorPath_Base(const VectorPath_Base<_Pt_Ty> &) = delete;
-        VectorPath_Base(VectorPath_Base<_Pt_Ty> && other):first(other.first),len(other.len){};
-        ~VectorPath_Base(){
+        GVectorPath_Base() = delete;
+        GVectorPath_Base(const GVectorPath_Base<_Pt_Ty> &) = delete;
+        GVectorPath_Base(GVectorPath_Base<_Pt_Ty> && other):first(other.first),len(other.len){};
+        ~GVectorPath_Base(){
             delete first;
         };
     };
     
-    typedef VectorPath_Base<GPoint2D> VectorPath2D;
-    typedef VectorPath_Base<GPoint3D> VectorPath3D;
+    typedef GVectorPath_Base<GPoint2D> GVectorPath2D;
+    typedef GVectorPath_Base<GPoint3D> GVectorPath3D;
 
 
 

@@ -21,6 +21,52 @@
 _NAMESPACE_BEGIN_
     using Microsoft::WRL::ComPtr;
 
+     class GED3D12Buffer : public GEBuffer {
+    public:
+        ComPtr<ID3D12Resource> buffer;
+        D3D12_VERTEX_BUFFER_VIEW bufferView;
+        size_t size(){
+            return buffer->GetDesc().Width;
+        };
+        void * data(){
+            void *ptr;
+            CD3DX12_RANGE readRange(0,0);
+            buffer->Map(0,&readRange,&ptr);
+            return ptr;
+        };
+         void removePtrRef(){
+             buffer->Unmap(0,nullptr);
+         };
+         void setStride(size_t stride){
+             bufferView.StrideInBytes = stride;
+         };
+        GED3D12Buffer(ID3D12Resource *buffer):buffer(buffer){
+            bufferView.BufferLocation = buffer->GetGPUVirtualAddress();
+            bufferView.SizeInBytes = buffer->GetDesc().Width;
+        };
+    };
+
+    class GED3D12Fence : public GEFence {
+    public:
+        ComPtr<ID3D12Fence> fence;
+        GED3D12Fence(ID3D12Fence *fence):fence(fence){};
+    };
+
+    class GED3D12Engine;
+
+    class GED3D12Heap : public GEHeap {
+        GED3D12Engine *engine;
+        ComPtr<ID3D12Heap> heap;
+        size_t currentOffset;
+    public:
+        GED3D12Heap(GED3D12Engine *engine,ID3D12Heap * heap):engine(engine),heap(heap),currentOffset(0){};
+        size_t currentSize(){
+            return heap->GetDesc().SizeInBytes;
+        };
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
+    };
+
     class GED3D12Engine : public OmegaGraphicsEngine {
     public:
         GED3D12Engine();

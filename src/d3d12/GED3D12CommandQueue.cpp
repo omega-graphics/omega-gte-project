@@ -1,6 +1,7 @@
 #include "GED3D12CommandQueue.h"
 #include "GED3D12RenderTarget.h"
 #include "GED3D12Pipeline.h"
+#include "GED3D12Texture.h"
 _NAMESPACE_BEGIN_
     // GED3D12CommandBuffer::GED3D12CommandBuffer(){};
     // void GED3D12CommandBuffer::commitToBuffer(){};
@@ -24,8 +25,16 @@ _NAMESPACE_BEGIN_
 
     };
 
-    GED3D12CommandBuffer::GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue):commandList(commandList),parentQueue(parentQueue),inComputePass(false){
+    GED3D12CommandBuffer::GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue):commandList(commandList),parentQueue(parentQueue),inComputePass(false),inBlitPass(false){
         
+    };
+
+    void GED3D12CommandBuffer::startBlitPass(){
+        inBlitPass = true;
+    };
+
+    void GED3D12CommandBuffer::finishBlitPass(){
+        inBlitPass = false;
     };
 
     void GED3D12CommandBuffer::startRenderPass(const GERenderPassDescriptor &desc){
@@ -81,6 +90,56 @@ _NAMESPACE_BEGIN_
         commandList->SetPipelineState(d3d12_pipeline_state->pipelineState.Get());
     };
 
+    void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
+        assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const at a Vertex Func when not in render pass");
+        GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
+        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+    };
+
+    void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index){
+         assert((!inComputePass && !inBlitPass) &&"Cannot set Resource Const at a Vertex Func when not in render pass");
+        GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
+        commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->descHeap->GetGPUDescriptorHandleForHeapStart());
+        descriptorHeapBuffer.push_back(d3d12_texture->descHeap.Get());
+    };
+
+    void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
+         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
+        GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
+        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+    };
+
+    void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index){
+         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
+         GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
+         commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->descHeap->GetGPUDescriptorHandleForHeapStart());
+         descriptorHeapBuffer.push_back(d3d12_texture->descHeap.Get());
+    };
+
+    void GED3D12CommandBuffer::setViewports(std::vector<GEViewport> viewports){
+        std::vector<D3D12_VIEWPORT> d3d12_viewports;
+        auto viewports_it = viewports.begin();
+        while(viewports_it != viewports.end()){
+            GEViewport & viewport = *viewports_it;
+            CD3DX12_VIEWPORT v(viewport.x,viewport.height - viewport.y,viewport.width,viewport.height,viewport.nearDepth,viewport.farDepth);
+            d3d12_viewports.push_back(std::move(v));
+            ++viewports_it;
+        };
+        commandList->RSSetViewports(d3d12_viewports.size(),d3d12_viewports.data());
+    };
+
+    void GED3D12CommandBuffer::setScissorRects(std::vector<GEScissorRect> scissorRects){
+        std::vector<D3D12_RECT> d3d12_rects;
+        auto rects_it = scissorRects.begin();
+        while(rects_it != scissorRects.end()){
+            GEScissorRect & rect = *rects_it;
+            CD3DX12_RECT r(rect.x,rect.y,rect.width + rect.x,rect.height + rect.y);
+            d3d12_rects.push_back(std::move(r));
+            ++rects_it;
+        };
+        commandList->RSSetScissorRects(d3d12_rects.size(),d3d12_rects.data());
+    };
+
     void GED3D12CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx){
         assert(!inComputePass && "Cannot Draw Polygons while in Compute Pass");
         D3D12_PRIMITIVE_TOPOLOGY topology;
@@ -95,7 +154,9 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandBuffer::finishRenderPass(){
+        commandList->SetDescriptorHeaps(descriptorHeapBuffer.size(),descriptorHeapBuffer.data());
         commandList->EndRenderPass();
+        descriptorHeapBuffer.clear();
     };
 
     void GED3D12CommandBuffer::startComputePass(const GEComputePassDescriptor &desc){

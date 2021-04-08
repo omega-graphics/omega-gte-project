@@ -7,10 +7,10 @@
 _NAMESPACE_BEGIN_
 
 class GED3D12Texture : public GETexture {
-    ComPtr<ID3D12Resource> resource;
-    D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 public:
-    GED3D12Texture(ID3D12Resource *res);
+    ComPtr<ID3D12Resource> resource;
+    ComPtr<ID3D12DescriptorHeap> descHeap;
+    GED3D12Texture(ID3D12Resource *res,ID3D12DescriptorHeap *descHeap);
 };
 
 _NAMESPACE_END_

@@ -69,6 +69,8 @@ _NAMESPACE_BEGIN_
             void endComputePass();
             
             void schedule();
+            
+            void reset();
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;
     };

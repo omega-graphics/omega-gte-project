@@ -1,33 +1,57 @@
 declare_args(){
     debug = false
-    python3 = ""
+    # python3 = ""
+}
+
+if(debug){
+    debug_flag = "-gdwarf"
+}
+else {
+    debug_flag = ""
 }
 
 toolchain("llvm") {
     if(is_windows){
+        cc = "clang-cl"
         win_cmd_prefix = "cmd.exe /c"
         obj_ext = "obj"
     }
     if(is_mac || is_linux){
-        python_path = python3
+        # python_path = python3
         obj_ext = "o"
     }
     else {
-        lld_command = "lld-link"
+        # lld_command = "lld-link"
     }
 
     if(is_mac){
-        lld_command = "ld"
+        cc = "clang"
+        cxx = "clang++"
+        # lld_command = "ld"
     }
 
+    tool("asm"){
+        if(is_linux || is_mac){
+            command = "clang {{defines}} -o {{output}}"
+        }
+        else {
+            command = "clang-cl {{defines}} {{source}} -o {{output}}"
+        }
+        outputs = [
+            "{{source_out_dir}}/{{source_name_part}}.${obj_ext}"
+        ]
+        description = "Compiling ASM source {{output}}"
+    }
     tool("cc") {
         depfile = "{{output}}.d"
-        command = "clang -MD -MF $depfile  {{defines}} {{include_dirs}} {{cflags_c}}  -c {{source}}  -o {{output}}"
+        
         if(is_linux || is_mac){
             depsformat = "gcc"
+            command = "$cc -MD -MF $depfile  {{defines}} {{include_dirs}} $debug_flag {{cflags_c}}  -c {{source}}  -o {{output}}"
         }
         else {
             depsformat = "msvc"
+            command = "$cc /clang:-MD /clang:-MF /clang:$depfile  {{defines}} {{include_dirs}} $debug_flag {{cflags_c}}  -c {{source}}  -o {{output}}"
         }
         description = "Compiling C source {{output}}"
         outputs = [
@@ -37,10 +61,10 @@ toolchain("llvm") {
     tool("cxx"){
         depfile = "{{output}}.d"
         if(is_linux || is_mac){
-            command = "clang++ -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} -c {{source}} -o {{output}}"
+            command = "$cxx -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} $debug_flag {{cflags_c}} {{cflags_cc}} -c {{source}} -o {{output}}"
         }
         else {
-            command = "clang-cl /clang:-MD /clang:-MF /clang:$depfile /std:c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} -c {{source}} -o {{output}}"
+            command = "clang-cl /clang:-MD /clang:-MF /clang:$depfile /std:c++17 {{defines}} {{include_dirs}} $debug_flag {{cflags_c}} {{cflags_cc}} -c {{source}} -o {{output}}"
         }
         if(is_linux || is_mac){
             depsformat = "gcc"
@@ -55,12 +79,14 @@ toolchain("llvm") {
     }
     tool("cxx_module"){
         depfile = "{{output}}.d"
-        command = "clang++ -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} -fmodules -fmodule-name={{label}} -Xclang -Xclang -emit-module-interface -c {{source}} -o {{output}}"
+        
         if(is_linux || is_mac){
             depsformat = "gcc"
+            command = "$cxx -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} -fmodules -fmodule-name={{label}} -Xclang -Xclang -emit-module-interface -c {{source}} -o {{output}}"
         }
         else {
             depsformat = "msvc"
+            command = "clang-cl /clang:-MD /clang:-MF /clang:$depfile /std:c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} -c {{source}} -o {{output}} -fmodules -fmodule-name={{label}} -Xclang -Xclang -emit-module-interface -c {{source}} -o {{output}}"
         }
         description = "Compiling CXX source for module {{label}} {{output}}"
         outputs = [
@@ -72,7 +98,7 @@ toolchain("llvm") {
             depfile = "{{output}}.d"
             depsformat = "gcc"
             description = "Compiling OBJC source {{output}}"
-            command = "clang -MD -MF $depfile  {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_objc}}  -c {{source}}  -o {{output}}"
+            command = "$cc -MD -MF $depfile  {{defines}} {{include_dirs}} $debug_flag {{cflags_c}} {{cflags_objc}}  -c {{source}}  -o {{output}}"
             outputs = [
                 "{{source_out_dir}}/{{source_name_part}}.${obj_ext}"
             ]
@@ -81,7 +107,7 @@ toolchain("llvm") {
             depfile = "{{output}}.d"
             depsformat = "gcc"
             description = "Compiling OBJCXX source {{output}}"
-            command = "clang++ -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} {{cflags_c}} {{cflags_cc}} {{cflags_objc}} {{cflags_objcc}} -c {{source}} -o {{output}}"
+            command = "$cxx -MD -MF $depfile -std=c++17 {{defines}} {{include_dirs}} $debug_flag {{cflags_c}} {{cflags_cc}} {{cflags_objc}} {{cflags_objcc}} -c {{source}} -o {{output}}"
             outputs = [
                 "{{source_out_dir}}/{{source_name_part}}.${obj_ext}"
             ]
@@ -99,7 +125,7 @@ toolchain("llvm") {
         _new_out = rebase_path("../../out/gen")
 
         description = "Compiling SWIFT source {{output}}"
-        command = "xcrun -sdk macosx swiftc  {{defines}} {{swiftflags}} {{module_dirs}} -emit-dependencies -module-name {{module_name}} -o {{output}} {{include_dirs}} -emit-module -emit-object -enable-library-evolution -emit-module-interface-path $_new_out/{{module_name}}.swiftinterface  {{inputs}}"
+        command = "xcrun -sdk macosx swiftc  {{defines}} $debug_flag {{swiftflags}} {{module_dirs}} -emit-dependencies -module-name {{module_name}} -o {{output}} {{include_dirs}} -emit-module -emit-object -enable-library-evolution -emit-module-interface-path $_new_out/{{module_name}}.swiftinterface  {{inputs}}"
         outputs = [
             "{{target_gen_dir}}/{{module_name}}.swiftmodule",
             "{{target_gen_dir}}/{{module_name}}.h",
@@ -115,10 +141,10 @@ toolchain("llvm") {
             command = "clang-cl /out:{{output}} /machine:x64 {{inputs}} {{arflags}}"
         }
         else if(is_mac) {
-            command = "llvm-ar --format=darwin -rs {{output}} {{inputs}} {{arflags}}"
+            command = "$cxx -o {{output}} {{inputs}} {{arflags}}"
         }
         outputs = [
-            "{{target_out_dir}}/{{target_output_name}}{{output_extension}}"
+            "{{output_dir}}/{{target_output_name}}{{output_extension}}"
         ]
         description = "Linking static archive {{target_output_name}}{{output_extension}}"
         if(is_mac || is_linux){
@@ -131,44 +157,46 @@ toolchain("llvm") {
         }
     }
     tool("solink") {
-        outfile = "{{target_output_name}}{{output_extension}}"
+        outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
         if(is_mac){
-            command = "$lld_command -o $outfile {{ldflags}}  {{inputs}} {{solibs}} {{frameworks}} {{swiftmodules}} {{libs}}"  
+            command = "$cxx -o $outfile -Wl, -Xlinker {{ldflags}} {{inputs}} {{solibs}} {{frameworks}} {{swiftmodules}} {{libs}}"  
         }
         # Link MSVC Runtime
         else {
-            command = "clang-cl  -Wl  /LD /Fe$outfile {{inputs}}  /link {{ldflags}} {{solibs}} msvcrt.lib {{libs}}"
+            command = "clang-cl  -Wl  /LD /Fe$outfile {{inputs}}  /link {{ldflags}} {{solibs}} {{libs}}"
         }
-        outputs = [outfile]
         if(is_windows){
-            outputs += ["{{target_output_name}}.lib"]
+            outputs = ["{{output_dir}}/{{target_output_name}}.lib","{{output_dir}}/{{target_output_name}}{{output_extension}}"]
+        }
+        else {
+            outputs = [outfile]
         }
         description = "Linking shared library $outfile"
-        default_output_dir = "{{root_out_dir}}"
+        # default_output_dir = "{{root_out_dir}}"
     }
     tool("link") {
-        outfile = "{{target_output_name}}{{output_extension}}"
+        outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
         if(is_mac || is_linux){
-            command = "$lld_command -execute -o $outfile {{ldflags}} {{inputs}} {{solibs}} {{frameworks}}  {{libs}} " 
+            command = "$cxx -o $outfile -Wl, {{ldflags}} {{inputs}} {{solibs}} {{frameworks}}  {{libs}} " 
         }
         # Link MSVC Runtime
         else {
-            command = "$lld_command {{ldflags}} /machine:x64   /out:$outfile {{inputs}} msvcrt.lib {{libs}}"
+            command = "clang-cl /MT /Fe$outfile -Wl {{ldflags}} {{solibs}} {{inputs}} {{libs}}"
         }
         outputs = [outfile]
         description = "Linking executable $outfile"
-        default_output_dir = "{{root_out_dir}}"
+        # default_output_dir = "{{root_out_dir}}"
     }
     tool("copy"){
         
         python_copy = rebase_path("../__copy.py")
-        command = "$python_path \"$python_copy\" --src {{source}} --dest {{output}}"
+        command = "$python_path $python_copy --src {{source}} --dest {{output}}"
         description = "Copying {{source}} to {{output}}"
     }
     tool("rc"){
         command = "rc.exe /nologo {{defines}} {{include_dirs}} /FO {{output}} {{source}}"
         outputs = [
-            "obj/{{source_name_part}}.res"
+            "{{source_out_dir}}/{{source_name_part}}.res"
         ]
         depsformat = "msvc"
         description = "Compiling rc script {{output}}"

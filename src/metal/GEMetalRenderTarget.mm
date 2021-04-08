@@ -10,6 +10,7 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBu
     return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,GERenderTarget::CommandBuffer::Native,commandQueue->getAvailableBuffer()));
 };
 
+
 void GEMetalNativeRenderTarget::commitAndPresent(){
     @autoreleasepool {
         NSMutableArray<id<MTLCommandBuffer>> *commandBuffers = commandQueue->commandBuffers;
@@ -22,6 +23,25 @@ void GEMetalNativeRenderTarget::commitAndPresent(){
 
 void GEMetalNativeRenderTarget::reset(){
     currentDrawable = [metalLayer nextDrawable];
+};
+
+
+GEMetalTextureRenderTarget::GEMetalTextureRenderTarget(SharedHandle<GEMetalTexture> texture):texturePtr(texture){
+    
+};
+
+
+SharedHandle<GERenderTarget::CommandBuffer> GEMetalTextureRenderTarget::commandBuffer(){
+    return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,GERenderTarget::CommandBuffer::Native,commandQueue->getAvailableBuffer()));
+};
+
+void GEMetalTextureRenderTarget::commit(){
+    @autoreleasepool {
+        NSMutableArray<id<MTLCommandBuffer>> *commandBuffers = commandQueue->commandBuffers;
+        for(id<MTLCommandBuffer> cb in commandBuffers){
+            [cb commit];
+        };
+    }
 };
 
 

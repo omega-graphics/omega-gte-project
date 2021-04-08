@@ -134,6 +134,11 @@ _NAMESPACE_BEGIN_
          @returns SharedHandle<GEHeap>
         */
         virtual SharedHandle<GEHeap> makeHeap(const HeapDescriptor & desc) = 0;
+        
+        /**
+         Creates a GETextureSampler
+         */
+        
 
         /**
          Creates a GERenderPipelineState from a RenderPipelineDescriptor.

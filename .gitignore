@@ -1,3 +1,4 @@
+__pycache__
 .DS_STORE
 .cache
 .clangd
@@ -7,6 +8,7 @@ compile_commands.json
 out 
 dist
 build
+*.pyc
 
 
 # Prerequisites

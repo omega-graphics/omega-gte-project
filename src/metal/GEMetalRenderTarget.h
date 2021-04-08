@@ -27,6 +27,7 @@ public:
 class GEMetalTextureRenderTarget : public GETextureRenderTarget {
     SharedHandle<GEMetalCommandQueue> commandQueue;
 public:
+    GEMetalTextureRenderTarget(SharedHandle<GEMetalTexture> texture);
     SharedHandle<GEMetalTexture> texturePtr;
     SharedHandle<CommandBuffer> commandBuffer();
     void commit();

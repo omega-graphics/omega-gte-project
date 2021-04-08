@@ -9,6 +9,15 @@ _NAMESPACE_BEGIN_
 
     };
 
+    void GEMetalCommandBuffer::startBlitPass(){
+        bp = [buffer blitCommandEncoder];
+    };
+
+    void GEMetalCommandBuffer::finishBlitPass(){
+        [bp endEncoding];
+        bp = nil;
+    };
+
     void GEMetalCommandBuffer::startRenderPass(const GERenderPassDescriptor & desc){
         MTLRenderPassDescriptor *renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor];
         renderPassDesc.renderTargetArrayLength = 1;
@@ -83,6 +92,40 @@ _NAMESPACE_BEGIN_
         GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
         [rp setFragmentTexture:metalTexture->texture atIndex:index];
     };
+
+    void GEMetalCommandBuffer::setViewports(std::vector<GEViewport> viewports){
+        std::vector<MTLViewport> metalViewports;
+        auto viewports_it = viewports.begin();
+        while(viewports_it != viewports.end()){
+            GEViewport & viewport = *viewports_it;
+            MTLViewport metalViewport;
+            metalViewport.originX = viewport.x;
+            metalViewport.originY = viewport.y;
+            metalViewport.width = viewport.width;
+            metalViewport.height = viewport.height;
+            metalViewport.znear = viewport.nearDepth;
+            metalViewport.zfar = viewport.farDepth;
+            metalViewports.push_back(std::move(metalViewport));
+            ++viewports_it;
+        };
+        [rp setViewports:metalViewports.data() count:metalViewports.size()];
+    };
+
+    void GEMetalCommandBuffer::setScissorRects(std::vector<GEScissorRect> scissorRects){
+        std::vector<MTLScissorRect> metalRects;
+        auto rects_it = scissorRects.begin();
+        while(rects_it != scissorRects.end()){
+            GEScissorRect & rect = *rects_it;
+            MTLScissorRect metalRect;
+            metalRect.x = rect.x;
+            metalRect.y = rect.y;
+            metalRect.width = rect.width;
+            metalRect.height = rect.height;
+            metalRects.push_back(std::move(metalRect));
+            ++rects_it;
+        };
+        [rp setScissorRects:metalRects.data() count:metalRects.size()];
+    };
     
     void GEMetalCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx){
         assert((rp && (cp == nil)) && "Cannot Draw Polygons when not in render pass");
@@ -98,6 +141,7 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishRenderPass(){
         [rp endEncoding];
+        rp = nil;
     };
 
     void GEMetalCommandBuffer::startComputePass(const GEComputePassDescriptor & desc){
@@ -111,6 +155,7 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishComputePass(){
         [cp endEncoding];
+        cp = nil;
     };
     
     void GEMetalCommandBuffer::commitToQueue(){

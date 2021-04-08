@@ -13,19 +13,27 @@ _NAMESPACE_BEGIN_
         id<MTLCommandBuffer> buffer;
         id<MTLRenderCommandEncoder> rp = nil;
         id<MTLComputeCommandEncoder> cp = nil;
+        id<MTLBlitCommandEncoder> bp = nil;
         GEMetalCommandQueue *parentQueue;
     public:
+        void startBlitPass();
+        void finishBlitPass();
+        
         void startRenderPass(const GERenderPassDescriptor &desc);
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
-        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx);
         void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
         void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned index);
         void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
         void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned index);
+        void setViewports(std::vector<GEViewport> viewports);
+        void setScissorRects(std::vector<GEScissorRect> scissorRects);
+        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx);
         void finishRenderPass();
         
         void startComputePass(const GEComputePassDescriptor &desc);
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState);
+        void setResourceConstAtComputeFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
+        void setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned index);
         void finishComputePass();
         GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue);
         void commitToQueue();
@@ -37,6 +45,7 @@ _NAMESPACE_BEGIN_
         NSMutableArray<id<MTLCommandBuffer>> * commandBuffers;
         friend class GEMetalCommandBuffer;
         friend class GEMetalNativeRenderTarget;
+        friend class GEMetalTextureRenderTarget;
     public:
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size);

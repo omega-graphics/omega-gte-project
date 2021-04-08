@@ -27,7 +27,7 @@ _NAMESPACE_BEGIN_
             DEBUG_STREAM("GEMetalEngine Successfully Created");
         };
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount){
-            id<MTLCommandQueue> commandQueue = [metalDevice newCommandQueueWithMaxCommandBufferCount:maxBufferCount+1];
+            id<MTLCommandQueue> commandQueue = [metalDevice newCommandQueueWithMaxCommandBufferCount:maxBufferCount];
             return std::make_shared<GEMetalCommandQueue>(commandQueue,maxBufferCount);
         };
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc){

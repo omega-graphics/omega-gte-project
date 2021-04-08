@@ -50,6 +50,10 @@ void GERenderTarget::CommandBuffer::schedule(){
     commandBuffer->commitToQueue();
 };
 
+void GERenderTarget::CommandBuffer::reset(){
+    commandBuffer->reset();
+};
+
 
 
 

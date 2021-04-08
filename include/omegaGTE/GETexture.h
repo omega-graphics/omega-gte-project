@@ -29,6 +29,10 @@ _NAMESPACE_BEGIN_
         unsigned depth;
     };
 
+    struct TextureSamplerDescriptor {
+        
+    };
+
 _NAMESPACE_END_
 
 #endif

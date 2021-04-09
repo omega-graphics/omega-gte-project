@@ -20,7 +20,7 @@ _NAMESPACE_BEGIN_
                                  ID3D12DescriptorHeap * descriptorHeapForRenderTarget,
                                  SharedHandle<GED3D12CommandQueue> & commandQueue,
                                  unsigned frameIndex,
-                                 ID3D12Resource *const *renderTargetViews,
+                                 ID3D12Resource *const *renderTargets,
                                  size_t renderTargetViewCount);
     };
 

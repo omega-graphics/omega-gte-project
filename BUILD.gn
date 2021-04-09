@@ -1,3 +1,5 @@
+import("//gn/EXPORT.gni")
+
 declare_args(){
     d3d11 = false
     omega_sl = false
@@ -7,67 +9,6 @@ declare_args(){
     glm_include_dir = ""
     glm_lib = ""
     code_signature = ""
-}
-
-current_version = "0.1"
-
-
-include_dir = "//include"
-if(is_linux){
-    vulkan_include_dir = "/usr/local/include"
-    vulkan_link_flags = exec_script("//gn/pkg-conf.py",["--name","vulkan","-L"],"value")
-    gtk_c_flags = exec_script("//gn/pkg-conf.py",["--name","gtk+-3.0","-F"],"value")
-    gtk_link_flags = exec_script("//gn/pkg-conf.py",["--name","gtk+-3.0","-L"],"value")
-}
-rhi_srcs = []
-
-if(is_windows){
-    rhi_srcs +=[
-         # Headers
-         "src/d3d12/GED3D12.h",
-         "src/d3d12/GED3D12CommandQueue.h",
-         "src/d3d12/GED3D12RenderTarget.h",
-         "src/d3d12/GED3D12Pipeline.h",
-         "src/d3d12/GED3D12Texture.h",
-         # Sources
-         "src/d3d12/GED3D12.cpp",
-         "src/d3d12/GED3D12CommandQueue.cpp",
-         "src/d3d12/GED3D12RenderTarget.cpp",
-         "src/d3d12/GED3D12Pipeline.cpp",
-         "src/d3d12/GED3D12Texture.cpp"
-    ]
-}
-else if(is_mac){
-
-    rhi_srcs +=[
-        # Headers
-        "src/metal/GEMetal.h",
-        "src/metal/GEMetalCommandQueue.h",
-        "src/metal/GEMetalPipeline.h",
-        "src/metal/GEMetalRenderTarget.h",
-        "src/metal/GEMetalTexture.h",
-        # Sources
-        "src/metal/GEMetal.mm",
-        "src/metal/GEMetalCommandQueue.mm",
-        "src/metal/GEMetalPipeline.mm",
-        "src/metal/GEMetalRenderTarget.mm",
-        "src/metal/GEMetalTexture.mm",
-    ]
-}
-else if(is_linux){
-
-    rhi_srcs +=[
-        # Headers
-        "src/vulkan/GEVulkan.h",
-        "src/vulkan/GEVulkanCommandQueue.h",
-        "src/vulkan/GEVulkanPipeline.h",
-        "src/vulkan/GEVulkanTexture.h",
-        # Sources
-        "src/vulkan/GEVulkan.cpp",
-        "src/vulkan/GEVulkanCommandQueue.cpp",
-        "src/vulkan/GEVulkanPipeline.cpp",
-        "src/vulkan/GEVulkanTexture.cpp",
-    ]
 }
 
 shared_library("OmegaGTE"){

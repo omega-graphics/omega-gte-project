@@ -4,12 +4,19 @@ _NAMESPACE_BEGIN_
     GED3D12NativeRenderTarget::GED3D12NativeRenderTarget(
         IDXGISwapChain3 * swapChain,
         ID3D12DescriptorHeap * descriptorHeapForRenderTarget,
-        SharedHandle<GED3D12CommandQueue> & commandQueue,unsigned frameIndex,ID3D12Resource *const *renderTargetViews,size_t renderTargetViewCount):swapChain(swapChain),descriptorHeapForRenderTarget(descriptorHeapForRenderTarget),commandQueue(commandQueue),frameIndex(frameIndex),renderTargets(renderTargetViews,renderTargetViews + renderTargetViewCount){
+        SharedHandle<GED3D12CommandQueue> & commandQueue,
+        unsigned frameIndex,
+        ID3D12Resource *const *renderTargets,
+        size_t renderTargetViewCount):swapChain(swapChain),
+        descriptorHeapForRenderTarget(descriptorHeapForRenderTarget),
+        commandQueue(commandQueue),frameIndex(frameIndex),
+        renderTargets(renderTargets,renderTargets + renderTargetViewCount){
         
     };
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12NativeRenderTarget::commandBuffer(){
-        return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Native,commandQueue->getAvailableBuffer()));
+        return std::shared_ptr<GERenderTarget::CommandBuffer>(
+            new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Native,commandQueue->getAvailableBuffer()));
     };
 
     void GED3D12NativeRenderTarget::commitAndPresent(){

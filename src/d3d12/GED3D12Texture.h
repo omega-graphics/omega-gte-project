@@ -10,7 +10,8 @@ class GED3D12Texture : public GETexture {
 public:
     ComPtr<ID3D12Resource> resource;
     ComPtr<ID3D12DescriptorHeap> descHeap;
-    GED3D12Texture(ID3D12Resource *res,ID3D12DescriptorHeap *descHeap);
+    ComPtr<ID3D12DescriptorHeap> rtvDescHeap;
+    GED3D12Texture(ID3D12Resource *res,ID3D12DescriptorHeap *descHeap,ID3D12DescriptorHeap *rtvDescHeap);
 };
 
 _NAMESPACE_END_

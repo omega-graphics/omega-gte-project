@@ -51,7 +51,7 @@ toolchain("llvm") {
         }
         else {
             depsformat = "msvc"
-            command = "$cc /clang:-MD /clang:-MF /clang:$depfile  {{defines}} {{include_dirs}} $debug_flag {{cflags_c}}  -c {{source}}  -o {{output}}"
+            command = "$cc /clang:-MD /clang:-MF /clang:$depfile /std:c17  {{defines}} {{include_dirs}} $debug_flag {{cflags_c}}  -c {{source}}  -o {{output}}"
         }
         description = "Compiling C source {{output}}"
         outputs = [

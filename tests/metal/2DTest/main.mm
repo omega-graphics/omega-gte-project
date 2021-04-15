@@ -1,4 +1,4 @@
-#include "omegaGTE/GE.h"
+#include <OmegaGTE.h>
 
 #import <Cocoa/Cocoa.h>
 

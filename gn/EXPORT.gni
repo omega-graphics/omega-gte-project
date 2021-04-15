@@ -1,6 +1,6 @@
 current_version = "0.1"
 
-include_dir = "../include"
+include_dir = get_path_info("../include","abspath")
 if(is_linux){
     vulkan_include_dir = "/usr/local/include"
     vulkan_link_flags = exec_script("./pkg-conf.py",["--name","vulkan","-L"],"value")
@@ -12,56 +12,68 @@ rhi_srcs = []
 if(is_windows){
     rhi_srcs +=[
          # Headers
-         "../src/d3d12/GED3D12.h",
-         "../src/d3d12/GED3D12CommandQueue.h",
-         "../src/d3d12/GED3D12RenderTarget.h",
-         "../src/d3d12/GED3D12Pipeline.h",
-         "../src/d3d12/GED3D12Texture.h",
+         get_path_info("../src/d3d12/GED3D12.h","abspath"),
+         get_path_info("../src/d3d12/GED3D12CommandQueue.h","abspath"),
+         get_path_info("../src/d3d12/GED3D12RenderTarget.h","abspath"),
+         get_path_info("../src/d3d12/GED3D12Pipeline.h","abspath"),
+         get_path_info("../src/d3d12/GED3D12Texture.h","abspath"),
          # Sources
-         "../src/d3d12/GED3D12.cpp",
-         "../src/d3d12/GED3D12CommandQueue.cpp",
-         "../src/d3d12/GED3D12RenderTarget.cpp",
-         "../src/d3d12/GED3D12Pipeline.cpp",
-         "../src/d3d12/GED3D12Texture.cpp"
+         get_path_info("../src/d3d12/GED3D12.cpp","abspath"),
+         get_path_info("../src/d3d12/GED3D12CommandQueue.cpp","abspath"),
+         get_path_info("../src/d3d12/GED3D12RenderTarget.cpp","abspath"),
+         get_path_info("../src/d3d12/GED3D12Pipeline.cpp","abspath"),
+         get_path_info("../src/d3d12/GED3D12Texture.cpp","abspath"),
+         get_path_info("../src/D3D12TEContext.cpp","abspath")
     ]
 }
 else if(is_mac){
 
     rhi_srcs +=[
         # Headers
-        "../src/metal/GEMetal.h",
-        "../src/metal/GEMetalCommandQueue.h",
-        "../src/metal/GEMetalPipeline.h",
-        "../src/metal/GEMetalRenderTarget.h",
-        "../src/metal/GEMetalTexture.h",
+        get_path_info("../src/metal/GEMetal.h","abspath"),
+        get_path_info("../src/metal/GEMetalCommandQueue.h","abspath"),
+        get_path_info("../src/metal/GEMetalPipeline.h","abspath"),
+        get_path_info("../src/metal/GEMetalRenderTarget.h","abspath"),
+        get_path_info("../src/metal/GEMetalTexture.h","abspath"),
         # Sources
-        "../src/metal/GEMetal.mm",
-        "../src/metal/GEMetalCommandQueue.mm",
-        "../src/metal/GEMetalPipeline.mm",
-        "../src/metal/GEMetalRenderTarget.mm",
-        "../src/metal/GEMetalTexture.mm",
+        get_path_info("../src/metal/GEMetal.mm","abspath"),
+        get_path_info("../src/metal/GEMetalCommandQueue.mm","abspath"),
+        get_path_info("../src/metal/GEMetalPipeline.mm","abspath"),
+        get_path_info("../src/metal/GEMetalRenderTarget.mm","abspath"),
+        get_path_info("../src/metal/GEMetalTexture.mm","abspath"),
     ]
 }
 else if(is_linux){
 
     rhi_srcs +=[
         # Headers
-        "../src/vulkan/GEVulkan.h",
-        "../src/vulkan/GEVulkanCommandQueue.h",
-        "../src/vulkan/GEVulkanPipeline.h",
-        "../src/vulkan/GEVulkanTexture.h",
+        get_path_info("../src/vulkan/GEVulkan.h","abspath"),
+        get_path_info("../src/vulkan/GEVulkanCommandQueue.h","abspath"),
+        get_path_info("../src/vulkan/GEVulkanPipeline.h","abspath"),
+        get_path_info("../src/vulkan/GEVulkanTexture.h","abspath"),
         # Sources
-        "../src/vulkan/GEVulkan.cpp",
-        "../src/vulkan/GEVulkanCommandQueue.cpp",
-        "../src/vulkan/GEVulkanPipeline.cpp",
-        "../src/vulkan/GEVulkanTexture.cpp",
+        get_path_info("../src/vulkan/GEVulkan.cpp","abspath"),
+        get_path_info("../src/vulkan/GEVulkanCommandQueue.cpp","abspath"),
+        get_path_info("../src/vulkan/GEVulkanPipeline.cpp","abspath"),
+        get_path_info("../src/vulkan/GEVulkanTexture.cpp","abspath"),
     ]
 }
+
+omegagte_sources = [
+        # Sources
+        get_path_info("../src/GE.cpp","abspath"),
+        get_path_info("../src/GTEBase.cpp","abspath"),
+        get_path_info("../src/GEPipeline.cpp","abspath"),
+        get_path_info("../src/GECommandQueue.cpp","abspath"),
+        get_path_info("../src/GERenderTarget.cpp","abspath"),
+        get_path_info("../src/TE.cpp","abspath"),
+    ] + rhi_srcs
 
 
 template("OmegaGTE_Export"){
 
     shared_library("OmegaGTE"){
+        sources = omegagte_sources
         if(is_mac){
             defines = ["TARGET_METAL"]
             libs = [
@@ -103,24 +115,6 @@ template("OmegaGTE_Export"){
                 vulkan_include_dir
             ]
         }
-        sources = [
-            # Headers 
-            "$include_dir/GTEBase.h",
-            "$include_dir/GTEShaderTypes.h",
-            "$include_dir/GE.h",
-            "$include_dir/GECommandQueue.h",
-            "$include_dir/GEPipeline.h",
-            "$include_dir/GERenderTarget.h",
-            "$include_dir/GETexture.h",
-            "$include_dir/TE.h",
-            # Sources
-            "../src/GE.cpp",
-            "../src/GTEBase.cpp",
-            "../src/GEPipeline.cpp",
-            "../src/GECommandQueue.cpp",
-            "../src/GERenderTarget.cpp",
-            "../src/TE.cpp",
-        ] + rhi_srcs
     }
 
 

@@ -22,6 +22,7 @@
 #define OMEGAGTE_GE_H
 
 _NAMESPACE_BEGIN_
+    struct GTE;
     typedef enum : uint8_t {
         Private,
         Managed,
@@ -101,12 +102,13 @@ _NAMESPACE_BEGIN_
      The Omega GE Main Class
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
-    public:
-        /**
+    /**
          Creates an Instance of the Omega Graphics Engine
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();
+        IN_INIT_SCOPE
+    public:
 
         /**
           Creates a GEFence.

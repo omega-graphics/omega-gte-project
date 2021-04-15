@@ -86,12 +86,15 @@ SharedHandle<OmegaTessalationEngine> OmegaTessalationEngine::Create(){
     return std::make_shared<OmegaTessalationEngine>();
 };
 
+SharedHandle<OmegaTessalationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> & renderTarget);
+SharedHandle<OmegaTessalationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> & renderTarget);
+
 SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTEContextFromNativeRenderTarget(SharedHandle<GENativeRenderTarget> & renderTarget){
-    
+    return CreateNativeRenderTargetTEContext(renderTarget);
 };
 
 SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTEContextFromTextureRenderTarget(SharedHandle<GETextureRenderTarget> & renderTarget){
-    
+    return CreateTextureRenderTargetTEContext(renderTarget);
 };
 
 

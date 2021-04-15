@@ -10,8 +10,10 @@
 #ifdef TARGET_DIRECTX
 #define OMEGAGTE_EXPORT __declspec( dllexport ) 
 #else 
-#define OMEGAGTE_EXPORT 
+#define OMEGAGTE_EXPORT
 #endif
+
+#define IN_INIT_SCOPE friend GTE Init();
 
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {
 #define _NAMESPACE_END_ }

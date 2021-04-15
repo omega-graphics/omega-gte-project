@@ -54,15 +54,6 @@ shared_library("OmegaGTE"){
         ]
     }
     sources = [
-        # Headers 
-        "$include_dir/GTEBase.h",
-        "$include_dir/GTEShaderTypes.h",
-        "$include_dir/GE.h",
-        "$include_dir/GECommandQueue.h",
-        "$include_dir/GEPipeline.h",
-        "$include_dir/GERenderTarget.h",
-        "$include_dir/GETexture.h",
-        "$include_dir/TE.h",
         # Sources
         "src/GE.cpp",
         "src/GTEBase.cpp",
@@ -70,6 +61,7 @@ shared_library("OmegaGTE"){
         "src/GECommandQueue.cpp",
         "src/GERenderTarget.cpp",
         "src/TE.cpp",
+        "src/OmegaGTE.cpp"
     ] + rhi_srcs
 }
 

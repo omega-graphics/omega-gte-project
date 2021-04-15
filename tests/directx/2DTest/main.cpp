@@ -1,13 +1,14 @@
-#include "omegaGTE/GE.h"
+#include <OmegaGTE.h>
 #include <windows.h>
 
-OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
 
 LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 
+OmegaGTE::GTE gte;
+
 APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
 
-    graphicsEngine = OmegaGTE::OmegaGraphicsEngine::Create();
+    gte = OmegaGTE::Init();
 
     WNDCLASSEX wcex;
 
@@ -44,6 +45,9 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             DispatchMessage(&msg);
         }
     }
+
+
+    OmegaGTE::Close(gte);
 
     return msg.wParam;
 };

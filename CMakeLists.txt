@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.15)
 
 project(OmegaGTE C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 # if(CMAKE_GENERATOR STREQUAL "Ninja")
 #     message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
 # endif()

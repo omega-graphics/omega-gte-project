@@ -67,7 +67,7 @@ _NAMESPACE_BEGIN_
         void operator-=(const Vector2D_Base<_Num_Ty,_Angle_Ty> & vec){
             subtract(std::move(vec));
         };
-        Vector2D_Base<_Num_Ty,_Angle_Ty> dot(const Vector2D_Base<_Num_Ty,_Angle_Ty> & vec){
+        _Num_Ty dot(const Vector2D_Base<_Num_Ty,_Angle_Ty> & vec){
             return (i * vec.i) + (j * vec.j);
         };
     };
@@ -263,15 +263,24 @@ _NAMESPACE_BEGIN_
 
 
 
-    template<class _Ty,size_t rows,size_t columns>
-    class Matrix {
-        std::array<std::array<_Ty,columns>,rows> data;
-    public:
-        static Matrix Identity();
-//        static Matrix FromVector2D();
-//        static Matrix FromVector3D();
-//        static Matrix Create(std::initializer_list<std::initializer_list<_Ty>> data);
-    };
+//    template<class _Ty,size_t rows,size_t columns>
+//    class Matrix {
+//        std::array<std::array<_Ty,columns>,rows> data;
+//        Matrix(std::array<std::array<_Ty,columns>,rows> data):data(std::move(data)){
+//            
+//        };
+//    public:
+//        static Matrix Identity(){
+////            std::initializer_list<std::initializer_list<_Ty>> _data;
+////            
+////            Matrix<_Ty,rows,columns> m(_data);
+//        };
+//        static Matrix FromVector2D(Vector2D_Base<_Ty,float> vector){
+//            
+//        };
+////        static Matrix FromVector3D();
+////        static Matrix Create(std::initializer_list<std::initializer_list<_Ty>> data);
+//    };
 
 
     template<class _Ty>

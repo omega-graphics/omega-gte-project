@@ -1,7 +1,7 @@
 #include "omegaGTE/TE.h"
+#include <thread>
 
 _NAMESPACE_BEGIN_
-
 
 
 struct TETessalationParams::GraphicsPath2DParams {
@@ -82,19 +82,18 @@ TETessalationParams TETessalationParams::GraphicsPath3D(unsigned int vectorPathC
 };
 
 
-class TECoordinateSpaceContext {
+SharedHandle<OmegaTessalationEngine> OmegaTessalationEngine::Create(){
+    return std::make_shared<OmegaTessalationEngine>();
+};
+
+SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTEContextFromNativeRenderTarget(SharedHandle<GENativeRenderTarget> & renderTarget){
+    
+};
+
+SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTEContextFromTextureRenderTarget(SharedHandle<GETextureRenderTarget> & renderTarget){
     
 };
 
 
-
-std::promise<TETessalationResult> OmegaTessalationEngine::tessalateAsync(const TETessalationParams & params){
-    
-};
-
-
-TETessalationResult OmegaTessalationEngine::tessalateSync(const TETessalationParams & params){
-    
-};
 
 _NAMESPACE_END_

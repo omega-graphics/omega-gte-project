@@ -1,6 +1,8 @@
 #include "GTEBase.h"
 #include <thread>
 #include <future>
+#include <optional>
+#include "GE.h"
 
 #ifndef OMEGAGTE_TE_H
 #define OMEGAGTE_TE_H
@@ -48,13 +50,19 @@ struct TETessalationResult {
     std::vector<TEMesh> meshes;
 };
 
+class OmegaTessalationEngineContext {
+public:
+    virtual TETessalationResult tessalateSync(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+    virtual std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+    virtual  std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+};
+
 
 class OmegaTessalationEngine {
 public:
     static SharedHandle<OmegaTessalationEngine> Create();
-    TETessalationResult tessalateSync(const TETessalationParams & params);
-    std::promise<TETessalationResult> tessalateOnGPU(const TETessalationParams & params);
-    std::promise<TETessalationResult> tessalateAsync(const TETessalationParams & params);
+    SharedHandle<OmegaTessalationEngineContext> createTEContextFromNativeRenderTarget(SharedHandle<GENativeRenderTarget> & renderTarget);
+    SharedHandle<OmegaTessalationEngineContext> createTEContextFromTextureRenderTarget(SharedHandle<GETextureRenderTarget> & renderTarget);
 };
 
 _NAMESPACE_END_

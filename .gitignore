@@ -9,6 +9,7 @@ out
 dist
 build
 *.pyc
+doxygen
 
 
 # Prerequisites

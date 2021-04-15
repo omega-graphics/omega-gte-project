@@ -28,7 +28,7 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     ATOM a = RegisterClassEx(&wcex);
 
 
-    HWND hwnd = CreateWindow("Test","",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,hInstance,NULL);
+    HWND hwnd = CreateWindowA("Test","",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,hInstance,NULL);
     ShowWindow(hwnd,nShowCmd);
     UpdateWindow(hwnd);
 

@@ -27,6 +27,7 @@ struct OMEGAGTE_EXPORT TETessalationParams {
     } TessalationType;
     TessalationType type;
     void * params;
+    friend class OmegaTessalationEngineContext;
 public:
     static TETessalationParams Rect(GRect & rect);
     static TETessalationParams RoundedRect(GRoundedRect & roundedRect);
@@ -53,10 +54,18 @@ struct OMEGAGTE_EXPORT TETessalationResult {
 
 class OMEGAGTE_EXPORT OmegaTessalationEngineContext {
     friend class OmegaTessalationEngine;
+protected:
+
+    std::vector<std::thread> activeThreads;
+
+    void translateCoordsDefaultImpl(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result);
+    virtual void translateCoords(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result) = 0;
+    inline TETessalationResult _tessalatePriv(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
 public:
-    virtual TETessalationResult tessalateSync(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+    ~OmegaTessalationEngineContext();
+    TETessalationResult tessalateSync(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
     virtual std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
-    virtual  std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+    std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
 };
 
 

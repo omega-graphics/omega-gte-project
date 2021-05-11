@@ -26,6 +26,7 @@ if(WIN32)
     "src/d3d12/GED3D12RenderTarget.cpp"
     "src/d3d12/GED3D12Texture.h"
     "src/d3d12/GED3D12Texture.cpp"
+    "src/D3D12TEContext.cpp"
     )
 endif()
 
@@ -45,6 +46,7 @@ if(CMAKE_HOST_APPLE)
     "src/metal/GEMetalRenderTarget.mm"
     "src/metal/GEMetalTexture.h"
     "src/metal/GEMetalTexture.mm"
+    "src/MetalTEContext.mm"
     )
 endif()
 
@@ -65,6 +67,8 @@ endif()
 set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 if(TARGET_METAL)
     find_library(METAL_FOUND "Metal")
+    find_library(COREANIMATION_FOUND "QuartzCore")
+    find_library(FOUNDATION_FOUND "Foundation")
     if(METAL_FOUND)
         message("Found Metal.framework (Path:${METAL_FOUND})")
     endif()
@@ -87,6 +91,7 @@ add_library("OmegaGTE" SHARED
 "src/GERenderTarget.cpp"
 "src/GTEBase.cpp"
 "src/TE.cpp"
+"src/OmegaGTE.cpp"
 ${_TARGET_SOURCES})
 
 # set_target_properties("OmegaGTE" PROPERTIES LINK_FLAGS "")
@@ -96,9 +101,10 @@ if(TARGET_METAL)
 set_target_properties("OmegaGTE" PROPERTIES 
 FRAMEWORK TRUE
 FRAMEWORK_VERSION "0.1"
-FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE")
+FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE"
+RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Frameworks")
 
-target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND})
+target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND} ${COREANIMATION_FOUND} ${FOUNDATION_FOUND})
 endif()
 
 if(TARGET_VULKAN)

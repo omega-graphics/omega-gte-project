@@ -1,5 +1,11 @@
 #include "omegaGTE/GTEBase.h"
+
 #include "omegaGTE/GE.h"
+#include "omegaGTE/GECommandQueue.h"
+#include "omegaGTE/GEPipeline.h"
+#include "omegaGTE/GERenderTarget.h"
+#include "omegaGTE/GETexture.h"
+
 #include "omegaGTE/TE.h"
 
 

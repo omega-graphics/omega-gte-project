@@ -1,4 +1,4 @@
-buildconfig = "//gn//BUILDCONFIG.gn"
+buildconfig = "//gn-utils//BUILDCONFIG.gn"
 
 
 # Only set this variable when on linux

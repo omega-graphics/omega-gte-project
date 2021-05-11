@@ -1,6 +1,6 @@
 import "./OmegaSLGen.h"
 
-/** Attributted Types
+/* Attributted Types
 
 Position<typeof numeric>
 Buffer<typeof any,numeric>
@@ -11,10 +11,6 @@ Texture3D<typeof numeric,numeric>
 
 
 */
-
-struct Test {
-
-};
 
 
 struct MyData {

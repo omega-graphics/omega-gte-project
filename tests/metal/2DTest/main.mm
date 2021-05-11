@@ -1,8 +1,9 @@
 #include <OmegaGTE.h>
 
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
 
-OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
+static OmegaGTE::GTE gte;
 
 @interface MyWindowController : NSWindowController<NSWindowDelegate>
 @end
@@ -13,6 +14,23 @@ OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
 {
     if(self = [super initWithWindow:[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,500,500) styleMask:NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO]]){
         self.window.delegate = self;
+
+        NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0,0,200,200)];
+        view.wantsLayer = TRUE;
+        CAMetalLayer * metalLayer = [CAMetalLayer layer];
+        view.layer = metalLayer;
+
+    
+        OmegaGTE::NativeRenderTargetDescriptor desc;
+        desc.metalLayer = metalLayer;
+
+        auto renderTarget = gte.graphicsEngine->makeNativeRenderTarget(desc);
+        // auto commandBuffer = renderTarget->commandBuffer();
+        // OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
+        // renderPass.
+        // commandBuffer->startRenderPass()
+
+
         [self.window center];
         [self.window layoutIfNeeded];
     }
@@ -37,7 +55,7 @@ OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
 };
 
 - (void)applicationWillTerminate:(NSNotification *)notification {
-    
+    OmegaGTE::Close(gte);
 };
 
 @end
@@ -45,6 +63,8 @@ OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
 
 
 int main(int argc,const char * argv[]){
-    graphicsEngine = OmegaGTE::OmegaGraphicsEngine::Create();
+    
+    gte = OmegaGTE::Init();
+
     return NSApplicationMain(argc,argv);
 };

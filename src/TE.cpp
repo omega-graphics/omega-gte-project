@@ -86,6 +86,61 @@ SharedHandle<OmegaTessalationEngine> OmegaTessalationEngine::Create(){
     return std::make_shared<OmegaTessalationEngine>();
 };
 
+void OmegaTessalationEngineContext::translateCoordsDefaultImpl(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result){
+    *x_result = x / viewport->width;
+    *y_result = y / viewport->height;
+    if(z > 0.0){
+        *z_result = z / viewport->farDepth;
+    }
+    else if(z < 0.0){
+        *z_result = z / viewport->nearDepth;
+    }
+    else {
+        *z_result = z;
+    };
+};
+
+inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const TETessalationParams &params,std::optional<GEViewport> viewport){
+    TETessalationResult result;
+    switch(params.type){
+        case TETessalationParams::TESSALATE_RECT : {
+            GRect *object = (GRect *)params.params;
+
+            TETessalationResult::TEMesh mesh;
+            TETessalationResult::TEMesh::Triangle tri;
+            float x0,x1,y0,y1;
+            translateCoords(object->pos.x,object->pos.y,0.f,viewport,&x0,&y0,nullptr);
+            translateCoords(object->pos.x + object->w,object->pos.y + object->h,0.f,viewport,&x1,&y1,nullptr);
+
+
+            tri.a.x = x0;
+            tri.a.y = y0;
+            tri.b.x = x0;
+            tri.b.y = y1;
+            tri.c.x = x1;
+            tri.c.y = y0;
+
+            mesh.vertexTriangles.push_back(tri);
+
+            tri.a.x = x1;
+            tri.a.y = y1;
+
+            mesh.vertexTriangles.push_back(tri);
+            
+            result.meshes.push_back(mesh);
+
+            break;
+        }
+        case TETessalationParams::TESSALATE_RECTANGULAR_PRISM : {
+
+            break;
+        }
+        default:
+            break;
+    }
+    return result;
+};
+
 SharedHandle<OmegaTessalationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> & renderTarget);
 SharedHandle<OmegaTessalationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> & renderTarget);
 
@@ -95,6 +150,28 @@ SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTECont
 
 SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTEContextFromTextureRenderTarget(SharedHandle<GETextureRenderTarget> & renderTarget){
     return CreateTextureRenderTargetTEContext(renderTarget);
+};
+
+std::future<TETessalationResult> OmegaTessalationEngineContext::tessalateAsync(const TETessalationParams &params,std::optional<GEViewport> viewport){
+    std::promise<TETessalationResult> prom;
+    auto fut = prom.get_future();
+    activeThreads.emplace_back([&](std::promise<TETessalationResult> promise,size_t idx){
+        promise.set_value_at_thread_exit(tessalateSync(params,viewport));
+        activeThreads.erase(activeThreads.begin() + idx);
+    },std::move(prom),activeThreads.size());
+    return fut;
+};
+
+TETessalationResult OmegaTessalationEngineContext::tessalateSync(const TETessalationParams &params,std::optional<GEViewport> viewport){
+    return _tessalatePriv(params,viewport);
+};
+
+OmegaTessalationEngineContext::~OmegaTessalationEngineContext(){
+    for(auto & t : activeThreads){
+        if(t.joinable()){
+            t.join();
+        }
+    };
 };
 
 

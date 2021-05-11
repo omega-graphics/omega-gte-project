@@ -1,4 +1,5 @@
-import("//gn/EXPORT.gni")
+import("./gn/OmegaGTE.gni")
+import("./gn-utils/Utils.gni")
 
 declare_args(){
     d3d11 = false
@@ -8,16 +9,109 @@ declare_args(){
     llvm_dir = ""
     glm_include_dir = ""
     glm_lib = ""
-    code_signature = ""
 }
 
-shared_library("OmegaGTE"){
-    if(is_mac){
-        defines = ["TARGET_METAL"]
+# config("spirv_cross_config") {
+#   include_dirs = [ "./spirv-cross" ]
+
+#   defines = [ "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS" ]
+# }
+
+# source_set("spirv_cross_sources") {
+#   public_configs = [ ":spirv_cross_config" ]
+
+#   sources = [
+#     "./spirv-cross/GLSL.std.450.h",
+#     "./spirv-cross/spirv.hpp",
+#     "./spirv-cross/spirv_cfg.cpp",
+#     "./spirv-cross/spirv_cfg.hpp",
+#     "./spirv-cross/spirv_cpp.cpp",
+#     "./spirv-cross/spirv_cross_c.cpp",
+#     "./spirv-cross/spirv_common.hpp",
+#     "./spirv-cross/spirv_cross.cpp",
+#     "./spirv-cross/spirv_cross.hpp",
+#     "./spirv-cross/spirv_cross_containers.hpp",
+#     "./spirv-cross/spirv_cross_error_handling.hpp",
+#     "./spirv-cross/spirv_cross_parsed_ir.cpp",
+#     "./spirv-cross/spirv_cross_parsed_ir.hpp",
+#     "./spirv-cross/spirv_cross_util.cpp",
+#     "./spirv-cross/spirv_cross_util.hpp",
+#     "./spirv-cross/spirv_glsl.cpp",
+#     "./spirv-cross/spirv_glsl.hpp",
+#     "./spirv-cross/spirv_hlsl.cpp",
+#     "./spirv-cross/spirv_hlsl.hpp",    
+#     "./spirv-cross/spirv_msl.cpp",
+#     "./spirv-cross/spirv_msl.hpp",
+#     "./spirv-cross/spirv_parser.cpp",
+#     "./spirv-cross/spirv_parser.hpp",
+#     "./spirv-cross/spirv_reflect.cpp",
+#     "./spirv-cross/spirv_reflect.hpp",
+#   ]
+
+#   if (!is_windows) {
+#     cflags = [ "-fno-exceptions" ]
+#   }
+
+# #   if (is_clang) {
+#     cflags_cc = [
+#       "-Wno-extra-semi",
+#       "-Wno-ignored-qualifiers",
+#       "-Wno-implicit-fallthrough",
+#       "-Wno-inconsistent-missing-override",
+#       "-Wno-missing-field-initializers",
+#       "-Wno-newline-eof",
+#       "-Wno-sign-compare",
+#       "-Wno-unused-variable",
+#     ]
+# #   }
+# }
+
+
+# executable("spirv-cross"){
+#     sources = [
+#         "./spirv-cross/main.cpp"
+#     ]
+#     public_deps = [
+#         ":spirv_cross_sources"
+#     ]
+#     include_dirs = [
+#         "./spirv-cross",
+#         "./spirv-cross/include"
+#     ]
+#     output_dir = "$root_out_dir/tools"
+# }
+
+# group("shader_cross_comp"){
+    
+# }
+
+if(is_mac){
+    config("OmegaGTE_Config"){
+        defines = [
+            "TARGET_METAL"
+        ]
+    }
+    mac_framework_bundle("OmegaGTE"){
+        version = "0.2"
+        public_configs = [
+            ":OmegaGTE_Config"
+        ]
         libs = [
             "c",
             "c++"
         ]
+        include_dirs = [
+            include_dir,
+        ]
+        sources = [
+            "src/GE.cpp",
+            "src/GTEBase.cpp",
+            "src/GEPipeline.cpp",
+            "src/GECommandQueue.cpp",
+            "src/GERenderTarget.cpp",
+            "src/TE.cpp",
+            "src/OmegaGTE.cpp"
+        ] + rhi_srcs
         ldflags = [
             "-dylib",
             "-Xlinker",
@@ -25,98 +119,47 @@ shared_library("OmegaGTE"){
             "-Xlinker",
             "@rpath/OmegaGTE.framework/Versions/${current_version}/OmegaGTE",
         ]
+        resources = [
+            "./src/Info.plist"
+        ]
         frameworks = ["Foundation.framework","QuartzCore.framework","Metal.framework"]
-        output_extension = ""
-        output_dir = "$root_out_dir/in"
+        output_dir = "$root_out_dir/Frameworks"
     }
-    else if(is_windows){
-        defines = ["TARGET_DIRECTX"]
-        output_extension = "dll"
-        ldflags = [
-            # "/WHOLEARCHIVE",
-            "/INCREMENTAL",
-            "/opt:noref"
-        ]
-        output_dir = "$root_out_dir/libs"
-    }
-    else if(is_linux){
-        defines = ["TARGET_VULKAN"]
-        cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags + ["-fPIC"]
-        ldflags =  gtk_link_flags + vulkan_link_flags
-        output_extension = "so"
-    }
-    include_dirs = [
-        include_dir,
-    ]
-    if(is_linux){
-        include_dirs += [
-            vulkan_include_dir
-        ]
-    }
-    sources = [
-        # Sources
-        "src/GE.cpp",
-        "src/GTEBase.cpp",
-        "src/GEPipeline.cpp",
-        "src/GECommandQueue.cpp",
-        "src/GERenderTarget.cpp",
-        "src/TE.cpp",
-        "src/OmegaGTE.cpp"
-    ] + rhi_srcs
 }
-
-
-if(is_mac){
-    bundle_data("OmegaGTE__plist"){
+else {
+    shared_library("OmegaGTE"){
+        if(is_windows){
+            defines = ["TARGET_DIRECTX"]
+            ldflags = [
+                # "/WHOLEARCHIVE",
+                "/INCREMENTAL",
+                "/opt:noref"
+            ]
+            output_dir = "$root_out_dir/libs"
+        }
+        else if(is_linux){
+            defines = ["TARGET_VULKAN"]
+            cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags + ["-fPIC"]
+            ldflags =  gtk_link_flags + vulkan_link_flags
+        }
+        include_dirs = [
+            include_dir,
+        ]
+        if(is_linux){
+            include_dirs += [
+                vulkan_include_dir
+            ]
+        }
         sources = [
-            "//src/Info.plist"
-        ]
-        outputs = [
-            "{{bundle_resources_dir}}/{{source_file_part}}"
-        ]
-    }
-    bundle_data("OmegaGTE__exec"){
-        sources = [
-            "${root_out_dir}/in/OmegaGTE"
-        ]
-        public_deps = [
-            ":OmegaGTE"
-        ]
-        outputs = [
-            "{{bundle_executable_dir}}/{{source_file_part}}"
-        ]
-    }
-
-    create_bundle("OmegaGTE.framework"){
-        public_deps = [
-            ":OmegaGTE__exec",
-            ":OmegaGTE__plist"
-        ]
-        bundle_root_dir = "${root_out_dir}/Frameworks/OmegaGTE.framework"
-        bundle_contents_dir = "${bundle_root_dir}/Versions/${current_version}"
-        bundle_resources_dir = "${bundle_contents_dir}/Resources"
-        bundle_executable_dir = "${bundle_contents_dir}"
-
-        code_signing_script = "//gn/codesign.py"
-        code_signing_sources = [
-            "${root_out_dir}/in/OmegaGTE"
-        ]
-        code_signing_args = [
-             "--sig",
-              code_signature,
-              "--code",
-              rebase_path("$root_out_dir/Frameworks/$target_name/Versions/${current_version}"),
-              "--framework",
-              "-F",
-              rebase_path("$root_out_dir/Frameworks/${target_name}"),
-              "--name",
-              "OmegaGTE",
-              "--current_version",
-              "${current_version}"
-        ]
-        code_signing_outputs = [
-            "${bundle_contents_dir}/_CodeSignature"
-        ]
+            # Sources
+            "src/GE.cpp",
+            "src/GTEBase.cpp",
+            "src/GEPipeline.cpp",
+            "src/GECommandQueue.cpp",
+            "src/GERenderTarget.cpp",
+            "src/TE.cpp",
+            "src/OmegaGTE.cpp"
+        ] + rhi_srcs
     }
 }
 
@@ -158,6 +201,33 @@ if(is_windows){
         sources = [
             "tests/directx/2DTest/main.cpp"
         ]
+    }
+}
+
+if(is_mac){
+    
+    mac_app_bundle("2DTest"){
+        sources = [
+            "./tests/metal/2DTest/main.mm"
+        ]
+        include_dirs = [
+            include_dir
+        ]
+        plist = "./tests/metal/2DTest/Info.plist"
+        public_deps = [
+            ":OmegaGTE.framework"
+        ]
+        resources = [
+            "./tests/metal/2DTest/MainMenu.nib"
+        ]
+        embedded_frameworks = [
+            "OmegaGTE.framework"
+        ]
+        frameworks = [
+            "Cocoa.framework",
+            "QuartzCore.framework"
+        ]
+        output_dir = test_out_dir
     }
 }
 
@@ -211,29 +281,24 @@ if(is_linux){
 
 if(omega_sl){
     executable("omegaslc"){
-        if(is_windows){
-            output_extension = "exe"
-        }
+        output_dir = "$root_out_dir/bin"
+        # if(is_windows){
+        #     output_extension = "exe"
+        # }
         sources = [
             "omegasl/main.cpp",
-            "omegasl/OmegaSLGen.h",
-            "omegasl/OmegaSLGen.cpp",
-            "omegasl/OmegaSLSyntax.h",
-            "omegasl/OmegaSLSyntax.cpp"
+            "omegasl/Gen.h",
+            "omegasl/Gen.cpp",
+            "omegasl/Parser.h",
+            "omegasl/Parser.cpp"
         ]
-        include_dirs = [
-            "${llvm_dir}/include"
-        ]
-        lib_dirs = [
-            "${llvm_dir}/libs"
-        ]
-        defines = [
-            "__STDC_CONSTANT_MACROS",
-            "__STDC_FORMAT_MACROS",
-            "__STDC_LIMIT_MACROS"
-        ]
-        libs = [
-            "clangParse"
-        ]
+        # defines = [
+        #     "__STDC_CONSTANT_MACROS",
+        #     "__STDC_FORMAT_MACROS",
+        #     "__STDC_LIMIT_MACROS"
+        # ]
+        # libs = [
+        #     "clangParse"
+        # ]
     }
 }

@@ -9,6 +9,26 @@ if(is_linux){
 }
 rhi_srcs = []
 
+shaderc_py = get_path_info("./shaderc.py","abspath")
+
+template("shader_library"){
+    assert(defined(invoker.sources))
+    assert(defined(invoker.output_dir))
+    t_name = target_name
+    action(target_name){
+        script = shaderc_py
+        sources = invoker.sources
+        if(is_mac){
+            args = [
+                "-o",
+                rebase_path(invoker.output_dir + "/${t_name}.metallib"),
+                "--target",
+                "metal",
+            ] + sources
+        }
+    }
+}
+
 if(is_windows){
     rhi_srcs +=[
          # Headers
@@ -41,6 +61,7 @@ else if(is_mac){
         get_path_info("../src/metal/GEMetalPipeline.mm","abspath"),
         get_path_info("../src/metal/GEMetalRenderTarget.mm","abspath"),
         get_path_info("../src/metal/GEMetalTexture.mm","abspath"),
+        get_path_info("../src/MetalTEContext.mm","abspath")
     ]
 }
 else if(is_linux){

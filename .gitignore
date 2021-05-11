@@ -10,6 +10,10 @@ dist
 build
 *.pyc
 doxygen
+gn-utils
+spirv-cross
+shaderc
+omegasl
 
 
 # Prerequisites

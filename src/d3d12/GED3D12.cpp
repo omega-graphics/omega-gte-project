@@ -280,4 +280,12 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         };
         return std::make_shared<GED3D12Buffer>(buffer);
     };
+
+    SharedHandle<GEFunction> GED3D12Engine::loadFunction(std::filesystem::path path){
+        ID3DBlob *blob;
+        D3DReadFileToBlob(path.wstring().c_str(),&blob);
+        auto rc = std::make_shared<GED3D12Function>();
+        rc->funcData = blob;
+        return rc;
+    };
 _NAMESPACE_END_

@@ -14,6 +14,7 @@
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"runtimeobject.lib")
+#pragma comment(lib,"d3dcompiler.lib")
 
 #ifndef OMEGAGTE_GED3D12_H
 #define OMEGAGTE_GED3D12_H
@@ -74,6 +75,7 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12Device8> d3d12_device;
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
+        SharedHandle<GEFunction> loadFunction(std::filesystem::path path);
         SharedHandle<GEFence> makeFence();
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);

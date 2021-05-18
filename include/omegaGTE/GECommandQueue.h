@@ -14,7 +14,7 @@ _NAMESPACE_BEGIN_
     struct GEScissorRect;
     struct GEViewport;
 
-    struct GERenderPassDescriptor {
+    struct  OMEGAGTE_EXPORT GERenderPassDescriptor {
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
         typedef GERenderTarget::RenderPassDesc::ColorAttachment ColorAttachment;
@@ -22,14 +22,14 @@ _NAMESPACE_BEGIN_
     };
 
 
-    struct GEComputePassDescriptor {
+    struct  OMEGAGTE_EXPORT GEComputePassDescriptor {
 
     };
 
     /**
      A Reusable interface for directly uploading commands to a GPU.
      */
-    class GECommandBuffer {
+    class  OMEGAGTE_EXPORT GECommandBuffer {
         friend class GERenderTarget::CommandBuffer;
     protected:
         typedef GERenderTarget::CommandBuffer::RenderPassDrawPolygonType RenderPassDrawPolygonType;
@@ -66,7 +66,7 @@ _NAMESPACE_BEGIN_
         virtual void commitToQueue() = 0;
         virtual void reset() = 0;
     };
-    class GECommandQueue {
+    class  OMEGAGTE_EXPORT GECommandQueue {
         unsigned size;
     protected:
         unsigned currentlyOccupied = 0;

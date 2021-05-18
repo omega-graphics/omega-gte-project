@@ -56,7 +56,7 @@ class OMEGAGTE_EXPORT OmegaTessalationEngineContext {
     friend class OmegaTessalationEngine;
 protected:
 
-    std::vector<std::thread> activeThreads;
+    std::vector<std::thread *> activeThreads;
 
     void translateCoordsDefaultImpl(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result);
     virtual void translateCoords(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result) = 0;

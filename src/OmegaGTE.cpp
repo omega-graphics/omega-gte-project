@@ -6,6 +6,7 @@ GTE Init(){
     return {OmegaGraphicsEngine::Create(),OmegaTessalationEngine::Create()};
 };
 
+
 void Close(GTE &gte){
     gte.graphicsEngine.reset();
     gte.tessalationEngine.reset();

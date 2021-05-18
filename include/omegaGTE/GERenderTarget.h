@@ -13,7 +13,7 @@
 _NAMESPACE_BEGIN_
     class GECommandBuffer;
 
-    class GERenderTarget {
+    class  OMEGAGTE_EXPORT GERenderTarget {
     public:
         struct RenderPassDesc {
             SharedHandle<GERenderPipelineState> pipelineState;
@@ -34,7 +34,7 @@ _NAMESPACE_BEGIN_
             };
             ColorAttachment * colorAttachment;
         };
-        class CommandBuffer {
+        class OMEGAGTE_EXPORT CommandBuffer {
             GERenderTarget *renderTargetPtr;
             SharedHandle<GECommandBuffer> commandBuffer;
             #ifdef TARGET_DIRECTX
@@ -74,11 +74,11 @@ _NAMESPACE_BEGIN_
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;
     };
-    class GENativeRenderTarget : public GERenderTarget {
+    class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {
         public:
         virtual void commitAndPresent() = 0;
      };
-     class GETextureRenderTarget : public GERenderTarget {
+     class  OMEGAGTE_EXPORT GETextureRenderTarget : public GERenderTarget {
          public:
          virtual void commit() = 0;
      };

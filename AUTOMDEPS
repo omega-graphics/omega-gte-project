@@ -3,6 +3,6 @@
         {
             "type":"gnpkg",
             "command":"utils --get"
-        },
+        }
     ]
 }

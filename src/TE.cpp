@@ -155,10 +155,10 @@ SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTECont
 std::future<TETessalationResult> OmegaTessalationEngineContext::tessalateAsync(const TETessalationParams &params,std::optional<GEViewport> viewport){
     std::promise<TETessalationResult> prom;
     auto fut = prom.get_future();
-    activeThreads.emplace_back([&](std::promise<TETessalationResult> promise,size_t idx){
+    activeThreads.emplace_back(new std::thread([&](std::promise<TETessalationResult> promise,size_t idx){
         promise.set_value_at_thread_exit(tessalateSync(params,viewport));
         activeThreads.erase(activeThreads.begin() + idx);
-    },std::move(prom),activeThreads.size());
+    },std::move(prom),activeThreads.size()));
     return fut;
 };
 
@@ -167,9 +167,9 @@ TETessalationResult OmegaTessalationEngineContext::tessalateSync(const TETessala
 };
 
 OmegaTessalationEngineContext::~OmegaTessalationEngineContext(){
-    for(auto & t : activeThreads){
-        if(t.joinable()){
-            t.join();
+    for(auto t : activeThreads){
+        if(t->joinable()){
+            t->join();
         }
     };
 };

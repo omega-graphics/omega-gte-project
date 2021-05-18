@@ -9,6 +9,12 @@ declare_args(){
     llvm_dir = ""
     glm_include_dir = ""
     glm_lib = ""
+    if(defined(external_project)){
+        external_project = external_project
+    }
+    else {
+        external_project = false
+    }
 }
 
 # config("spirv_cross_config") {
@@ -163,142 +169,146 @@ else {
     }
 }
 
-test_out_dir = root_out_dir + "/tests"
+if(!external_project){
 
-if(is_windows){
-    template("directx_test"){
+    test_out_dir = root_out_dir + "/tests"
 
-        if(defined(invoker.include_dirs)){
-            invoker.include_dirs += [include_dir]
-        }
-        else {
-            invoker.include_dirs = [include_dir]
-        }
-        invoker.ldflags = [
-           "User32.lib"
-        ]
-        invoker.public_deps = [
-            ":OmegaGTE"
-        ]
-        invoker.output_dir = "$root_out_dir/tests"
-        executable(target_name){
-            forward_variables_from(invoker,"*")
-        }
-        exe_name = target_name
-       
-        copy("${target_name}__copy_dll"){
-            sources = ["$root_out_dir/libs/OmegaGTE.dll"]
-            public_deps = [
-                ":$exe_name"
+    if(is_windows){
+        template("directx_test"){
+
+            if(defined(invoker.include_dirs)){
+                invoker.include_dirs += [include_dir]
+            }
+            else {
+                invoker.include_dirs = [include_dir]
+            }
+            invoker.ldflags = [
+            "User32.lib"
             ]
-            outputs = [
-                "${test_out_dir}/{{source_file_part}}"
+            invoker.public_deps = [
+                ":OmegaGTE"
             ]
+            invoker.output_dir = "$root_out_dir/tests"
+            executable(target_name){
+                forward_variables_from(invoker,"*")
+            }
+            exe_name = target_name
+        
+            copy("${target_name}__copy_dll"){
+                sources = ["$root_out_dir/libs/OmegaGTE.dll"]
+                public_deps = [
+                    ":$exe_name"
+                ]
+                outputs = [
+                    "${test_out_dir}/{{source_file_part}}"
+                ]
+            }
         }
-    }
 
-    directx_test("2DTest"){
-        sources = [
-            "tests/directx/2DTest/main.cpp"
-        ]
-    }
-}
-
-if(is_mac){
-    
-    mac_app_bundle("2DTest"){
-        sources = [
-            "./tests/metal/2DTest/main.mm"
-        ]
-        include_dirs = [
-            include_dir
-        ]
-        plist = "./tests/metal/2DTest/Info.plist"
-        public_deps = [
-            ":OmegaGTE.framework"
-        ]
-        resources = [
-            "./tests/metal/2DTest/MainMenu.nib"
-        ]
-        embedded_frameworks = [
-            "OmegaGTE.framework"
-        ]
-        frameworks = [
-            "Cocoa.framework",
-            "QuartzCore.framework"
-        ]
-        output_dir = test_out_dir
-    }
-}
-
-if(is_linux){
-    # Compile Test Suite
-    template("vulkan_test"){
-        if(defined(invoker.include_dirs)){
-            invoker.include_dirs += [include_dir]
-        }
-        else {
-            invoker.include_dirs = [include_dir]
-        }
-        invoker.cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags
-        invoker.ldflags =
-        gtk_link_flags + ["-rpath",rebase_path("$root_out_dir/tests")]
-        invoker.output_name = "$target_name"
-        invoker.libs = [
-            "c",
-            "c++",
-            "c++abi",
-        ]
-        invoker.public_deps = [
-            ":OmegaGTE"
-        ]
-        executable(target_name){
-            forward_variables_from(invoker,"*")
-        }
-        exe_name = target_name
-        copy("${target_name}__copy_so"){
+        directx_test("2DTest"){
             sources = [
-                "$root_out_dir/OmegaGTE.so",
-                "$libcxx_dir/libc++.so.1",
-                "$libcxx_dir/libc++abi.so.1"
-            ]
-            public_deps = [
-                ":$exe_name"
-            ]
-            outputs = [
-                "$test_out_dir/{{source_file_part}}"
+                "tests/directx/2DTest/main.cpp"
             ]
         }
     }
 
-    vulkan_test("2DTest"){
-        sources = [
-            "tests/vulkan/2DTest/main.cpp"
-        ]
+    if(is_mac){
+        
+        mac_app_bundle("2DTest"){
+            sources = [
+                "./tests/metal/2DTest/main.mm"
+            ]
+            include_dirs = [
+                include_dir
+            ]
+            plist = "./tests/metal/2DTest/Info.plist"
+            public_deps = [
+                ":OmegaGTE.framework"
+            ]
+            resources = [
+                "./tests/metal/2DTest/MainMenu.nib"
+            ]
+            embedded_frameworks = [
+                "OmegaGTE.framework"
+            ]
+            frameworks = [
+                "Cocoa.framework",
+                "QuartzCore.framework"
+            ]
+            output_dir = test_out_dir
+        }
     }
-    
+
+    if(is_linux){
+        # Compile Test Suite
+        template("vulkan_test"){
+            if(defined(invoker.include_dirs)){
+                invoker.include_dirs += [include_dir]
+            }
+            else {
+                invoker.include_dirs = [include_dir]
+            }
+            invoker.cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags
+            invoker.ldflags =
+            gtk_link_flags + ["-rpath",rebase_path("$root_out_dir/tests")]
+            invoker.output_name = "$target_name"
+            invoker.libs = [
+                "c",
+                "c++",
+                "c++abi",
+            ]
+            invoker.public_deps = [
+                ":OmegaGTE"
+            ]
+            executable(target_name){
+                forward_variables_from(invoker,"*")
+            }
+            exe_name = target_name
+            copy("${target_name}__copy_so"){
+                sources = [
+                    "$root_out_dir/OmegaGTE.so",
+                    "$libcxx_dir/libc++.so.1",
+                    "$libcxx_dir/libc++abi.so.1"
+                ]
+                public_deps = [
+                    ":$exe_name"
+                ]
+                outputs = [
+                    "$test_out_dir/{{source_file_part}}"
+                ]
+            }
+        }
+
+        vulkan_test("2DTest"){
+            sources = [
+                "tests/vulkan/2DTest/main.cpp"
+            ]
+        }
+        
+    }
+
 }
 
-if(omega_sl){
-    executable("omegaslc"){
-        output_dir = "$root_out_dir/bin"
-        # if(is_windows){
-        #     output_extension = "exe"
-        # }
-        sources = [
-            "omegasl/main.cpp",
-            "omegasl/Gen.h",
-            "omegasl/Gen.cpp",
-            "omegasl/Parser.h",
-            "omegasl/Parser.cpp"
-        ]
-        # defines = [
-        #     "__STDC_CONSTANT_MACROS",
-        #     "__STDC_FORMAT_MACROS",
-        #     "__STDC_LIMIT_MACROS"
-        # ]
-        # libs = [
-        #     "clangParse"
-        # ]
-    }
-}
+# if(omega_sl){
+#     executable("omegaslc"){
+#         output_dir = "$root_out_dir/bin"
+#         # if(is_windows){
+#         #     output_extension = "exe"
+#         # }
+#         sources = [
+#             "omegasl/main.cpp",
+#             "omegasl/Gen.h",
+#             "omegasl/Gen.cpp",
+#             "omegasl/Parser.h",
+#             "omegasl/Parser.cpp"
+#         ]
+#         # defines = [
+#         #     "__STDC_CONSTANT_MACROS",
+#         #     "__STDC_FORMAT_MACROS",
+#         #     "__STDC_LIMIT_MACROS"
+#         # ]
+#         # libs = [
+#         #     "clangParse"
+#         # ]
+#     }
+# }

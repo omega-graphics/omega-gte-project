@@ -24,7 +24,7 @@ _NAMESPACE_BEGIN_
 
 
     template<class _Num_Ty,typename _Angle_Ty>
-    class Vector2D_Base {
+    class  OMEGAGTE_EXPORT Vector2D_Base {
         _Num_Ty i;
         _Num_Ty j;
         public:
@@ -77,55 +77,55 @@ _NAMESPACE_BEGIN_
     typedef Vector2D_Base<float,float> FVector2D;
     typedef Vector2D_Base<int,float> IVector2D;
 
-    struct GPoint2D {
+    struct  OMEGAGTE_EXPORT GPoint2D {
         float x,y;
     };
 
-    struct GArc {
+    struct  OMEGAGTE_EXPORT GArc {
         GPoint2D center;
         float radians;
         unsigned radius_x;
         unsigned radius_y;
     };
-    struct GPoint3D {
+    struct  OMEGAGTE_EXPORT GPoint3D {
         float x,y,z;
     };
 
-    struct GRect {
+    struct  OMEGAGTE_EXPORT GRect {
         GPoint2D pos;
         float w,h;
     };
 
-    struct GRoundedRect {
+    struct  OMEGAGTE_EXPORT GRoundedRect {
         GPoint2D pos;
         float w,h,rad_x,rad_y;
     };
 
-    struct GRectangularPrism {
+    struct  OMEGAGTE_EXPORT GRectangularPrism {
         GPoint3D pos;
         float w,h,d;
     };
 
-    struct GCylinder {
+    struct  OMEGAGTE_EXPORT GCylinder {
         GPoint3D pos;
         float r,h;
     };
 
-    struct GPyramid {
+    struct  OMEGAGTE_EXPORT GPyramid {
         float x,y,z,w,d,h;
     };
 
-    struct GCone {
+    struct  OMEGAGTE_EXPORT GCone {
         float x,y,z,r,h;
     };
 
-    struct GEllipsoid {
+    struct  OMEGAGTE_EXPORT GEllipsoid {
         float x,y,z,rad_x,rad_y,rad_z;
     };
 
 
     template<class _Pt_Ty>
-    class GVectorPath_Base {
+    class  OMEGAGTE_EXPORT GVectorPath_Base {
         public:
         struct Node {
             _Pt_Ty *pt;
@@ -139,12 +139,12 @@ _NAMESPACE_BEGIN_
             };
         };
 
-        struct Segment {
+        struct  OMEGAGTE_EXPORT Segment {
             _Pt_Ty ** pt_A;
             _Pt_Ty ** pt_B;
         };
 
-        class Path_Iterator {
+        class  OMEGAGTE_EXPORT Path_Iterator {
             Node *pt_A;
             Node *pt_B;
             unsigned pos;

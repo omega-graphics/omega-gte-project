@@ -1,3 +1,5 @@
+
+#include <filesystem>
 #if defined(TARGET_DIRECTX)
 #include <windows.h>
 #include <dxgi1_6.h>
@@ -58,17 +60,17 @@ _NAMESPACE_BEGIN_
         float width,height;
     };
 
-    struct BufferDescriptor {
+    struct  OMEGAGTE_EXPORT BufferDescriptor {
         size_t len;
         StorageOpts opts;
     };
 
-    class GEBuffer {
+    class  OMEGAGTE_EXPORT GEBuffer {
         virtual size_t size() = 0;
         virtual void *data() = 0;
     };
 
-    struct HeapDescriptor {
+    struct  OMEGAGTE_EXPORT HeapDescriptor {
         typedef enum : uint8_t {
             Shared,
             Automatic
@@ -76,7 +78,7 @@ _NAMESPACE_BEGIN_
         size_t len;
     };
 
-    class GEHeap {
+    class  OMEGAGTE_EXPORT GEHeap {
     public:
         virtual size_t currentSize() = 0;
         /**
@@ -94,7 +96,7 @@ _NAMESPACE_BEGIN_
         virtual SharedHandle<GETexture> makeTexture(const TextureDescriptor & desc) = 0;
     };
 
-    class GEFence {
+    class  OMEGAGTE_EXPORT GEFence {
 
     };
 
@@ -109,7 +111,9 @@ _NAMESPACE_BEGIN_
         static SharedHandle<OmegaGraphicsEngine> Create();
         IN_INIT_SCOPE
     public:
-
+        #ifdef TARGET_DIRECTX
+        virtual SharedHandle<GEFunction> loadFunction(std::filesystem::path path) = 0;
+        #endif
         /**
           Creates a GEFence.
          @returns SharedHandle<GEFence>

@@ -7,12 +7,12 @@ _NAMESPACE_BEGIN_
 
     typedef struct __GEFunctionInternal GEFunction;
 
-    struct RenderPipelineDescriptor {
+    struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
         SharedHandle<GEFunction> vertexFunc;
         SharedHandle<GEFunction> fragmentFunc;
     };
 
-    struct ComputePipelineDescriptor {
+    struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
         SharedHandle<GEFunction> computeFunc;
 
     };

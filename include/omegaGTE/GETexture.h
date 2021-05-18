@@ -6,7 +6,7 @@
 
 _NAMESPACE_BEGIN_
 
-    class GETexture {
+    class  OMEGAGTE_EXPORT GETexture {
         public:
         typedef enum : unsigned char {
             Texture2D,
@@ -20,7 +20,7 @@ _NAMESPACE_BEGIN_
             RenderTarget = 0x04
         } GETextureUsage;
     };
-    struct TextureDescriptor {
+    struct  OMEGAGTE_EXPORT TextureDescriptor {
         GETexture::GETextureType type;
         StorageOpts storage_opts;
         GETexture::GETextureUsage usage;
@@ -29,7 +29,7 @@ _NAMESPACE_BEGIN_
         unsigned depth;
     };
 
-    struct TextureSamplerDescriptor {
+    struct  OMEGAGTE_EXPORT TextureSamplerDescriptor {
         
     };
 

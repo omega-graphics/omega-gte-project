@@ -90,7 +90,17 @@ declare_args(){
 # group("shader_cross_comp"){
     
 # }
-
+omega_gte_headers = [
+    "./include/OmegaGTE.h",
+    "./include/omegaGTE/GE.h",
+    "./include/omegaGTE/GECommandQueue.h",
+    "./include/omegaGTE/GEPipeline.h",
+    "./include/omegaGTE/GERenderTarget.h",
+    "./include/omegaGTE/GETexture.h",
+    "./include/omegaGTE/GTEBase.h",
+    "./include/omegaGTE/GTEShaderTypes.h",
+    "./include/omegaGTE/TE.h"
+    ]
 if(is_mac){
     config("OmegaGTE_Config"){
         defines = [
@@ -109,6 +119,7 @@ if(is_mac){
         include_dirs = [
             include_dir,
         ]
+        public = omega_gte_headers
         sources = [
             "src/GE.cpp",
             "src/GTEBase.cpp",
@@ -148,6 +159,7 @@ else {
             cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags + ["-fPIC"]
             ldflags =  gtk_link_flags + vulkan_link_flags
         }
+        public_headers = omega_gte_headers
         include_dirs = [
             include_dir,
         ]

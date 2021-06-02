@@ -1,9 +1,15 @@
 #import "GEMetalRenderTarget.h"
+#import "GEMetalCommandQueue.h"
 
 _NAMESPACE_BEGIN_
 
-GEMetalNativeRenderTarget::GEMetalNativeRenderTarget(CAMetalLayer *metalLayer):metalLayer(metalLayer),currentDrawable([metalLayer nextDrawable]){
+GEMetalNativeRenderTarget::GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer):metalLayer(metalLayer),
+commandQueue((GEMetalCommandQueue *)commandQueue.get()),drawableSize([metalLayer drawableSize]),currentDrawable([metalLayer nextDrawable]){
     
+};
+
+id<CAMetalDrawable> GEMetalNativeRenderTarget::getDrawable(){
+    return currentDrawable;
 };
 
 SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBuffer(){
@@ -12,13 +18,15 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBu
 
 
 void GEMetalNativeRenderTarget::commitAndPresent(){
-    @autoreleasepool {
-        NSMutableArray<id<MTLCommandBuffer>> *commandBuffers = commandQueue->commandBuffers;
-        [[commandBuffers lastObject] presentDrawable:currentDrawable];
-        for(id<MTLCommandBuffer> cb in commandBuffers){
-            [cb commit];
-        };
-    }
+    auto & commandBuffers = commandQueue->commandBuffers;
+    // [commandBuffers.back()->buffer presentDrawable:currentDrawable];
+    for(auto buffer_it = commandBuffers.begin();buffer_it != commandBuffers.end();buffer_it++){     
+        auto ref = *buffer_it;
+        if(buffer_it == commandBuffers.end()-1)
+            [ref->buffer presentDrawable:currentDrawable];
+        [ref->buffer commit];
+    };
+    commandBuffers.clear();
 };
 
 void GEMetalNativeRenderTarget::reset(){
@@ -36,12 +44,10 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalTextureRenderTarget::commandB
 };
 
 void GEMetalTextureRenderTarget::commit(){
-    @autoreleasepool {
-        NSMutableArray<id<MTLCommandBuffer>> *commandBuffers = commandQueue->commandBuffers;
-        for(id<MTLCommandBuffer> cb in commandBuffers){
-            [cb commit];
-        };
-    }
+    auto & commandBuffers = commandQueue->commandBuffers;
+     for(auto commandBuffer : commandBuffers){
+        [commandBuffer->buffer commit];
+    };
 };
 
 

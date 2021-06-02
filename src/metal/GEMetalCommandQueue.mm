@@ -4,8 +4,10 @@
 #import "GEMetal.h"
 
 #import <QuartzCore/QuartzCore.h>
+
 _NAMESPACE_BEGIN_
-    GEMetalCommandBuffer::GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue):buffer(buffer),parentQueue(parentQueue){
+    GEMetalCommandBuffer::GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue):
+    buffer(buffer),parentQueue(parentQueue){
 
     };
 
@@ -15,7 +17,6 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishBlitPass(){
         [bp endEncoding];
-        bp = nil;
     };
 
     void GEMetalCommandBuffer::startRenderPass(const GERenderPassDescriptor & desc){
@@ -23,9 +24,9 @@ _NAMESPACE_BEGIN_
         renderPassDesc.renderTargetArrayLength = 1;
         if(desc.nRenderTarget){
             GEMetalNativeRenderTarget *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
-            id<CAMetalDrawable> metalDrawable = n_rt->currentDrawable;
-            renderPassDesc.renderTargetWidth = n_rt->drawableSize->width;
-            renderPassDesc.renderTargetHeight = n_rt->drawableSize->height;
+            id<CAMetalDrawable> metalDrawable = n_rt->getDrawable();
+            renderPassDesc.renderTargetWidth = n_rt->drawableSize.width;
+            renderPassDesc.renderTargetHeight = n_rt->drawableSize.height;
             renderPassDesc.colorAttachments[0].texture = metalDrawable.texture;
         }
         else if(desc.tRenderTarget){
@@ -141,7 +142,6 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishRenderPass(){
         [rp endEncoding];
-        rp = nil;
     };
 
     void GEMetalCommandBuffer::startComputePass(const GEComputePassDescriptor & desc){
@@ -155,33 +155,42 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishComputePass(){
         [cp endEncoding];
-        cp = nil;
     };
     
     void GEMetalCommandBuffer::commitToQueue(){
+        NSLog(@"Buffer Enqueueing");
         [buffer enqueue];
-        [parentQueue->commandBuffers addObject:buffer];
+        NSLog(@"Buffer Enqueued");
+        decltype(this) self_ptr = this;
+        std::cout << "PTR:" << self_ptr << std::endl;
+        parentQueue->commandBuffers.emplace_back(self_ptr);
+        NSLog(@"Buffer Push into Buffer Array");
+        
     };
 
     void GEMetalCommandBuffer::reset(){
         buffer = [parentQueue->commandQueue commandBuffer];
     };
 
-    GEMetalCommandQueue::GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size):GECommandQueue(size),commandQueue(queue){
-        commandBuffers = [[NSMutableArray alloc] init];
+    GEMetalCommandBuffer::~GEMetalCommandBuffer(){
+        NSLog(@"Metal Command Buffer Destroy");
+    };
+
+    GEMetalCommandQueue::GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size):
+    GECommandQueue(size),
+    commandQueue(queue){
+         
     };
 
     void GEMetalCommandQueue::commitToGPU(){
-        @autoreleasepool {
-            for(id<MTLCommandBuffer> commandBuffer in commandBuffers){
-                [commandBuffer commit];
-            };
-            [commandBuffers removeAllObjects];
-        };
+        // for(auto commandBuffer : commandBuffers){
+        //     [commandBuffer->buffer commit];
+        // };
+        // commandBuffers.clear();
     };
 
     GEMetalCommandQueue::~GEMetalCommandQueue(){
-        [commandBuffers release];
+        
     };
 
     SharedHandle<GECommandBuffer> GEMetalCommandQueue::getAvailableBuffer(){

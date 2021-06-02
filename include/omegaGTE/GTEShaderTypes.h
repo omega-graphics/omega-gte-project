@@ -18,6 +18,7 @@ struct OmegaGTETexturedVertex;
 
 #ifdef TARGET_DIRECTX
 
+
 #endif
 
 #ifdef TARGET_METAL
@@ -32,6 +33,7 @@ struct OmegaGTEColorVertex : OmegaGTEVertex {
 struct OmegaGTETexturedVertex : OmegaGTEVertex {
     simd_float2 texturePos;
 };
+
 #endif
 
 

@@ -16,7 +16,6 @@ _NAMESPACE_BEGIN_
     class  OMEGAGTE_EXPORT GERenderTarget {
     public:
         struct RenderPassDesc {
-            SharedHandle<GERenderPipelineState> pipelineState;
             struct ColorAttachment {
                 typedef enum {
                     Load,
@@ -53,10 +52,11 @@ _NAMESPACE_BEGIN_
                 Texture
             } GERTType;
             GERTType renderTargetTy;
-            CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
+            CommandBuffer(GERenderTarget *renderTarget,GERTType type,const SharedHandle<GECommandBuffer> & commandBuffer);
         public:
             friend SharedHandle<CommandBuffer> commandBuffer();
             void startRenderPass(const RenderPassDesc & desc);
+            void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
             typedef enum : uint8_t {
                 Triangle,
                 TriangleStrip

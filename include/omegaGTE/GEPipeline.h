@@ -3,9 +3,21 @@
 #ifndef OMEGAGTE_GEPIPELINE_H
 #define OMEGAGTE_GEPIPELINE_H
 
+#if defined(TARGET_METAL) && defined(__OBJC__)
+@protocol MTLLibrary;
+#endif
+
 _NAMESPACE_BEGIN_
 
     typedef struct __GEFunctionInternal GEFunction;
+
+    #if defined(TARGET_METAL) && defined(__OBJC__)
+
+    struct GEFunctionLibrary {
+        __strong id<MTLLibrary> mtlLib;
+        std::vector<SharedHandle<GEFunction>> functions;
+    };
+    #endif
 
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
         SharedHandle<GEFunction> vertexFunc;

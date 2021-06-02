@@ -12,7 +12,7 @@ GERenderTarget::RenderPassDesc::ColorAttachment::ColorAttachment(GERenderTarget:
     
 };
 
-GERenderTarget::CommandBuffer::CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer):renderTargetPtr(renderTarget),renderTargetTy(type),commandBuffer(commandBuffer){
+GERenderTarget::CommandBuffer::CommandBuffer(GERenderTarget *renderTarget,GERTType type,const SharedHandle<GECommandBuffer> & commandBuffer):renderTargetPtr(renderTarget),renderTargetTy(type),commandBuffer(std::move(commandBuffer)){
     
 };
 
@@ -27,6 +27,10 @@ void GERenderTarget::CommandBuffer::startRenderPass(const GERenderTarget::Render
     renderPassDesc.colorAttachment = desc.colorAttachment;
     
     commandBuffer->startRenderPass(renderPassDesc);
+};
+
+void GERenderTarget::CommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState){
+    commandBuffer->setRenderPipelineState(pipelineState);
 };
 
 void GERenderTarget::CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t start){

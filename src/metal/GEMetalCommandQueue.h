@@ -9,13 +9,14 @@
 _NAMESPACE_BEGIN_
 
     class GEMetalCommandQueue;
-    class GEMetalCommandBuffer : public GECommandBuffer {
-        id<MTLCommandBuffer> buffer;
-        id<MTLRenderCommandEncoder> rp = nil;
-        id<MTLComputeCommandEncoder> cp = nil;
-        id<MTLBlitCommandEncoder> bp = nil;
+    class GEMetalCommandBuffer final : public GECommandBuffer {
+        __strong id<MTLRenderCommandEncoder> rp = nil;
+        __strong id<MTLComputeCommandEncoder> cp = nil;
+        __strong id<MTLBlitCommandEncoder> bp = nil;
         GEMetalCommandQueue *parentQueue;
+        friend class GEMetalCommandQueue;
     public:
+        __strong id<MTLCommandBuffer> buffer = nil;
         void startBlitPass();
         void finishBlitPass();
         
@@ -36,13 +37,17 @@ _NAMESPACE_BEGIN_
         void setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned index);
         void finishComputePass();
         GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue);
+        ~GEMetalCommandBuffer();
         void commitToQueue();
         void reset();
     };
 
     class GEMetalCommandQueue : public GECommandQueue {
-        id<MTLCommandQueue> commandQueue;
-        NSMutableArray<id<MTLCommandBuffer>> * commandBuffers;
+        __strong id<MTLCommandQueue> commandQueue;
+
+        std::vector<GEMetalCommandBuffer *> commandBuffers;
+
+        
         friend class GEMetalCommandBuffer;
         friend class GEMetalNativeRenderTarget;
         friend class GEMetalTextureRenderTarget;

@@ -1,4 +1,6 @@
 #import "GEMetal.h"
+#include <sstream>
+#include <memory>
 #import "GEMetalCommandQueue.h"
 #import "GEMetalTexture.h"
 #import "GEMetalRenderTarget.h"
@@ -21,20 +23,20 @@ _NAMESPACE_BEGIN_
     GEMetalFence::GEMetalFence(id<MTLFence> fence):metalFence(fence){};
 
     class GEMetalEngine : public OmegaGraphicsEngine {
-        id<MTLDevice> metalDevice;
+        __strong id<MTLDevice> metalDevice;
     public:
         GEMetalEngine():metalDevice(MTLCreateSystemDefaultDevice()){
             DEBUG_STREAM("GEMetalEngine Successfully Created");
         };
-        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount){
+        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override{
             id<MTLCommandQueue> commandQueue = [metalDevice newCommandQueueWithMaxCommandBufferCount:maxBufferCount];
             return std::make_shared<GEMetalCommandQueue>(commandQueue,maxBufferCount);
         };
-        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc){
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override{
             id<MTLBuffer> buffer = [metalDevice newBufferWithLength:desc.len options:MTLResourceStorageModeShared];
             return std::make_shared<GEMetalBuffer>(buffer);
         };
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc){
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc) override{
             GEMetalFunction *computeFunc = (GEMetalFunction *)desc.computeFunc.get();
             NSError *error;
             id<MTLComputePipelineState> pipelineState = [metalDevice newComputePipelineStateWithFunction:computeFunc->function error:&error];
@@ -43,18 +45,19 @@ _NAMESPACE_BEGIN_
             };
             return std::make_shared<GEMetalComputePipelineState>(pipelineState);
         };
-        SharedHandle<GEFence> makeFence(){
+        SharedHandle<GEFence> makeFence() override{
             auto fence = [metalDevice newFence];
             return std::make_shared<GEMetalFence>(fence);
         };
-        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc){
+        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc) override{
             MTLHeapDescriptor *heapDesc = [[MTLHeapDescriptor alloc]init];
-            
+            return nullptr;
         };
-        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
-            return std::make_shared<GEMetalNativeRenderTarget>(desc.metalLayer);
+        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc) override{
+            desc.metalLayer.device = metalDevice;
+            return std::make_shared<GEMetalNativeRenderTarget>(makeCommandQueue(100),desc.metalLayer);
         };
-        SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor &desc){
+        SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor &desc) override{
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
             
             GEMetalFunction *vertexFunc = (GEMetalFunction *)desc.vertexFunc.get();
@@ -73,18 +76,45 @@ _NAMESPACE_BEGIN_
             
             return std::make_shared<GEMetalRenderPipelineState>(pipelineState);
         };
-        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
+        SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) override{
+            NSURL *url = [NSURL fileURLWithFileSystemRepresentation:path.c_str() isDirectory:NO relativeToURL:nil];
+            NSError *error;
+            id<MTLLibrary> metallib = [metalDevice newLibraryWithURL:url error:&error];
+            if(error.code >= 0){
+                auto funcLib = std::make_shared<GEFunctionLibrary>();
+                funcLib->mtlLib = metallib;
+                /// Succeeded.
+                for(const std::string & func_name : func_names) {
+                    NSString *nsStr = [NSString stringWithUTF8String:func_name.c_str()];
+                    id <MTLFunction> mtlFunc = [metallib newFunctionWithName:nsStr];
+                    auto func = new GEMetalFunction();
+                    func->function = mtlFunc;
+                    funcLib->functions.emplace_back(func);
+                };
+                return funcLib;
+            }
+            else {
+                /// Failed
+                std::ostringstream oss;
+                oss << "Failed to Load MTLLibrary from path:" << path.c_str() << " " << std::flush;
+                DEBUG_STREAM(oss.str());
+                return nullptr;
+            };
             
         };
-        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc){
+
+        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override{
+            return nullptr;
+        };
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override{
             MTLTextureDescriptor *mtlDesc = [[MTLTextureDescriptor alloc] init];
             id<MTLTexture> texture = [metalDevice newTextureWithDescriptor:mtlDesc];
-            return std::make_shared<GEMetalTexture>(texture,desc);
+            return std::shared_ptr<GETexture>(new GEMetalTexture(texture,desc));
         };
     };
 
 
     SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(){
-        return std::make_shared<GEMetalEngine>();
+        return std::shared_ptr<OmegaGraphicsEngine>(new GEMetalEngine());
     };
 _NAMESPACE_END_

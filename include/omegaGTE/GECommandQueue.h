@@ -65,6 +65,7 @@ _NAMESPACE_BEGIN_
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
         virtual void commitToQueue() = 0;
         virtual void reset() = 0;
+        virtual ~GECommandBuffer() = default;
     };
     class  OMEGAGTE_EXPORT GECommandQueue {
         unsigned size;

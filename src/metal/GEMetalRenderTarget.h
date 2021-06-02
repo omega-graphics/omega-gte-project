@@ -15,11 +15,12 @@ _NAMESPACE_BEGIN_
 class GEMetalNativeRenderTarget : public GENativeRenderTarget {
     SharedHandle<GEMetalCommandQueue> commandQueue;
     CAMetalLayer *metalLayer;
+    __strong id<CAMetalDrawable> currentDrawable;
 public:
-    GEMetalNativeRenderTarget(CAMetalLayer *metalLayer);
-    CGSize *drawableSize;
-    id<CAMetalDrawable> currentDrawable;
+    GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer);
+    CGSize drawableSize;
     SharedHandle<CommandBuffer> commandBuffer();
+    id<CAMetalDrawable> getDrawable();
     void commitAndPresent();
     void reset();
 };

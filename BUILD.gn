@@ -4,11 +4,6 @@ import("./gn-utils/Utils.gni")
 declare_args(){
     d3d11 = false
     omega_sl = false
-    libcxx_dir = ""
-    libcxx_include = ""
-    llvm_dir = ""
-    glm_include_dir = ""
-    glm_lib = ""
     if(defined(external_project)){
         external_project = external_project
     }

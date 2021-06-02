@@ -1,5 +1,7 @@
 
+
 #include <filesystem>
+#include <initializer_list>
 #if defined(TARGET_DIRECTX)
 #include <windows.h>
 #include <dxgi1_6.h>
@@ -32,6 +34,7 @@ _NAMESPACE_BEGIN_
     } StorageOpts;
 
     typedef struct __GEFunctionInternal GEFunction;
+    struct GEFunctionLibrary;
     class GETexture;
     typedef class __GEComputePipelineState GEComputePipelineState;
     typedef class __GERenderPipelineState  GERenderPipelineState;
@@ -100,6 +103,18 @@ _NAMESPACE_BEGIN_
 
     };
 
+    struct GEVertex {
+        FVector3D pos;
+    };
+
+    struct GEColoredVertex : public GEVertex {
+        FMatrix color;
+    };
+
+    struct GETexturedVertex : public GEVertex {
+        FVector2D textureCoord;
+    };
+
     /**
      The Omega GE Main Class
     */
@@ -113,6 +128,9 @@ _NAMESPACE_BEGIN_
     public:
         #ifdef TARGET_DIRECTX
         virtual SharedHandle<GEFunction> loadFunction(std::filesystem::path path) = 0;
+        #endif
+        #ifdef TARGET_METAL
+        virtual SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) = 0;
         #endif
         /**
           Creates a GEFence.
@@ -165,6 +183,8 @@ _NAMESPACE_BEGIN_
     };
 
 
+    
+
 
     #ifdef TARGET_DIRECTX
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
@@ -184,6 +204,8 @@ _NAMESPACE_BEGIN_
         Window w;
     };
     #endif
+
+
 _NAMESPACE_END_
 
 #endif

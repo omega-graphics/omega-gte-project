@@ -96,12 +96,20 @@ omega_gte_headers = [
     "./include/omegaGTE/GTEShaderTypes.h",
     "./include/omegaGTE/TE.h"
     ]
-if(is_mac){
+
     config("OmegaGTE_Config"){
-        defines = [
-            "TARGET_METAL"
-        ]
+        if(is_mac){
+            defines = [
+                "TARGET_METAL"
+            ]
+        }
+        else if(is_windows){
+            defines = [
+                "TARGET_DIRECTX"
+            ]
+        }
     }
+if(is_mac){
     mac_framework_bundle("OmegaGTE"){
         version = "0.2"
         public_configs = [
@@ -141,20 +149,25 @@ if(is_mac){
 else {
     shared_library("OmegaGTE"){
         if(is_windows){
-            defines = ["TARGET_DIRECTX"]
+            public_configs = [
+                ":OmegaGTE_Config"
+            ]
             ldflags = [
                 # "/WHOLEARCHIVE",
                 "/INCREMENTAL",
-                "/opt:noref"
+                "/opt:noref",
+                "User32.lib"
             ]
             output_dir = "$root_out_dir/libs"
         }
         else if(is_linux){
-            defines = ["TARGET_VULKAN"]
+            public_configs = [
+                ":OmegaGTE_Config"
+            ]
             cflags_cc = ["-stdlib=libc++","-isystem",libcxx_include] + gtk_c_flags + ["-fPIC"]
             ldflags =  gtk_link_flags + vulkan_link_flags
         }
-        public_headers = omega_gte_headers
+        # public = omega_gte_headers
         include_dirs = [
             include_dir,
         ]
@@ -182,6 +195,19 @@ if(!external_project){
 
     if(is_windows){
         template("directx_test"){
+            f = rebase_path("//tests/directx/2DTest/manifest.rc.in")
+            manifest = rebase_path("//tests/directx/2DTest/app.exe.manifest")
+            configure_file("manifest_rc"){
+                file = f
+                defines = [
+                    "-DEMBED=\"${manifest}\""
+                ]
+                output_name = "$root_out_dir/manifest.rc"
+            }
+
+            invoker.sources += [
+                "$root_out_dir/manifest.rc"
+            ]
 
             if(defined(invoker.include_dirs)){
                 invoker.include_dirs += [include_dir]
@@ -190,10 +216,11 @@ if(!external_project){
                 invoker.include_dirs = [include_dir]
             }
             invoker.ldflags = [
-            "User32.lib"
+                "User32.lib"
             ]
             invoker.public_deps = [
-                ":OmegaGTE"
+                ":OmegaGTE",
+                ":manifest_rc"
             ]
             invoker.output_dir = "$root_out_dir/tests"
             executable(target_name){

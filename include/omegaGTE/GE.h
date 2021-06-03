@@ -128,6 +128,7 @@ _NAMESPACE_BEGIN_
     public:
         #ifdef TARGET_DIRECTX
         virtual SharedHandle<GEFunction> loadFunction(std::filesystem::path path) = 0;
+
         #endif
         #ifdef TARGET_METAL
         virtual SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) = 0;
@@ -188,7 +189,10 @@ _NAMESPACE_BEGIN_
 
     #ifdef TARGET_DIRECTX
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
-        IDXGISwapChain3 *swapChain;
+        bool isHwnd;
+        HWND hwnd;
+        unsigned width;
+        unsigned height;
     };
 
     #endif

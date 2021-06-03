@@ -13,6 +13,7 @@ _NAMESPACE_BEGIN_
         bool inComputePass;
         bool inBlitPass;
         std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
+        friend class GED3D12CommandQueue;
     public:
         void startBlitPass();
         void finishBlitPass();
@@ -32,7 +33,6 @@ _NAMESPACE_BEGIN_
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState);
         void finishComputePass();
 
-        void commitToQueue();
         GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
         void reset();
     };
@@ -48,6 +48,7 @@ _NAMESPACE_BEGIN_
     public:
         void commitToGPU();
         void reset();
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer);
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
     };

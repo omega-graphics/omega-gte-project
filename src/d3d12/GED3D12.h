@@ -75,6 +75,7 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12Device8> d3d12_device;
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
+        void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
         SharedHandle<GEFunction> loadFunction(std::filesystem::path path);
         SharedHandle<GEFence> makeFence();
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
@@ -85,6 +86,8 @@ _NAMESPACE_BEGIN_
         SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc);
         SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc);
         SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc);
+        IDXGISwapChain3 *createSwapChainForComposition(DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue);
+        IDXGISwapChain3 *createSwapChainFromHWND(HWND hwnd,DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue);
     };
 _NAMESPACE_END_
 #endif

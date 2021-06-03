@@ -13,12 +13,13 @@ _NAMESPACE_BEGIN_
     public:
         SharedHandle<CommandBuffer> commandBuffer();
         void commitAndPresent();
+        void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer);
          ComPtr<ID3D12DescriptorHeap> descriptorHeapForRenderTarget;
           unsigned frameIndex;
         std::vector<ID3D12Resource *> renderTargets;
         GED3D12NativeRenderTarget(IDXGISwapChain3 * swapChain,
                                  ID3D12DescriptorHeap * descriptorHeapForRenderTarget,
-                                 SharedHandle<GED3D12CommandQueue> & commandQueue,
+                                 SharedHandle<GECommandQueue> commandQueue,
                                  unsigned frameIndex,
                                  ID3D12Resource *const *renderTargets,
                                  size_t renderTargetViewCount);

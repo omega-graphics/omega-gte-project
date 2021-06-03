@@ -4,14 +4,18 @@ _NAMESPACE_BEGIN_
     GED3D12NativeRenderTarget::GED3D12NativeRenderTarget(
         IDXGISwapChain3 * swapChain,
         ID3D12DescriptorHeap * descriptorHeapForRenderTarget,
-        SharedHandle<GED3D12CommandQueue> & commandQueue,
+        SharedHandle<GECommandQueue> commandQueue,
         unsigned frameIndex,
         ID3D12Resource *const *renderTargets,
         size_t renderTargetViewCount):swapChain(swapChain),
         descriptorHeapForRenderTarget(descriptorHeapForRenderTarget),
-        commandQueue(commandQueue),frameIndex(frameIndex),
+        commandQueue((GED3D12CommandQueue *)commandQueue.get()),frameIndex(frameIndex),
         renderTargets(renderTargets,renderTargets + renderTargetViewCount){
         
+    };
+
+    void GED3D12NativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer){
+
     };
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12NativeRenderTarget::commandBuffer(){

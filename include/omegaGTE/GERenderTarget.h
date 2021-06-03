@@ -15,8 +15,8 @@ _NAMESPACE_BEGIN_
 
     class  OMEGAGTE_EXPORT GERenderTarget {
     public:
-        struct RenderPassDesc {
-            struct ColorAttachment {
+        struct OMEGAGTE_EXPORT RenderPassDesc {
+            struct OMEGAGTE_EXPORT ColorAttachment {
                 typedef enum {
                     Load,
                     LoadPreserve,
@@ -24,7 +24,7 @@ _NAMESPACE_BEGIN_
                     Discard
                 } LoadAction;
                 LoadAction loadAction;
-                struct ClearColor {
+                struct OMEGAGTE_EXPORT ClearColor {
                     float r,g,b,a;
                     ClearColor(float r,float g,float b,float a);
                 };

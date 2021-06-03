@@ -16,10 +16,11 @@ _NAMESPACE_BEGIN_
         D3D12_COMMAND_QUEUE_DESC desc;
         desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         desc.NodeMask = engine->d3d12_device->GetNodeCount();
-        desc.Priority = 0;
+        desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
         desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
         hr = engine->d3d12_device->CreateCommandQueue(&desc,IID_PPV_ARGS(commandQueue.GetAddressOf()));
         if(FAILED(hr)){
+            MessageBoxA(GetForegroundWindow(),"Failed to Create Command Queue.","NOTE",MB_OK);
             exit(1);
         };
 
@@ -172,11 +173,19 @@ _NAMESPACE_BEGIN_
         inComputePass = false;
     };
 
-    void GED3D12CommandBuffer::commitToQueue(){
-        HRESULT hr;
-        hr = commandList->Close();
+    // void GED3D12CommandBuffer::commitToQueue(){
+    //     HRESULT hr;
+    //     hr = commandList->Close();
         
-        parentQueue->commandLists.push_back(commandList.Get());
+    //     parentQueue->commandLists.push_back(commandList.Get());
+    // };
+
+    void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
+        HRESULT hr;
+        auto d3d12_buffer = (GED3D12CommandBuffer *)commandBuffer.get();
+        hr = d3d12_buffer->commandList->Close();
+        
+        commandLists.push_back(d3d12_buffer->commandList.Get());
     };
 
     void GED3D12CommandBuffer::reset(){

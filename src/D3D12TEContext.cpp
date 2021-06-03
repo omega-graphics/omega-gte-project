@@ -11,7 +11,7 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessalationEngineContext {
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
-
+            
         };
     };
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};

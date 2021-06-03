@@ -29,9 +29,47 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     ATOM a = RegisterClassEx(&wcex);
 
 
-    HWND hwnd = CreateWindowA("Test","",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,hInstance,NULL);
+    HWND hwnd = CreateWindowA(MAKEINTATOM(a),"",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,hInstance,NULL);
+    if(!IsWindow(hwnd)){
+         MessageBoxA(GetForegroundWindow(),"Failed to Create Window","NOTE",MB_OK);
+        exit(1);
+    };
+    OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc;
+
+    renderTargetDesc.hwnd = hwnd;
+    renderTargetDesc.isHwnd = true;
+
+    MessageBoxA(GetForegroundWindow(),"App Started..","NOTE",MB_OK);
+       
+    auto renderTarget = gte.graphicsEngine->makeNativeRenderTarget(renderTargetDesc);
+
+    MessageBoxA(GetForegroundWindow(),"Loaded Stage 1","NOTE",MB_OK);
+
+
+    auto commandBuffer = renderTarget->commandBuffer();
+
+    MessageBoxA(GetForegroundWindow(),"Loaded Stage 2","NOTE",MB_OK);
+    OmegaGTE::GERenderTarget::RenderPassDesc renderPassDesc;
+    using ColorAttachment = OmegaGTE::GERenderTarget::RenderPassDesc::ColorAttachment;
+    renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(1.f,0.f,0.f,1.f),ColorAttachment::Clear);
+
+    commandBuffer->startRenderPass(renderPassDesc);
+    MessageBoxA(GetForegroundWindow(),"Loaded Stage 3","NOTE",MB_OK);
+    commandBuffer->endRenderPass();
+     MessageBoxA(GetForegroundWindow(),"Loaded Stage 4","NOTE",MB_OK);
+
+    renderTarget->submitCommandBuffer(commandBuffer);
+    MessageBoxA(GetForegroundWindow(),"Loaded Stage 5","NOTE",MB_OK);
+
+    renderTarget->commitAndPresent();
+    MessageBoxA(GetForegroundWindow(),"Loaded Stage 6","NOTE",MB_OK);
+
     ShowWindow(hwnd,nShowCmd);
+    
+
     UpdateWindow(hwnd);
+
+
 
     /// Message Loop
     MSG msg = {};
@@ -52,12 +90,18 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     return msg.wParam;
 };
 
+
+
 LRESULT CALLBACK   WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam){
     LRESULT lr = 0;
     switch (uMsg) {
     case WM_PAINT : {
         PAINTSTRUCT ps;
         HDC dc = BeginPaint(hwnd,&ps);
+
+
+
+
         EndPaint(hwnd,&ps);
         break;
     }

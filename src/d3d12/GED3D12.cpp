@@ -252,19 +252,19 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         
         RECT rc;
         GetClientRect(desc.hwnd,&rc);
-        DXGI_SWAP_CHAIN_DESC1 swapChaindesc;
-        swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        swapChaindesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
+        DXGI_SWAP_CHAIN_DESC1 swapChaindesc = {};
+        swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        // swapChaindesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
         swapChaindesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
         swapChaindesc.BufferCount = 2;
-        swapChaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_BACK_BUFFER;
-        swapChaindesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        swapChaindesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        // swapChaindesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         swapChaindesc.Height = rc.bottom - rc.top;
         swapChaindesc.Width = rc.right - rc.left;
-        swapChaindesc.Scaling = DXGI_SCALING_STRETCH;
-        swapChaindesc.Stereo = TRUE;
+        // swapChaindesc.Scaling = DXGI_SCALING_NONE;
+        // swapChaindesc.Stereo = TRUE;
         swapChaindesc.SampleDesc.Count = 1;
-        swapChaindesc.SampleDesc.Quality = 0;
+        // swapChaindesc.SampleDesc.Quality = 0;
 
         auto commandQueue = makeCommandQueue(64);
 

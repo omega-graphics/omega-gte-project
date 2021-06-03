@@ -18,7 +18,7 @@ _NAMESPACE_BEGIN_
         desc.NodeMask = engine->d3d12_device->GetNodeCount();
         desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
         desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-        hr = engine->d3d12_device->CreateCommandQueue(&desc,IID_PPV_ARGS(commandQueue.GetAddressOf()));
+        hr = engine->d3d12_device->CreateCommandQueue(&desc,IID_PPV_ARGS(&commandQueue));
         if(FAILED(hr)){
             MessageBoxA(GetForegroundWindow(),"Failed to Create Command Queue.","NOTE",MB_OK);
             exit(1);
@@ -201,6 +201,7 @@ _NAMESPACE_BEGIN_
         ID3D12GraphicsCommandList6 *commandList;
         hr = engine->d3d12_device->CreateCommandList(engine->d3d12_device->GetNodeCount(),D3D12_COMMAND_LIST_TYPE_DIRECT,bufferAllocator.Get(),NULL,IID_PPV_ARGS(&commandList));
         if(FAILED(hr)){
+             MessageBoxA(GetForegroundWindow(),"Failed to Create Command List","NOTE",MB_OK);
             exit(1);
         };
         return std::make_shared<GED3D12CommandBuffer>(commandList,this);

@@ -9,18 +9,24 @@ _NAMESPACE_BEGIN_
         ID3D12Resource *const *renderTargets,
         size_t renderTargetViewCount):swapChain(swapChain),
         descriptorHeapForRenderTarget(descriptorHeapForRenderTarget),
-        commandQueue((GED3D12CommandQueue *)commandQueue.get()),frameIndex(frameIndex),
+        commandQueue(commandQueue),frameIndex(frameIndex),
         renderTargets(renderTargets,renderTargets + renderTargetViewCount){
         
     };
 
     void GED3D12NativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer){
-
+        commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
     };
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12NativeRenderTarget::commandBuffer(){
-        return std::shared_ptr<GERenderTarget::CommandBuffer>(
-            new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Native,commandQueue->getAvailableBuffer()));
+        std::ostringstream ss;
+        ss << "About to Get Buffer" << commandQueue << std::endl;
+        //  MessageBoxA(GetForegroundWindow(),ss.str().c_str(),"NOTE",MB_OK);
+
+        auto commandBuffer = commandQueue->getAvailableBuffer();
+        //  MessageBoxA(GetForegroundWindow(),"Got Buffer","NOTE",MB_OK);
+        auto ptr = new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Native,std::move(commandBuffer));
+        return std::shared_ptr<GERenderTarget::CommandBuffer>(ptr);
     };
 
     void GED3D12NativeRenderTarget::commitAndPresent(){

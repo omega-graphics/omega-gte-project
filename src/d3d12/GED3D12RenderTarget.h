@@ -9,7 +9,7 @@ _NAMESPACE_BEGIN_
     class GED3D12NativeRenderTarget : public GENativeRenderTarget {
         GED3D12Engine *engine;
         ComPtr<IDXGISwapChain3> swapChain;
-        SharedHandle<GED3D12CommandQueue> commandQueue;
+        SharedHandle<GECommandQueue> commandQueue;
     public:
         SharedHandle<CommandBuffer> commandBuffer();
         void commitAndPresent();

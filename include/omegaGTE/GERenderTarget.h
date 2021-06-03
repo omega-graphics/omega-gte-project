@@ -47,13 +47,15 @@ _NAMESPACE_BEGIN_
             #endif
         
             /// Do NOT CALL THESE CONSTRUCTORS!!!
+          
+        public:
             typedef enum : uint8_t {
                 Native,
                 Texture
             } GERTType;
             GERTType renderTargetTy;
-            CommandBuffer(GERenderTarget *renderTarget,GERTType type,const SharedHandle<GECommandBuffer> & commandBuffer);
-        public:
+            /// Do NOT CALL THIS CONSTRUCTOR!!!
+            CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
             friend SharedHandle<CommandBuffer> commandBuffer();
             void startRenderPass(const RenderPassDesc & desc);
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);

@@ -15,7 +15,7 @@ _NAMESPACE_BEGIN_
 class GEMetalNativeRenderTarget : public GENativeRenderTarget {
     SharedHandle<GEMetalCommandQueue> commandQueue;
     CAMetalLayer *metalLayer;
-    __strong id<CAMetalDrawable> currentDrawable;
+    id<CAMetalDrawable> currentDrawable;
 public:
     GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer);
     CGSize drawableSize;
@@ -23,6 +23,7 @@ public:
     id<CAMetalDrawable> getDrawable();
     void commitAndPresent();
     void reset();
+    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer);
 };
 
 class GEMetalTextureRenderTarget : public GETextureRenderTarget {

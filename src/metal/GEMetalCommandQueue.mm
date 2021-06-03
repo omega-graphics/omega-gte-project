@@ -6,8 +6,7 @@
 #import <QuartzCore/QuartzCore.h>
 
 _NAMESPACE_BEGIN_
-    GEMetalCommandBuffer::GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue):
-    buffer(buffer),parentQueue(parentQueue){
+    GEMetalCommandBuffer::GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue):parentQueue(parentQueue),buffer(buffer){
 
     };
 
@@ -156,16 +155,13 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::finishComputePass(){
         [cp endEncoding];
     };
+
+    void GEMetalCommandBuffer::__present_drawable(id<CAMetalDrawable> drawable){
+        [buffer presentDrawable:drawable];
+    };
     
-    void GEMetalCommandBuffer::commitToQueue(){
-        NSLog(@"Buffer Enqueueing");
-        [buffer enqueue];
-        NSLog(@"Buffer Enqueued");
-        decltype(this) self_ptr = this;
-        std::cout << "PTR:" << self_ptr << std::endl;
-        parentQueue->commandBuffers.emplace_back(self_ptr);
-        NSLog(@"Buffer Push into Buffer Array");
-        
+    void GEMetalCommandBuffer::__commit(){
+        [buffer commit];
     };
 
     void GEMetalCommandBuffer::reset(){
@@ -174,23 +170,39 @@ _NAMESPACE_BEGIN_
 
     GEMetalCommandBuffer::~GEMetalCommandBuffer(){
         NSLog(@"Metal Command Buffer Destroy");
+        buffer = nil;
     };
 
     GEMetalCommandQueue::GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size):
     GECommandQueue(size),
-    commandQueue(queue){
+    commandQueue(queue),commandBuffers(0){
          
     };
 
+    void GEMetalCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
+        commandBuffers.push_back((GEMetalCommandBuffer *)commandBuffer.get());
+    };
+
     void GEMetalCommandQueue::commitToGPU(){
-        // for(auto commandBuffer : commandBuffers){
-        //     [commandBuffer->buffer commit];
-        // };
-        // commandBuffers.clear();
+        for(auto & commandBuffer : commandBuffers){
+            GEMetalCommandBuffer *mtlCommandBuffer = commandBuffer;
+            [mtlCommandBuffer->buffer commit];
+        };
+        commandBuffers.clear();
+    };
+
+    void GEMetalCommandQueue::commitToGPUAndPresent(id<CAMetalDrawable> drawable){
+        auto b = (GEMetalCommandBuffer *)commandBuffers.back();
+        b->__present_drawable(drawable);
+        for(auto & commandBuffer : commandBuffers){
+            GEMetalCommandBuffer *mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer;
+            mtlCommandBuffer->__commit();
+        };
+        commandBuffers.clear();
     };
 
     GEMetalCommandQueue::~GEMetalCommandQueue(){
-        
+       commandQueue = nil;
     };
 
     SharedHandle<GECommandBuffer> GEMetalCommandQueue::getAvailableBuffer(){

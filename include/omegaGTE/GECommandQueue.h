@@ -63,7 +63,6 @@ _NAMESPACE_BEGIN_
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
         virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
-        virtual void commitToQueue() = 0;
         virtual void reset() = 0;
         virtual ~GECommandBuffer() = default;
     };
@@ -75,6 +74,7 @@ _NAMESPACE_BEGIN_
     public:
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;
         unsigned getSize();
+        virtual void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer) = 0;
         virtual void commitToGPU() = 0;
     };
 _NAMESPACE_END_

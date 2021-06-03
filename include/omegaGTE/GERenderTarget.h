@@ -68,11 +68,10 @@ _NAMESPACE_BEGIN_
             
             void endComputePass();
             
-            void schedule();
-            
             void reset();
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;
+        virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer) = 0;
     };
     class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {
         public:

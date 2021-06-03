@@ -532,8 +532,6 @@ _NAMESPACE_BEGIN_
 
    typedef Matrix<float> FMatrix;
 
-   auto matrix = FMatrix::Create(3,3);
-
 
     template<class _Ty>
     using UniqueHandle = std::unique_ptr<_Ty>;

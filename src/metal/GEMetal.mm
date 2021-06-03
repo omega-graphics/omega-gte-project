@@ -23,7 +23,7 @@ _NAMESPACE_BEGIN_
     GEMetalFence::GEMetalFence(id<MTLFence> fence):metalFence(fence){};
 
     class GEMetalEngine : public OmegaGraphicsEngine {
-        __strong id<MTLDevice> metalDevice;
+        id<MTLDevice> metalDevice;
     public:
         GEMetalEngine():metalDevice(MTLCreateSystemDefaultDevice()){
             DEBUG_STREAM("GEMetalEngine Successfully Created");
@@ -50,12 +50,13 @@ _NAMESPACE_BEGIN_
             return std::make_shared<GEMetalFence>(fence);
         };
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc) override{
-            MTLHeapDescriptor *heapDesc = [[MTLHeapDescriptor alloc]init];
+            MTLHeapDescriptor *heapDesc = [[MTLHeapDescriptor alloc] init];
             return nullptr;
         };
         SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc) override{
             desc.metalLayer.device = metalDevice;
-            return std::make_shared<GEMetalNativeRenderTarget>(makeCommandQueue(100),desc.metalLayer);
+            auto commandQueue = makeCommandQueue(100);
+            return std::make_shared<GEMetalNativeRenderTarget>(commandQueue,desc.metalLayer);
         };
         SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor &desc) override{
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];

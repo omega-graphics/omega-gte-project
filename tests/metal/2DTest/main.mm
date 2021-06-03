@@ -7,7 +7,8 @@
 static OmegaGTE::GTE gte;
 static OmegaGTE::SharedHandle<OmegaGTE::GEFunctionLibrary> funcLib;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
-static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget;
+static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
+//static OmegaGTE::SharedHandle<OmegaGTE::GERenderTarget::CommandBuffer> commandBuffer;
 
 @interface MyWindowController : NSWindowController<NSWindowDelegate>
 @end
@@ -16,13 +17,19 @@ static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget
 
 - (instancetype)init
 {
-    if(self = [super initWithWindow:[[NSWindow alloc] initWithContentRect:NSZeroRect styleMask:NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO]]){
+    if(self = [super initWithWindow:[[NSWindow alloc] initWithContentRect:NSMakeRect(0,0,500,500) styleMask:NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO]]){
         self.window.delegate = self;
-
+        NSView *rootView = [[NSView alloc] initWithFrame:NSZeroRect];
         NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0,0,200,200)];
         view.wantsLayer = TRUE;
         CAMetalLayer * metalLayer = [CAMetalLayer layer];
+        metalLayer.contentsScale = [NSScreen mainScreen].backingScaleFactor;
+        metalLayer.frame = view.frame;
+        // CALayer *regLayer = [CALayer layer];
+        // regLayer.backgroundColor = [NSColor blueColor].CGColor;
         view.layer = metalLayer;
+        // view.layer = regLayer;
+
 
     
         OmegaGTE::NativeRenderTargetDescriptor desc;
@@ -39,15 +46,14 @@ static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget
         NSLog(@"Ending Render Pass");
         commandBuffer->endRenderPass();
         NSLog(@"Ended Render Pass");
-
-        commandBuffer->schedule();
+        nativeRenderTarget->submitCommandBuffer(commandBuffer);
         NSLog(@"Command Buffer Scheduled for Execution");
 
         nativeRenderTarget->commitAndPresent();
         NSLog(@"Presenting Frame"); 
+        [rootView addSubview:view];
 
-
-        [self.window setContentView:view];
+        [self.window setContentView:rootView];
         [self.window center];
         [self.window layoutIfNeeded];
     }

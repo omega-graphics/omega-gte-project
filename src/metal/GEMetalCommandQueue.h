@@ -10,13 +10,15 @@ _NAMESPACE_BEGIN_
 
     class GEMetalCommandQueue;
     class GEMetalCommandBuffer final : public GECommandBuffer {
-        __strong id<MTLRenderCommandEncoder> rp = nil;
-        __strong id<MTLComputeCommandEncoder> cp = nil;
-        __strong id<MTLBlitCommandEncoder> bp = nil;
-        GEMetalCommandQueue *parentQueue;
+        id<MTLRenderCommandEncoder> rp = nil;
+        id<MTLComputeCommandEncoder> cp = nil;
+        id<MTLBlitCommandEncoder> bp = nil;
+        GEMetalCommandQueue *parentQueue = nullptr;
         friend class GEMetalCommandQueue;
+        void __present_drawable(id<CAMetalDrawable> drawable);
+        void __commit();
     public:
-        __strong id<MTLCommandBuffer> buffer = nil;
+        id<MTLCommandBuffer> buffer = nil;
         void startBlitPass();
         void finishBlitPass();
         
@@ -38,12 +40,11 @@ _NAMESPACE_BEGIN_
         void finishComputePass();
         GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue);
         ~GEMetalCommandBuffer();
-        void commitToQueue();
         void reset();
     };
 
     class GEMetalCommandQueue : public GECommandQueue {
-        __strong id<MTLCommandQueue> commandQueue;
+        id<MTLCommandQueue> commandQueue = nil;
 
         std::vector<GEMetalCommandBuffer *> commandBuffers;
 
@@ -51,10 +52,12 @@ _NAMESPACE_BEGIN_
         friend class GEMetalCommandBuffer;
         friend class GEMetalNativeRenderTarget;
         friend class GEMetalTextureRenderTarget;
+        void commitToGPUAndPresent(id<CAMetalDrawable> drawable);
     public:
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size);
         ~GEMetalCommandQueue();
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer);
         void commitToGPU();
     };
 _NAMESPACE_END_

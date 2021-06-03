@@ -18,19 +18,16 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBu
 
 
 void GEMetalNativeRenderTarget::commitAndPresent(){
-    auto & commandBuffers = commandQueue->commandBuffers;
-    // [commandBuffers.back()->buffer presentDrawable:currentDrawable];
-    for(auto buffer_it = commandBuffers.begin();buffer_it != commandBuffers.end();buffer_it++){     
-        auto ref = *buffer_it;
-        if(buffer_it == commandBuffers.end()-1)
-            [ref->buffer presentDrawable:currentDrawable];
-        [ref->buffer commit];
-    };
-    commandBuffers.clear();
+    commandQueue->commitToGPUAndPresent(currentDrawable);
 };
 
 void GEMetalNativeRenderTarget::reset(){
     currentDrawable = [metalLayer nextDrawable];
+};
+
+void GEMetalNativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){
+    if(commandBuffer->commandBuffer)
+        commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
 };
 
 
@@ -44,10 +41,7 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalTextureRenderTarget::commandB
 };
 
 void GEMetalTextureRenderTarget::commit(){
-    auto & commandBuffers = commandQueue->commandBuffers;
-     for(auto commandBuffer : commandBuffers){
-        [commandBuffer->buffer commit];
-    };
+    commandQueue->commitToGPU();
 };
 
 

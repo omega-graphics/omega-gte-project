@@ -76,6 +76,7 @@ endif()
 
 add_library("OmegaGTE" SHARED 
 # Headers
+"${INCLUDE_DIR}/OmegaGTE.h"
 "${INCLUDE_DIR}/omegaGTE/GE.h"
 "${INCLUDE_DIR}/omegaGTE/GECommandQueue.h" 
 "${INCLUDE_DIR}/omegaGTE/GEPipeline.h" 

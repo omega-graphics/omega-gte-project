@@ -15,7 +15,7 @@ _NAMESPACE_BEGIN_
 
 class GEMetalBuffer : public GEBuffer {
 public:
-    __strong id<MTLBuffer> metalBuffer;
+    id<MTLBuffer> metalBuffer;
     size_t size();
     void * data();
     GEMetalBuffer(id<MTLBuffer> buffer);
@@ -23,7 +23,7 @@ public:
 
 class GEMetalFence : public GEFence {
 public:
-    __strong id<MTLFence> metalFence;
+    id<MTLFence> metalFence;
     GEMetalFence(id<MTLFence> fence);
 };
 

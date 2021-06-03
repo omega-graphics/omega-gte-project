@@ -50,9 +50,9 @@ void GERenderTarget::CommandBuffer::endComputePass(){
     commandBuffer->finishComputePass();
 };
 
-void GERenderTarget::CommandBuffer::schedule(){
-    commandBuffer->commitToQueue();
-};
+// void GERenderTarget::CommandBuffer::schedule(){
+//     commandBuffer->commitToQueue();
+// };
 
 void GERenderTarget::CommandBuffer::reset(){
     commandBuffer->reset();

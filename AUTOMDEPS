@@ -1,8 +1,42 @@
 {
+    "variables":{
+        "external_lib_path":"./external-libs"
+    },
     "commands":[ 
         {
             "type":"gnpkg",
             "command":"utils --get"
+        },
+        {
+            "type":"git_clone",
+            "url":"https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git",
+            "branch":"default",
+            "dest":"$(external_lib_path)/vulkan-memory-allocator",
+            "platforms":[
+                "linux"
+            ]
+        },
+        {
+            "type":"system",
+            "path":"mkdir temp && curl https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz --output ./temp/vulkan-sdk.tar.gz",
+            "platforms":[
+                "linux"
+            ]
+        },
+        {
+            "type":"tar",
+            "tarfile":"./temp/vulkan-sdk.tar.gz",
+            "dest":"$(external_lib_path)/vulkan_sdk",
+            "platforms":[
+                "linux"
+            ]
+        },
+        {
+            "type":"system",
+            "path":"rm -r ./temp",
+            "platforms":[
+                "linux"
+            ]
         }
     ]
 }

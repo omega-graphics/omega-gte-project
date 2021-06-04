@@ -1,7 +1,25 @@
 #include "omegaGTE/TE.h"
 #include "metal/GEMetalRenderTarget.h"
+#include "omegaGTE/GTEShaderTypes.h"
+
+#import <simd/simd.h>
 
 _NAMESPACE_BEGIN_
+
+OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
+    auto * v = new OmegaGTEColorVertex();
+    v->color = {vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4)};
+    v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
+    return v;
+};
+
+OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex){
+    auto * v = new OmegaGTETexturedVertex();
+    v->texturePos = {vertex.textureCoord.getI(),vertex.textureCoord.getJ()};
+    v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
+    return v;
+};
+
 
 class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
     SharedHandle<GEMetalNativeRenderTarget> target;

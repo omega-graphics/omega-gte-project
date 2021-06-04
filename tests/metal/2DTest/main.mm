@@ -36,6 +36,14 @@ static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget
         desc.metalLayer = metalLayer;
 
         nativeRenderTarget = gte.graphicsEngine->makeNativeRenderTarget(desc);
+
+        auto tessContext = gte.tessalationEngine->createTEContextFromNativeRenderTarget(nativeRenderTarget);
+        
+        OmegaGTE::GRect rect;
+        auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
+
+        
+
         auto commandBuffer = nativeRenderTarget->commandBuffer();
         NSLog(@"Command Buffer Created");
         OmegaGTE::GERenderTarget::RenderPassDesc renderPass;

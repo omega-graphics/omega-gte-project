@@ -13,21 +13,21 @@ _NAMESPACE_BEGIN_
 
 
 class GEMetalNativeRenderTarget : public GENativeRenderTarget {
-    SharedHandle<GEMetalCommandQueue> commandQueue;
+    SharedHandle<GECommandQueue> commandQueue;
     CAMetalLayer *metalLayer;
-    id<CAMetalDrawable> currentDrawable;
+    NSSmartPtr currentDrawable;
 public:
     GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer);
     CGSize drawableSize;
     SharedHandle<CommandBuffer> commandBuffer();
-    id<CAMetalDrawable> getDrawable();
+    NSSmartPtr & getDrawable();
     void commitAndPresent();
     void reset();
     void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer);
 };
 
 class GEMetalTextureRenderTarget : public GETextureRenderTarget {
-    SharedHandle<GEMetalCommandQueue> commandQueue;
+    SharedHandle<GECommandQueue> commandQueue;
 public:
     GEMetalTextureRenderTarget(SharedHandle<GEMetalTexture> texture);
     SharedHandle<GEMetalTexture> texturePtr;

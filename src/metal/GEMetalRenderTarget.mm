@@ -1,14 +1,15 @@
 #import "GEMetalRenderTarget.h"
+#include "GEMetal.h"
 #import "GEMetalCommandQueue.h"
 
 _NAMESPACE_BEGIN_
 
 GEMetalNativeRenderTarget::GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer):metalLayer(metalLayer),
-commandQueue((GEMetalCommandQueue *)commandQueue.get()),drawableSize([metalLayer drawableSize]),currentDrawable([metalLayer nextDrawable]){
+commandQueue(commandQueue),drawableSize([metalLayer drawableSize]),currentDrawable({NSOBJECT_CPP_BRIDGE [metalLayer nextDrawable]}){
     
 };
 
-id<CAMetalDrawable> GEMetalNativeRenderTarget::getDrawable(){
+NSSmartPtr & GEMetalNativeRenderTarget::getDrawable(){
     return currentDrawable;
 };
 
@@ -18,11 +19,12 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBu
 
 
 void GEMetalNativeRenderTarget::commitAndPresent(){
-    commandQueue->commitToGPUAndPresent(currentDrawable);
+    auto mtlqueue = (GEMetalCommandQueue *)commandQueue.get();
+    mtlqueue->commitToGPUAndPresent(currentDrawable);
 };
 
 void GEMetalNativeRenderTarget::reset(){
-    currentDrawable = [metalLayer nextDrawable];
+    currentDrawable = NSObjectHandle{ NSOBJECT_CPP_BRIDGE [metalLayer nextDrawable]};
 };
 
 void GEMetalNativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){

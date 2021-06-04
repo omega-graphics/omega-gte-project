@@ -2,11 +2,15 @@
 
 _NAMESPACE_BEGIN_
 
-GEMetalRenderPipelineState::GEMetalRenderPipelineState(id<MTLRenderPipelineState> renderPipelineState):renderPipelineState(renderPipelineState){
+GEMetalFunction::GEMetalFunction(NSSmartPtr & func):function(func){
+
+};
+
+GEMetalRenderPipelineState::GEMetalRenderPipelineState(NSSmartPtr & renderPipelineState):renderPipelineState(renderPipelineState){
     
 };
 
-GEMetalComputePipelineState::GEMetalComputePipelineState(id<MTLComputePipelineState> computePipelineState):computePipelineState(computePipelineState){
+GEMetalComputePipelineState::GEMetalComputePipelineState(NSSmartPtr & computePipelineState):computePipelineState(computePipelineState){
     
 };
 

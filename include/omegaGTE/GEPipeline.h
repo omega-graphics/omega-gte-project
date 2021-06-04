@@ -14,7 +14,7 @@ _NAMESPACE_BEGIN_
     #if defined(TARGET_METAL) && defined(__OBJC__)
 
     struct GEFunctionLibrary {
-        __strong id<MTLLibrary> mtlLib;
+        id<MTLLibrary> mtlLib;
         std::vector<SharedHandle<GEFunction>> functions;
     };
     #endif

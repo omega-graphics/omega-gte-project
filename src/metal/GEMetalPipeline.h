@@ -9,19 +9,20 @@
 _NAMESPACE_BEGIN_
 
 struct GEMetalFunction : public __GEFunctionInternal {
-    id<MTLFunction> function;
+    NSSmartPtr function;
+    GEMetalFunction(NSSmartPtr & func);
 };
 
 class GEMetalRenderPipelineState : public __GERenderPipelineState {
 public:
-    id<MTLRenderPipelineState> renderPipelineState;
-    GEMetalRenderPipelineState(id<MTLRenderPipelineState> renderPipelineState);
+    NSSmartPtr renderPipelineState;
+    GEMetalRenderPipelineState(NSSmartPtr & renderPipelineState);
 };
 
 class GEMetalComputePipelineState : public __GEComputePipelineState {
 public:
-    id<MTLComputePipelineState> computePipelineState;
-    GEMetalComputePipelineState(id<MTLComputePipelineState> computePipelineState);
+    NSSmartPtr computePipelineState;
+    GEMetalComputePipelineState(NSSmartPtr & computePipelineState);
 };
 
 _NAMESPACE_END_

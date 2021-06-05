@@ -1,4 +1,5 @@
 #include "GTEBase.h"
+#include <initializer_list>
 
 #ifndef OMEGAGTE_GEPIPELINE_H
 #define OMEGAGTE_GEPIPELINE_H
@@ -19,12 +20,22 @@ _NAMESPACE_BEGIN_
     };
     #endif
 
+    struct OMEGAGTE_EXPORT PipelineLayoutInputDesc {
+        typedef enum : int {
+
+        } DataType;
+        std::string v;
+        DataType type;
+    };
+
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
+        std::initializer_list<PipelineLayoutInputDesc> layout;
         SharedHandle<GEFunction> vertexFunc;
         SharedHandle<GEFunction> fragmentFunc;
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
+        std::initializer_list<PipelineLayoutInputDesc> layout;
         SharedHandle<GEFunction> computeFunc;
 
     };

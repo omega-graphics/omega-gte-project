@@ -13,18 +13,33 @@ _NAMESPACE_BEGIN_
 
 #if defined(TARGET_METAL) && defined(__OBJC__)
 
+struct NSObjectHandle {
+    const void *data;
+};
+
+class NSSmartPtr {
+    const void * data = nullptr;
+public:   
+    NSSmartPtr(const NSObjectHandle & handle);
+    inline const void* handle() const { return data; }
+    void assertExists();
+};
+
+#define NSOBJECT_OBJC_BRIDGE(t,o)((__bridge t)o) 
+#define NSOBJECT_CPP_BRIDGE (__bridge void *)
+
 class GEMetalBuffer : public GEBuffer {
 public:
-    id<MTLBuffer> metalBuffer;
+    NSSmartPtr metalBuffer;
     size_t size();
     void * data();
-    GEMetalBuffer(id<MTLBuffer> buffer);
+    GEMetalBuffer(NSSmartPtr & buffer);
 };
 
 class GEMetalFence : public GEFence {
 public:
-    id<MTLFence> metalFence;
-    GEMetalFence(id<MTLFence> fence);
+    NSSmartPtr metalFence;
+    GEMetalFence(NSSmartPtr & fence);
 };
 
 #endif

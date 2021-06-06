@@ -70,11 +70,13 @@ _NAMESPACE_BEGIN_
     };
 
     class  OMEGAGTE_EXPORT GEBuffer {
+    public:
         virtual size_t size() = 0;
         virtual void *data() = 0;
     };
 
     struct  OMEGAGTE_EXPORT HeapDescriptor {
+    public:
         typedef enum : uint8_t {
             Shared,
             Automatic
@@ -115,6 +117,10 @@ _NAMESPACE_BEGIN_
     struct GETexturedVertex : public GEVertex {
         FVector2D textureCoord;
     };
+
+
+    typedef std::vector<GEColoredVertex> ColoredVertexVector;
+    typedef std::vector<GETexturedVertex> TexturedVertexVector;
 
     /**
      @brief The Omega Graphics Engine

@@ -1,6 +1,7 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
 
+#include "GEMetal.h"
 #include "omegaGTE/GECommandQueue.h"
 
 #ifndef OMEGAGTE_METAL_GEMETALCOMMANDQUEUE_H
@@ -15,10 +16,10 @@ _NAMESPACE_BEGIN_
         id<MTLBlitCommandEncoder> bp = nil;
         GEMetalCommandQueue *parentQueue = nullptr;
         friend class GEMetalCommandQueue;
-        void __present_drawable(id<CAMetalDrawable> drawable);
+        void __present_drawable(NSSmartPtr & drawable);
         void __commit();
     public:
-        id<MTLCommandBuffer> buffer = nil;
+        NSSmartPtr buffer;
         void startBlitPass();
         void finishBlitPass();
         
@@ -38,24 +39,24 @@ _NAMESPACE_BEGIN_
         void setResourceConstAtComputeFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
         void setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned index);
         void finishComputePass();
-        GEMetalCommandBuffer(id<MTLCommandBuffer> buffer,GEMetalCommandQueue *parentQueue);
+        GEMetalCommandBuffer(GEMetalCommandQueue *parentQueue);
         ~GEMetalCommandBuffer();
         void reset();
     };
 
     class GEMetalCommandQueue : public GECommandQueue {
-        id<MTLCommandQueue> commandQueue = nil;
+        NSSmartPtr commandQueue;
 
-        std::vector<GEMetalCommandBuffer *> commandBuffers;
+        std::vector<SharedHandle<GECommandBuffer>> commandBuffers;
 
         
         friend class GEMetalCommandBuffer;
         friend class GEMetalNativeRenderTarget;
         friend class GEMetalTextureRenderTarget;
-        void commitToGPUAndPresent(id<CAMetalDrawable> drawable);
+        void commitToGPUAndPresent(NSSmartPtr & drawable);
     public:
         SharedHandle<GECommandBuffer> getAvailableBuffer();
-        GEMetalCommandQueue(id<MTLCommandQueue> queue,unsigned size);
+        GEMetalCommandQueue(NSSmartPtr & commandQueue,unsigned size);
         ~GEMetalCommandQueue();
         void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer);
         void commitToGPU();

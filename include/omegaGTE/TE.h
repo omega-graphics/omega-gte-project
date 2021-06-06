@@ -157,6 +157,7 @@ public:
      @returns SharedHandle<GEBuffer>
     */
     SharedHandle<GEBuffer> convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TETessalationResult & result);
+};
 
 /**
  @brief The Omega Tessalation Engine

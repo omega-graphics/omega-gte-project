@@ -14,6 +14,8 @@ _NAMESPACE_BEGIN_
         bool inBlitPass;
         std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
         friend class GED3D12CommandQueue;
+
+       
     public:
         void startBlitPass();
         void finishBlitPass();
@@ -24,6 +26,7 @@ _NAMESPACE_BEGIN_
         void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index);
         void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
         void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index);
+       
         void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx);
         void setViewports(std::vector<GEViewport> viewports);
         void setScissorRects(std::vector<GEScissorRect> scissorRects);

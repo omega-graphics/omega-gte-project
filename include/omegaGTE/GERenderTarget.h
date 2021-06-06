@@ -12,6 +12,7 @@
 
 _NAMESPACE_BEGIN_
     class GECommandBuffer;
+    class GEBuffer;
 
     class  OMEGAGTE_EXPORT GERenderTarget {
     public:
@@ -59,6 +60,7 @@ _NAMESPACE_BEGIN_
             friend SharedHandle<CommandBuffer> commandBuffer();
             void startRenderPass(const RenderPassDesc & desc);
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
+            void setInputVertexBuffer(SharedHandle<GEBuffer> & buffer);
             typedef enum : uint8_t {
                 Triangle,
                 TriangleStrip

@@ -210,7 +210,60 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     };
 
     SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(const RenderPipelineDescriptor &desc){
+        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
+        std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
+        for(auto & attr : desc.vertexInputAttributes){
+            D3D12_INPUT_ELEMENT_DESC inputEl;
+            switch (attr.type) {
+                case InputAttributeDesc::FLOAT : {
+                    inputEl.Format = DXGI_FORMAT_R32_FLOAT;
+                    break;
+                }
+                case InputAttributeDesc::FLOAT2 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32_FLOAT;
+                    break;
+                }
+                case InputAttributeDesc::FLOAT3 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+                    break;
+                }
+                case InputAttributeDesc::FLOAT4 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+                    break;
+                }
+                case InputAttributeDesc::INT : {
+                    inputEl.Format = DXGI_FORMAT_R32_SINT;
+                    break;
+                }
+                case InputAttributeDesc::INT2 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32_SINT;
+                    break;
+                }
+                case InputAttributeDesc::INT3 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32B32_SINT;
+                    break;
+                }
+                case InputAttributeDesc::INT4 : {
+                    inputEl.Format = DXGI_FORMAT_R32G32B32A32_SINT;
+                    break;
+                }
+            };
+            
+            inputEl.InputSlot = 0;
+            inputEl.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+            inputEl.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            inputs.push_back(inputEl);
+            
+        };
+
+        inputLayoutDesc.pInputElementDescs = inputs.data();
+        inputLayoutDesc.NumElements = inputs.size();
+
+
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d;
+        d.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+        d.NodeMask = d3d12_device->GetNodeCount();
+        
         HRESULT hr;
         GED3D12Function *vertexFunc = (GED3D12Function *)desc.vertexFunc.get();
         GED3D12Function *fragmentFunc = (GED3D12Function *)desc.fragmentFunc.get();
@@ -224,6 +277,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         D3D12_COMPUTE_PIPELINE_STATE_DESC d;
         HRESULT hr;
         ID3D12PipelineState *state;
+        d.NodeMask = d3d12_device->GetNodeCount();
         GED3D12Function *computeFunc = (GED3D12Function *)desc.computeFunc.get();
         d.CS = CD3DX12_SHADER_BYTECODE(computeFunc->funcData.Get());
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
@@ -372,11 +426,38 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
         ID3D12Resource *buffer;
         auto heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT );
-        hr = d3d12_device->CreateCommittedResource(&heap_prop,D3D12_HEAP_FLAG_NONE,&d3d12_desc,D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_COPY_DEST,nullptr,IID_PPV_ARGS(&buffer));
+        hr = d3d12_device->CreateCommittedResource(
+            &heap_prop,D3D12_HEAP_FLAG_NONE,
+            &d3d12_desc,
+            D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_COPY_DEST,
+            nullptr,IID_PPV_ARGS(&buffer));
+        if(FAILED(hr)){
+            ///
+            DEBUG_STREAM("Failed to Create D3D12 Buffer");
+        };
+
+        D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
+        descHeapDesc.NumDescriptors = 1;
+        descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
+        descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        ID3D12DescriptorHeap *descHeap;
+        hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
         if(FAILED(hr)){
 
         };
-        return std::make_shared<GED3D12Buffer>(buffer);
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
+        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+        res_view_desc.Buffer.StructureByteStride = desc.objectStride;
+        res_view_desc.Buffer.FirstElement = 0;
+        res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+        res_view_desc.Buffer.NumElements = desc.len/desc.objectStride;
+
+        d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+
+        return std::make_shared<GED3D12Buffer>(buffer,descHeap);
     };
 
     SharedHandle<GEFunction> GED3D12Engine::loadFunction(std::filesystem::path path){

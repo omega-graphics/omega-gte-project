@@ -65,6 +65,7 @@ _NAMESPACE_BEGIN_
 
     struct  OMEGAGTE_EXPORT BufferDescriptor {
         size_t len;
+        size_t objectStride;
         StorageOpts opts;
     };
 
@@ -85,14 +86,14 @@ _NAMESPACE_BEGIN_
     public:
         virtual size_t currentSize() = 0;
         /**
-         Creates a GEBuffer from a BufferDescriptor.
+         @brief Creates a GEBuffer from a BufferDescriptor.
          @param[in] desc The Buffer Descriptor, which could describe a buffer at any length with any object.
          @returns SharedHandle<GEBuffer>
         */
         virtual SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor & desc) = 0;
 
         /**
-          Creates a GETexture from a TextureDescriptor.
+          @brief Creates a GETexture from a TextureDescriptor.
          @param[in] desc The Texture Descriptor,  which could describe a 2D, 3D, 2D-Multisampled,or 3D-Multisampled texture with any given width, height (and depth).
          @returns SharedHandle<GETexture>
         */
@@ -116,11 +117,11 @@ _NAMESPACE_BEGIN_
     };
 
     /**
-     The Omega GE Main Class
+     @brief The Omega Graphics Engine
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
     /**
-         Creates an Instance of the Omega Graphics Engine
+        @brief Creates an Instance of the Omega Graphics Engine
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();
@@ -134,46 +135,46 @@ _NAMESPACE_BEGIN_
         virtual SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) = 0;
         #endif
         /**
-          Creates a GEFence.
+         @brief Creates a GEFence.
          @returns SharedHandle<GEFence>
         */
         virtual SharedHandle<GEFence> makeFence() = 0;
 
         /**
-         Creates a GEBuffer from a BufferDescriptor.
+         @brief Creates a GEBuffer from a BufferDescriptor.
          @param[in] desc The Buffer Descriptor, which could describe a buffer at any length with any object.
          @returns SharedHandle<GEBuffer>
         */
         virtual SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor & desc) = 0;
 
         /**
-          Creates a GETexture from a TextureDescriptor.
+         @brief Creates a GETexture from a TextureDescriptor.
          @param[in] desc The Texture Descriptor,  which could describe a 2D, 3D, 2D-Multisampled,or 3D-Multisampled texture with any given width, height (and depth).
          @returns SharedHandle<GETexture>
         */
         virtual SharedHandle<GETexture> makeTexture(const TextureDescriptor & desc) = 0;
 
         /**
-          Creates a GEHeap from a HeapDescriptor.
+         @brief Creates a GEHeap from a HeapDescriptor.
          @param[in] desc The Heap Descriptor
          @returns SharedHandle<GEHeap>
         */
         virtual SharedHandle<GEHeap> makeHeap(const HeapDescriptor & desc) = 0;
         
         /**
-         Creates a GETextureSampler
+         @brief Creates a GETextureSampler
          */
         
 
         /**
-         Creates a GERenderPipelineState from a RenderPipelineDescriptor.
+         @brief Creates a GERenderPipelineState from a RenderPipelineDescriptor.
          @param[in] desc The Render Pipeline Descriptor
          @returns SharedHandle<GERenderPipelineState>
         */
         virtual SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor & desc) = 0;
 
         /** 
-         Creates a GEComputePipelineState from a ComputePipelineDescriptor.
+         @brief Creates a GEComputePipelineState from a ComputePipelineDescriptor.
          @param[in] desc The Compute Pipeline State
          @returns SharedHandle<GEComputePipelineState>
         */

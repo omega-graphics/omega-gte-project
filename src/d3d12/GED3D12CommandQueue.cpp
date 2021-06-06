@@ -94,7 +94,7 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const at a Vertex Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootDescriptorTable(index,d3d12_buffer->bufferDescHeap->GetGPUDescriptorHandleForHeapStart());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index){
@@ -107,7 +107,7 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootDescriptorTable(index,d3d12_buffer->bufferDescHeap->GetGPUDescriptorHandleForHeapStart());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index){

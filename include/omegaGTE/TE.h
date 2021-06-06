@@ -68,12 +68,25 @@ public:
     std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
 };
 
-
+/**
+ @brief The Omega Tessalation Engine
+*/
 class OMEGAGTE_EXPORT OmegaTessalationEngine {
     static SharedHandle<OmegaTessalationEngine> Create();
     IN_INIT_SCOPE
 public:
+    /**
+     @brief Create a Tessalation Context from a Native Render Target
+     @param renderTarget
+     @returns SharedHandle<OmegaTessalationEngineContext>
+    */
     SharedHandle<OmegaTessalationEngineContext> createTEContextFromNativeRenderTarget(SharedHandle<GENativeRenderTarget> & renderTarget);
+    
+     /**
+     @brief Create a Tessalation Context from a Texture Render Target
+     @param renderTarget
+     @returns SharedHandle<OmegaTessalationEngineContext>
+    */
     SharedHandle<OmegaTessalationEngineContext> createTEContextFromTextureRenderTarget(SharedHandle<GETextureRenderTarget> & renderTarget);
 };
 

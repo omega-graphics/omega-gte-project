@@ -7,6 +7,10 @@
 #include <simd/simd.h>
 #endif
 
+#ifdef TARGET_VULKAN
+#include <glm/glm.h>
+#endif
+
 
 #ifndef OMEGAGTE_GTESHADERTYPES_H
 #define OMEGAGTE_GTESHADERTYPES_H
@@ -18,6 +22,17 @@ struct OmegaGTETexturedVertex;
 
 #ifdef TARGET_DIRECTX
 
+struct OmegaGTEVertex {
+    DirectX::XMFLOAT3 pos;
+};
+
+struct OmegaGTEColorVertex : OmegaGTEVertex {
+     DirectX::XMFLOAT4 color;
+};
+
+struct OmegaGTETexturedVertex : OmegaGTEVertex {
+    DirectX::XMFLOAT2 texturePos;
+};
 
 #endif
 

@@ -22,10 +22,12 @@
 _NAMESPACE_BEGIN_
     using Microsoft::WRL::ComPtr;
 
-     class GED3D12Buffer : public GEBuffer {
+    class GED3D12Buffer : public GEBuffer {
     public:
+
         ComPtr<ID3D12Resource> buffer;
-        D3D12_VERTEX_BUFFER_VIEW bufferView;
+        ComPtr<ID3D12DescriptorHeap> bufferDescHeap;
+
         size_t size(){
             return buffer->GetDesc().Width;
         };
@@ -35,15 +37,11 @@ _NAMESPACE_BEGIN_
             buffer->Map(0,&readRange,&ptr);
             return ptr;
         };
-         void removePtrRef(){
+        void removePtrRef(){
              buffer->Unmap(0,nullptr);
-         };
-         void setStride(size_t stride){
-             bufferView.StrideInBytes = stride;
-         };
-        GED3D12Buffer(ID3D12Resource *buffer):buffer(buffer){
-            bufferView.BufferLocation = buffer->GetGPUVirtualAddress();
-            bufferView.SizeInBytes = buffer->GetDesc().Width;
+        };
+        GED3D12Buffer(ID3D12Resource *buffer,ID3D12DescriptorHeap *bufferDescHeap):buffer(buffer),bufferDescHeap(bufferDescHeap){
+            
         };
     };
 

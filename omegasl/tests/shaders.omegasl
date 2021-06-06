@@ -1,0 +1,22 @@
+
+
+texture = Texture2D(float4,idx=0)
+
+buffer = ConstBuffer(float,idx=1,scopes=[myVertexShader])
+
+@struct
+class VertexOut:
+   pos:Position
+
+
+
+@vertex
+def myVertexShader() -> VertexOut:
+    return 
+
+
+
+@fragment
+def myFragmentShader() -> float4:
+
+    return

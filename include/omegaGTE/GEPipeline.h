@@ -19,12 +19,31 @@ _NAMESPACE_BEGIN_
     };
     #endif
 
+    struct OMEGAGTE_EXPORT InputAttributeDesc {
+        typedef enum : int {
+            FLOAT,
+            FLOAT4,
+            FLOAT3,
+            FLOAT2,
+            INT,
+            INT2,
+            INT3,
+            INT4,
+        } InputType;
+        InputType type;
+    };
+
+    OMEGAGTE_EXPORT std::vector<InputAttributeDesc> ColoredVertexAttributes();
+    OMEGAGTE_EXPORT std::vector<InputAttributeDesc> TexturedVertexAttributes();
+
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
+        std::vector<InputAttributeDesc> vertexInputAttributes;
         SharedHandle<GEFunction> vertexFunc;
         SharedHandle<GEFunction> fragmentFunc;
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
+        std::vector<InputAttributeDesc> inputAttributes;
         SharedHandle<GEFunction> computeFunc;
 
     };

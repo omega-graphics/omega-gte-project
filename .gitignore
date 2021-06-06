@@ -13,8 +13,8 @@ doxygen
 gn-utils
 spirv-cross
 shaderc
-omegasl
 .idea
+sphinx*
 
 
 # Prerequisites

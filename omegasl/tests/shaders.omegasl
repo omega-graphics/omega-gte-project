@@ -1,22 +1,30 @@
 
 
-texture = Texture2D(float4,idx=0)
+@struct 
+class MyVertex:
+   pos:float2
+   color:float4
 
-buffer = ConstBuffer(float,idx=1,scopes=[myVertexShader])
+
+buff:ConstBuffer[MyVertex,0]
+
+text:Texture2D[float,1]
+
 
 @struct
 class VertexOut:
    pos:Position
+   color:float4
 
 
-
-@vertex
+@vertex(buff)
 def myVertexShader() -> VertexOut:
-    return 
+    vertex:float2 = [1.0,1.4]
+
+    return vertex
 
 
 
-@fragment
-def myFragmentShader() -> float4:
-
-    return
+@fragment(text)
+def myFragmentShader(input:VertexOut) -> float4:
+    return input.color

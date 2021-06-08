@@ -1,0 +1,29 @@
+
+
+@struct
+class OmegaGTEColorVertex:
+    pos:float3
+    color:float4
+
+@struct 
+class ColoredVertexOut:
+    pos:Position
+    color:float4
+
+
+vertexBuffer:ConstBuffer[OmegaGTEColorVertex,0]
+
+
+
+@vertex(vertexBuffer)
+def coloredVertexShader() -> ColoredVertexOut:
+
+    v:OmegaGTEColorVertex = vertexBuffer[vertexID]
+
+    out:ColoredVertexOut
+    out.pos = [v.pos.x,v.pos.y,v.pos.z,1.0]
+    out.color = v.color 
+    return out
+
+
+

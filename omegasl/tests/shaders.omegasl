@@ -19,7 +19,9 @@ class VertexOut:
 
 @vertex(buff)
 def myVertexShader() -> VertexOut:
-    vertex:float2 = [1.0,1.4]
+    vertex:VertexOut
+    vertex.pos = [0.0,1.0,0.0,1.0]
+    vertex.color = [1.0,1.0,1.0,1.0]
 
     return vertex
 

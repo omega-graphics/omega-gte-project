@@ -133,13 +133,12 @@ _NAMESPACE_BEGIN_
         static SharedHandle<OmegaGraphicsEngine> Create();
         IN_INIT_SCOPE
     public:
-        #ifdef TARGET_DIRECTX
-        virtual SharedHandle<GEFunction> loadFunction(std::filesystem::path path) = 0;
-
-        #endif
-        #ifdef TARGET_METAL
-        virtual SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) = 0;
-        #endif
+        /**
+         @brief Loads an OmegaSL Shader Library,
+         @param path Path to a `.shadermap` file.
+         @returns SharedHandle<GEFunctionLibrary>
+        */
+        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path);
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

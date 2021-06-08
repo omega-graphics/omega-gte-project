@@ -5,6 +5,7 @@ __pycache__
 compile_commands.json
 *.sh
 *.bat
+!omegasl/omegaslc.bat
 out 
 dist
 build

@@ -96,29 +96,9 @@ _NAMESPACE_BEGIN_
             
             return std::make_shared<GEMetalRenderPipelineState>(pipelineState);
         };
-        SharedHandle<GEFunctionLibrary> loadLibrary(std::filesystem::path path,std::initializer_list<std::string> func_names) override{
-            NSURL *url = [NSURL fileURLWithFileSystemRepresentation:path.c_str() isDirectory:NO relativeToURL:nil];
-            NSError *error;
-            id<MTLLibrary> metallib = [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithURL:url error:&error];
-            if(error.code >= 0){
-                auto funcLib = std::make_shared<GEFunctionLibrary>();
-                funcLib->mtlLib = metallib;
-                /// Succeeded.
-                for(const std::string & func_name : func_names) {
-                    NSString *nsStr = [NSString stringWithUTF8String:func_name.c_str()];
-                    NSSmartPtr mtlFunc = NSObjectHandle{NSOBJECT_CPP_BRIDGE [metallib newFunctionWithName:nsStr]};
-                    auto func = new GEMetalFunction(mtlFunc);
-                    funcLib->functions.emplace_back(func);
-                };
-                return funcLib;
-            }
-            else {
-                /// Failed
-                std::ostringstream oss;
-                oss << "Failed to Load MTLLibrary from path:" << path.c_str() << " " << std::flush;
-                DEBUG_STREAM(oss.str());
-                return nullptr;
-            };
+        SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) override{
+            /// Load OmegaSL Shadermap
+
             
         };
 

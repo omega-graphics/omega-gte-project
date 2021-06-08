@@ -138,7 +138,7 @@ _NAMESPACE_BEGIN_
          @param path Path to a `.shadermap` file.
          @returns SharedHandle<GEFunctionLibrary>
         */
-        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path);
+        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) = 0;
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

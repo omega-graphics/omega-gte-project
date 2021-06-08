@@ -13,10 +13,13 @@ class MSLTarget(Target):
     
     out:TargetOutputContext
     opts:MSLTargetOptions
+    dist_file:str
 
     def __init__(self,out:TargetOutputContext,opts:MSLTargetOptions):
         super().__init__(out,TargetType.METAL)
         self.out = out
+        (f,ext) = os.path.splitext(os.path.basename(self.out.source_file))
+        self.dist_file = f"./{f}.metallib"
         self.opts = opts
         self.out.write("#include <metal_stdlib>\n")
         if self.opts.use_simd:
@@ -84,6 +87,9 @@ class MSLTarget(Target):
             self.out.write(", ")
         self.out.write("unsigned vertexID [[vertex_id]]")
         self.out.write(")")
+
+       
+        self.out.writeShaderEntryToMap(self.dist_file,utf8str_to_bytes(name))
     def writeFragmentShaderDecl(self,name:str,type_str:str,params:"dict[str,str]"): 
         self.out.write(f"fragment {self.convertTypeIfStandard(type_str)} {name} (")
         

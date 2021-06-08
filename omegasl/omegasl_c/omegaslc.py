@@ -66,6 +66,8 @@ def main():
     istream = io.open(args.file,"r")
 
     ctxt = TargetOutputContext()
+    ctxt.output_dir = args.output
+    ctxt.source_file = args.file
 
     if not os.path.exists(args.output):
         os.mkdir(args.output)

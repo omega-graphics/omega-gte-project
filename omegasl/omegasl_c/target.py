@@ -1,6 +1,8 @@
 from enum import Enum 
 import io,ast,os
-from shutil import whichv
+# from shutil import which
+
+
 
 """
 
@@ -40,6 +42,9 @@ float4x4
 def is_standard_type(ty:str) -> bool:
     return ty == "float" or ty == "float2" or ty == "float3" or ty == "float4"
 
+def utf8str_to_bytes(s:str) -> bytes:
+    return bytes(s,"utf8")
+
 class TargetType(Enum):
     HLSL = 0,
     METAL = 1,
@@ -47,6 +52,8 @@ class TargetType(Enum):
 
 
 class TargetOutputContext(object):
+    source_file:str
+    output_dir:str
     b:dict[str,list[bytes]]
     def __init__(self):
         self.b = {}
@@ -60,7 +67,7 @@ class TargetOutputContext(object):
        l = len(self.b)
        self.shaderMapOut.write(bytes(l))
        for e in self.b:
-           self.shaderMapOut.write(bytes(e))
+           self.shaderMapOut.write(utf8str_to_bytes(e))
            self.shaderMapOut.write(bytes(len(self.b[e])))
            for shaderName in self.b[e]:
                self.shaderMapOut.write(shaderName)

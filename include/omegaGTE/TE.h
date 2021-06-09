@@ -153,10 +153,26 @@ public:
     /**
      Convert a TETessalationResult into a platform specfic Vertex Buffer ready to be used.
      @param[in] graphicsEngine
-     @param[in] vertexVector
+     @param[in] result
      @returns SharedHandle<GEBuffer>
     */
     SharedHandle<GEBuffer> convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TETessalationResult & result);
+
+    /**
+     Convert a ColoredVertexVector into a platform specfic Vertex Buffer ready to be used.
+     @param[in] graphicsEngine
+     @param[in] vertexVector
+     @returns SharedHandle<GEBuffer>
+    */
+    SharedHandle<GEBuffer> convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,ColoredVertexVector & vertexVector);
+
+    /**
+     Convert a TexturedVertexVector into a platform specfic Vertex Buffer ready to be used.
+     @param[in] graphicsEngine
+     @param[in] vertexVector
+     @returns SharedHandle<GEBuffer>
+    */
+    SharedHandle<GEBuffer> convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TexturedVertexVector & vertexVector);
 };
 
 /**

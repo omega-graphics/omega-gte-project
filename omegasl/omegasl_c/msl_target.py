@@ -73,6 +73,9 @@ class MSLTarget(Target):
         if type == "Position":
             metal_native_type = self.convertTypeIfStandard("float4")
             metal_attribute = "position"
+        elif type == "Color":
+            metal_native_type = self.convertTypeIfStandard("float4")
+            metal_attribute = None
         else:
             metal_attribute = None 
             metal_native_type = self.convertTypeIfStandard(type)

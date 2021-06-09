@@ -6,6 +6,7 @@
 #import "GEMetalRenderTarget.h"
 #import "GEMetalPipeline.h"
 #include <cassert>
+#include <fstream>
 
 #import <Metal/Metal.h>
 
@@ -98,8 +99,46 @@ _NAMESPACE_BEGIN_
         };
         SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) override{
             /// Load OmegaSL Shadermap
-
+            std::ifstream in(path.string(),std::ios::binary | std::ios::in);
             
+            if(in.is_open()){
+                SharedHandle<GEFunctionLibrary> funcLibrary = std::make_shared<GEFunctionLibrary>();
+                unsigned b;
+                in.read((char *)&b,sizeof(b));
+                DEBUG_STREAM("LENGTH:" << b);
+                while(b > 0){
+                    unsigned entNameLen;
+                    in.read((char *)&entNameLen,sizeof(entNameLen));
+                    char *name = new char[entNameLen];
+                    in.read(name,sizeof(char) * entNameLen);
+                    std::string_view str(name,entNameLen);
+                    NSURL *fileUrl = [NSURL fileURLWithFileSystemRepresentation:str.data() isDirectory:NO relativeToURL:nil];
+                    NSError *error;
+                    NSSmartPtr mtlLibrary = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithURL:fileUrl error:&error] };
+                    
+                    unsigned shaderCount;
+                    in.read((char *)&shaderCount,sizeof(shaderCount));
+                    while(shaderCount > 0){
+                        unsigned funcNameLen;
+                        in.read((char *)&funcNameLen,sizeof(funcNameLen));
+                        char *name = new char[funcNameLen];
+                        in.read(name,sizeof(char) * funcNameLen);
+                        std::string_view func_name(name,funcNameLen);
+
+                        NSString *str = [[NSString alloc] initWithUTF8String:func_name.data()];
+                        NSSmartPtr mtlFunc = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,mtlLibrary.handle()) newFunctionWithName:str] };
+                        funcLibrary->functions.push_back(std::make_shared<GEMetalFunction>(mtlFunc));
+
+                        --shaderCount;
+                    };
+
+                    --b;
+                };
+                return funcLibrary;
+            }
+            else {
+                return nullptr;
+            };
         };
 
         SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override{

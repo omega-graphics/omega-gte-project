@@ -82,9 +82,13 @@ declare_args(){
 #     output_dir = "$root_out_dir/tools"
 # }
 
-# group("shader_cross_comp"){
-    
-# }
+shader_library("std"){
+    source = "./shaders/std.omegasl"
+    output_dir = "$root_out_dir/shaders/stdshaderlib"
+    temp_dir = "$root_out_dir/shaders/temp"
+}
+
+
 omega_gte_headers = [
     "./include/OmegaGTE.h",
     "./include/omegaGTE/GE.h",
@@ -112,6 +116,9 @@ omega_gte_headers = [
 if(is_mac){
     mac_framework_bundle("OmegaGTE"){
         version = "0.2"
+        public_deps = [
+            ":std"
+        ]
         public_configs = [
             ":OmegaGTE_Config"
         ]
@@ -140,7 +147,8 @@ if(is_mac){
             "@rpath/OmegaGTE.framework/Versions/${current_version}/OmegaGTE",
         ]
         resources = [
-            "./src/Info.plist"
+            "./src/Info.plist",
+            "$root_out_dir/shaders/stdshaderlib"
         ]
         frameworks = ["Foundation.framework","QuartzCore.framework","Metal.framework"]
         output_dir = "$root_out_dir/Frameworks"

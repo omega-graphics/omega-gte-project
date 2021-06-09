@@ -45,6 +45,9 @@ def is_standard_type(ty:str) -> bool:
 def utf8str_to_bytes(s:str) -> bytes:
     return bytes(s,"utf8")
 
+def int_to_bn_uint(n:int) -> bytes:
+    return n.to_bytes(4,byteorder="little",signed=False)
+
 class TargetType(Enum):
     HLSL = 0,
     METAL = 1,
@@ -70,11 +73,13 @@ class TargetOutputContext(object):
         self.out.write(content)
     def writeShaderMap(self):
        l = len(self.b)
-       self.shaderMapOut.write(bytes(l))
+       self.shaderMapOut.write(int_to_bn_uint(l))
        for e in self.b:
+           self.shaderMapOut.write(int_to_bn_uint(len(e)))
            self.shaderMapOut.write(utf8str_to_bytes(e))
-           self.shaderMapOut.write(bytes(len(self.b[e])))
+           self.shaderMapOut.write(int_to_bn_uint(len(self.b[e])))
            for shaderName in self.b[e]:
+               self.shaderMapOut.write(int_to_bn_uint(len(shaderName)))
                self.shaderMapOut.write(shaderName)
     def writeShaderEntryToMap(self,filename:str,data:bytes):
         if self.b.get(filename) is None:

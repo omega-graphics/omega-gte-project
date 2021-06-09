@@ -9,23 +9,31 @@ if(is_linux){
 }
 rhi_srcs = []
 
-shaderc_py = get_path_info("./shaderc.py","abspath")
+omegaslc_py = get_path_info("../omegasl/_main.py","abspath")
 
 template("shader_library"){
-    assert(defined(invoker.sources))
+    assert(defined(invoker.source))
+    assert(defined(invoker.temp_dir))
     assert(defined(invoker.output_dir))
+
     t_name = target_name
-    action(target_name){
-        script = shaderc_py
-        sources = invoker.sources
+    action(t_name){
+        script = omegaslc_py
+        sources = [invoker.source]
+        args = ["--temp",rebase_path(invoker.temp_dir),"-o",rebase_path(invoker.output_dir),"--target"]
         if(is_mac){
-            args = [
-                "-o",
-                rebase_path(invoker.output_dir + "/${t_name}.metallib"),
-                "--target",
-                "metal",
-            ] + sources
+            args += ["metal"]
         }
+        else if(is_windows){
+            args += ["hlsl"]
+        }
+        else {
+            args += ["glsl"]
+        }
+        args += [rebase_path(invoker.source)]
+        outputs = [
+            "${invoker.output_dir}"
+        ]
     }
 }
 

@@ -81,7 +81,6 @@ def main():
 
     t:Target
     if args.target == "hlsl":
-        target = TargetType.HLSL
         outstream = io.open(f"{temp_file}.hlsl","w")
         outstream.write(file_header)
 
@@ -89,11 +88,10 @@ def main():
         t = HLSLTarget(out=ctxt)
 
         compiler = TargetCompilerInvoker(target=t,targetCtxt=ctxt)
-        
     
         
     elif args.target == "metal":
-        target = TargetType.METAL
+
         outstream = io.open(f"{temp_file}.metal","w")
         outstream.write(file_header)
         ctxt.out = outstream
@@ -101,9 +99,7 @@ def main():
 
         compiler = TargetCompilerInvoker(target=t,targetCtxt=ctxt)
         
-        compiler.check()
-        compiler.compile(inputFile=f"{temp_file}.metal",shaderType="NULL",output=f"{temp_file}.air")
-        compiler.link(inputs=[f"{temp_file}.air"],output=os.path.join(args.output,f"{f}.metallib"))
+       
     
 
     writer = TargetWriter(t=t)
@@ -118,8 +114,28 @@ def main():
             writer.writeStruct(stmt)
         elif isinstance(stmt,ast.AnnAssign):
             writer.writeShaderResourceDecl(stmt)
+
+    outstream.close()
+    
+    compiler.check()
+
+    if  args.target == "hlsl":
+        compiler.check()
+
+        for shader in t.shaders:
+            shader_ty:ShaderType = t.shaders[shader]
             
-           
+            if shader_ty == ShaderType.VERTEX:
+                profile = "vs_6_0"
+            elif shader_ty == ShaderType.FRAGMENT:
+                profile = "ps_6_0"
+            elif shader_ty == ShaderType.COMPUTE:
+                profile = "cs_6_0"
+
+            compiler.compile(inputFile=f"{temp_file}.hlsl",shaderName=shader,shaderProfile=profile,output=os.path.join(args.output,f"{shader}.cso"))
+    elif args.target == "metal":     
+        compiler.compile(inputFile=f"{temp_file}.metal",shaderName="NULL",shaderProfile="",output=f"{temp_file}.air")
+        compiler.link(inputs=[f"{temp_file}.air"],output=os.path.join(args.output,f"{f}.metallib"))
     ctxt.writeShaderMap()
 
 main()

@@ -29,6 +29,9 @@ class TargetWriter(object):
         if len(self.resourceQueue) > 0:
             if self.resourceExists(res_name.id) is not None:
                 raise RuntimeError("Resources must have unique names")
+
+        if self.target.type == TargetType.HLSL:
+            self.outputStr.write(self.target.annotationToString(expr))
         self.resourceQueue.append(expr)
         return
 
@@ -118,13 +121,29 @@ class TargetWriter(object):
             return
         
         elif isinstance(expr,ast.List):
-            # Write C Array
-            self.outputStr.write("{")
-            for i in range(len(expr.elts)):
-                if i > 0:
-                    self.outputStr.write(", ")
-                self.writeExpr(expr.elts[i])
-            self.outputStr.write("}")
+            # Write C Array if Metal
+
+            if self.target.type == TargetType.METAL:
+                self.outputStr.write("{")
+                for i in range(len(expr.elts)):
+                    if i > 0:
+                        self.outputStr.write(", ")
+                    self.writeExpr(expr.elts[i])
+                self.outputStr.write("}")
+            else:
+                # Write Matrix Struct Constructor Call.
+                l = len(expr.elts)
+                if l == 1:
+                    self.outputStr.write(f"float(")
+                else:
+                    self.outputStr.write(f"float{l}(")
+                
+                for i in range(l):
+                    if i > 0:
+                        self.outputStr.write(", ")
+                    self.writeExpr(expr.elts[i])
+                self.outputStr.write(")")
+                return
 
         elif isinstance(expr,ast.Attribute):
             self.writeExpr(expr.value)

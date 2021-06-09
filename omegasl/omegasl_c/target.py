@@ -50,6 +50,11 @@ class TargetType(Enum):
     METAL = 1,
     GLSL = 2
 
+class ShaderType(Enum):
+    VERTEX = 0,
+    FRAGMENT = 1,
+    COMPUTE = 2
+
 
 class TargetOutputContext(object):
     source_file:str

@@ -29,10 +29,12 @@ class TargetCompilerInvoker(object):
                 raise RuntimeError("GLSL compiler `glslc` was not found in PATH")
         return
 
-    def compile(self,inputFile:str,shaderType:str,output:str):
-        if self.target.type == TargetType.METAL:
+    def compile(self,inputFile:str,shaderName:str,shaderProfile:str,output:str):
+        if self.target.type == TargetType.HLSL:
+            os.system(f"dxc -Fo{output} -E{shaderName} -T{shaderProfile} {inputFile}")
+        elif self.target.type == TargetType.METAL:
             os.system(f"xcrun -sdk macosx metal -c {inputFile} -o {output}")
-            
+        
         return
 
     def link(self,inputs:"list[str]",output:str):

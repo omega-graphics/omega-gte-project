@@ -3,6 +3,7 @@
 #include "omegaGTE/GTEShaderTypes.h"
 
 #import <simd/simd.h>
+#import <AppKit/AppKit.h>
 
 _NAMESPACE_BEGIN_
 
@@ -32,15 +33,40 @@ class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
     //     },std::move(prom));
     //     return fut;
     // };
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
+    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params,GEViewport * viewport){
+
+    };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
     //     return _tessalatePriv(params,viewport);
     // };
-    void translateCoords(float x, float y,float z,std::optional<GEViewport> & viewport,float *x_result, float *y_result,float *z_result){
-        if(viewport.has_value()){
+    void translateCoords(float x, float y,float z,GEViewport * viewport,float *x_result, float *y_result,float *z_result){
+        std::cout << viewport << std::endl;
+        if(viewport != 0x00){
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
+
+            std::cout << "Yes" << std::endl;
+
+            CGFloat scaleFactor = [NSScreen mainScreen].backingScaleFactor;
+
+            CGFloat width = target->drawableSize.width / scaleFactor / 2.f;
+            CGFloat height = target->drawableSize.height / scaleFactor / 2.f;
+
+            *x_result = x / width;
+            *y_result = y / height;
+
+            if(z_result != nullptr) {
+                if(z > 0.0){
+                    *z_result = z / 1.0;
+                }
+                else if(z < 0.0){
+                    *z_result = z / 0.0;
+                }
+                else {
+                    *z_result = z;
+                };
+            }
 
         };
     };
@@ -53,12 +79,12 @@ class MetalTextureRenderTargetTEContext : public OmegaTessalationEngineContext {
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
         
     // };
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
+    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){};
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
     //     return _tessalatePriv(params,viewport);
     // };
-    void translateCoords(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result){
-        if(viewport.has_value()){
+    void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result){
+        if(viewport != nullptr){
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {

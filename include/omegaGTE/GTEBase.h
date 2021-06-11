@@ -3,6 +3,8 @@
 #include <cmath>
 #include <string>
 #include <sstream>
+#include <algorithm>
+
 
 #ifndef OMEGAGTE_GTEBASE_H
 #define OMEGAGTE_GTEBASE_H
@@ -33,7 +35,9 @@ _NAMESPACE_BEGIN_
     public:
         using size_type = unsigned;
         using iterator = T *;
+        using const_iterator = const T*;
         using reference = T &;
+        using const_reference = const T &;
     private:
         size_type maxSize;
         size_type len;
@@ -46,6 +50,8 @@ _NAMESPACE_BEGIN_
     public:
         iterator begin(){ return iterator(_data);};
         iterator end(){ return iterator(_data + len);};
+        const_iterator cbegin() const{ return const_iterator(_data);};
+        const_iterator cend() const{ return const_iterator(_data + len);};
 
         reference first(){ return begin()[0];};
         reference last(){ return end()[-1];};
@@ -75,9 +81,29 @@ _NAMESPACE_BEGIN_
         };
         size_type length(){ return len; };
 
-        VectorHeap(unsigned maxSize){
-           _data = alloc.allocate(maxSize);
+        explicit VectorHeap(unsigned maxSize):maxSize(maxSize),len(0),_data(alloc.allocate(maxSize)){
+            
         };
+        VectorHeap(const VectorHeap & other){
+            maxSize = other.maxSize;
+            len = other.len;
+            _data = alloc.allocate(maxSize);
+            std::copy(other.cbegin(),other.cend(),begin());
+        };
+
+        VectorHeap(VectorHeap & other){
+            maxSize = other.maxSize;
+            len = other.len;
+            _data = alloc.allocate(maxSize);
+            std::copy(other.begin(),other.end(),begin());
+        };
+        // VectorHeap operator=(VectorHeap &other){
+        //     maxSize = other.maxSize;
+        //     len = other.len;
+        //     _data = alloc.allocate(maxSize);
+        //     std::copy(other.begin(),other.end(),begin());
+        // };
+        // VectorHeap(VectorHeap &&) = delete;
         ~VectorHeap(){
             for(auto & obj : *this){
                 obj.~T();
@@ -308,7 +334,7 @@ _NAMESPACE_BEGIN_
         unsigned radius_y;
     };
     struct  OMEGAGTE_EXPORT GPoint3D {
-        float x,y,z;
+        float x,y,z = 0;
     };
 
     struct  OMEGAGTE_EXPORT GRect {
@@ -487,24 +513,26 @@ _NAMESPACE_BEGIN_
 
    template<class _Ty>
    class Matrix {
-       VectorHeap<VectorHeap<_Ty>> * rows;
+       VectorHeap<VectorHeap<_Ty>> rows;
     private:
-        Matrix(unsigned h,unsigned w){
-            rows = new VectorHeap<VectorHeap<_Ty>>(w);
+        Matrix(unsigned h,unsigned w):rows(w){
             /// Intialize Matrix with zeros.
             while(w > 0){
                 auto n_h = h;
-                rows->push({h});
+                rows.push(VectorHeap<_Ty>(h));
                 while(n_h > 0) {
-                    rows->last().push(0.f);
+                    rows.last().push(0.f);
                     --n_h;
                 }
                 --w;
             }
         };
    public:
+        Matrix(const Matrix & other):rows(other.rows){
+           
+        };
         _Ty & valueAt(unsigned row,unsigned column){
-            auto row_it = rows->begin() + (row-1);
+            auto row_it = rows.begin() + (row-1);
             auto column_it = (row_it->begin()) + (column-1);
             return *column_it;
         };
@@ -523,11 +551,17 @@ _NAMESPACE_BEGIN_
        static Matrix FromVector2D(Vector2D_Base<_Ty,float> vector){
            
        };
-       ~Matrix(){
-           delete rows;
+       static Matrix Color(float r,float g,float b,float a){
+           auto m = Create(1,4);
+           m.valueAt(1,1) = r;
+           m.valueAt(1,2) = g;
+           m.valueAt(1,3) = b;
+           m.valueAt(1,4) = a;
+           return std::move(m);
        };
-//        static Matrix FromVector3D();
-//        static Matrix Create(std::initializer_list<std::initializer_list<_Ty>> data);
+       ~Matrix(){
+           
+       };
    };
 
    typedef Matrix<float> FMatrix;

@@ -16,7 +16,7 @@ spirv-cross
 shaderc
 .idea
 sphinx*
-
+.build
 
 # Prerequisites
 *.d

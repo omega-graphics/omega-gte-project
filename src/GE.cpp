@@ -14,6 +14,26 @@
 
 _NAMESPACE_BEGIN_
 
+GEColoredVertex::GEColoredVertex(FVector3D pos,FMatrix color):GEVertex({pos}),color(color){
+
+};
+
+GEColoredVertex::GEColoredVertex(GEColoredVertex && vertex):GEVertex({vertex.pos}),color(vertex.color){
+    
+};
+
+GEColoredVertex::GEColoredVertex(const GEColoredVertex & vertex):GEVertex({vertex.pos}),color(vertex.color){
+
+};
+
+GEColoredVertex::GEColoredVertex(GEColoredVertex & vertex):GEVertex({vertex.pos}),color(vertex.color){
+
+};
+
+GEColoredVertex GEColoredVertex::FromGPoint3D(GPoint3D &pt, FMatrix &color){
+    return {FVector3D(pt.x,pt.y,pt.z),color};
+};
+
 SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){
     #ifdef TARGET_METAL
         return CreateMetalEngine();

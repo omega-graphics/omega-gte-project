@@ -36,6 +36,10 @@ void GERenderTarget::CommandBuffer::setRenderPipelineState(SharedHandle<GERender
     commandBuffer->setRenderPipelineState(pipelineState);
 };
 
+void GERenderTarget::CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned idx){
+    commandBuffer->setResourceConstAtVertexFunc(buffer,idx);
+};
+
 void GERenderTarget::CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t start){
     commandBuffer->drawPolygons(polygonType,vertexCount,start);
 };

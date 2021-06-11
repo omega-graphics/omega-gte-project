@@ -112,10 +112,18 @@ _NAMESPACE_BEGIN_
 
     struct GEColoredVertex : public GEVertex {
         FMatrix color;
+    private:
+        GEColoredVertex(FVector3D pos,FMatrix color);
+    public:
+        static GEColoredVertex FromGPoint3D(GPoint3D & pt,FMatrix & color);
+        GEColoredVertex(GEColoredVertex && vertex);
+        GEColoredVertex(GEColoredVertex & vertex);
+        GEColoredVertex(const GEColoredVertex & vertex);
     };
 
     struct GETexturedVertex : public GEVertex {
         FVector2D textureCoord;
+        GETexturedVertex(GEColoredVertex && vertex);
     };
 
 
@@ -133,6 +141,11 @@ _NAMESPACE_BEGIN_
         static SharedHandle<OmegaGraphicsEngine> Create();
         IN_INIT_SCOPE
     public:
+        /**
+        @brief Loads the Omega GTE Shader Library
+        @returns SharedHandle<GEFunctionLibrary>
+        */
+        virtual SharedHandle<GEFunctionLibrary> loadStdShaderLibrary() = 0;
         /**
          @brief Loads an OmegaSL Shader Library,
          @param path Path to a `.shadermap` file.

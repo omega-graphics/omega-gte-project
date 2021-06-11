@@ -13,6 +13,9 @@
 _NAMESPACE_BEGIN_
     class GECommandBuffer;
     class GEBuffer;
+    class GETexture;
+    struct GEViewport;
+    struct GEScissorRect;
 
     class  OMEGAGTE_EXPORT GERenderTarget {
     public:
@@ -60,7 +63,17 @@ _NAMESPACE_BEGIN_
             friend SharedHandle<CommandBuffer> commandBuffer();
             void startRenderPass(const RenderPassDesc & desc);
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
-            void setInputVertexBuffer(SharedHandle<GEBuffer> & buffer);
+
+            void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index);
+            void setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index);
+        
+            void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index);
+            void setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index);
+        
+            void setViewports(std::vector<GEViewport> viewport);
+            void setScissorRects(std::vector<GEScissorRect> scissorRects);
+        
+
             typedef enum : uint8_t {
                 Triangle,
                 TriangleStrip

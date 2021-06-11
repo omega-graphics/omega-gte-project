@@ -1,5 +1,6 @@
 #include "GTEBase.h"
 #include <initializer_list>
+#include <map>
 
 #ifndef OMEGAGTE_GEPIPELINE_H
 #define OMEGAGTE_GEPIPELINE_H
@@ -13,8 +14,11 @@ _NAMESPACE_BEGIN_
     typedef struct __GEFunctionInternal GEFunction;
 
     struct GEFunctionLibrary {
-        std::vector<SharedHandle<GEFunction>> functions;
+        std::map<std::string,SharedHandle<GEFunction>> functions;
     };
+
+    #define STD_COLOREDVERTEX_FUNC "coloredVertexShader"
+    #define STD_FRAGMENTVERTEX_FUNC "coloredFragmentShader"
 
     struct OMEGAGTE_EXPORT InputAttributeDesc {
         typedef enum : int {

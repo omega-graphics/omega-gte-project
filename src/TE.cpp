@@ -1,6 +1,8 @@
 #include "omegaGTE/TE.h"
 #include "omegaGTE/GTEShaderTypes.h"
+#include <optional>
 #include <thread>
+#include <iostream>
 
 _NAMESPACE_BEGIN_
 
@@ -87,24 +89,27 @@ SharedHandle<OmegaTessalationEngine> OmegaTessalationEngine::Create(){
     return std::make_shared<OmegaTessalationEngine>();
 };
 
-void OmegaTessalationEngineContext::translateCoordsDefaultImpl(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result){
+void OmegaTessalationEngineContext::translateCoordsDefaultImpl(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result){
     *x_result = x / viewport->width;
     *y_result = y / viewport->height;
-    if(z > 0.0){
-        *z_result = z / viewport->farDepth;
-    }
-    else if(z < 0.0){
-        *z_result = z / viewport->nearDepth;
-    }
-    else {
-        *z_result = z;
+    if(z_result != nullptr){
+        if(z > 0.0){
+            *z_result = z / viewport->farDepth;
+        }
+        else if(z < 0.0){
+            *z_result = z / viewport->nearDepth;
+        }
+        else {
+            *z_result = z;
+        };
     };
 };
 
-inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const TETessalationParams &params,std::optional<GEViewport> viewport){
+inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const TETessalationParams &params,GEViewport * viewport){
     TETessalationResult result;
     switch(params.type){
         case TETessalationParams::TESSALATE_RECT : {
+            std::cout << "Tessalate GRect" << std::endl;
             GRect *object = (GRect *)params.params;
 
             TETessalationResult::TEMesh mesh;
@@ -113,6 +118,7 @@ inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const T
             translateCoords(object->pos.x,object->pos.y,0.f,viewport,&x0,&y0,nullptr);
             translateCoords(object->pos.x + object->w,object->pos.y + object->h,0.f,viewport,&x1,&y1,nullptr);
 
+            std::cout << "X0:" << x0 << ", X1:" << x1 << ", Y0:" << y0 << ", Y1:" << y1 << std::endl;
 
             tri.a.x = x0;
             tri.a.y = y0;
@@ -127,6 +133,7 @@ inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const T
             tri.a.y = y1;
 
             mesh.vertexTriangles.push_back(tri);
+
             
             result.meshes.push_back(mesh);
 
@@ -153,7 +160,7 @@ SharedHandle<OmegaTessalationEngineContext> OmegaTessalationEngine::createTECont
     return CreateTextureRenderTargetTEContext(renderTarget);
 };
 
-std::future<TETessalationResult> OmegaTessalationEngineContext::tessalateAsync(const TETessalationParams &params,std::optional<GEViewport> viewport){
+std::future<TETessalationResult> OmegaTessalationEngineContext::tessalateAsync(const TETessalationParams &params,GEViewport * viewport){
     std::promise<TETessalationResult> prom;
     auto fut = prom.get_future();
     activeThreads.emplace_back(new std::thread([&](std::promise<TETessalationResult> promise,size_t idx){
@@ -163,7 +170,7 @@ std::future<TETessalationResult> OmegaTessalationEngineContext::tessalateAsync(c
     return fut;
 };
 
-TETessalationResult OmegaTessalationEngineContext::tessalateSync(const TETessalationParams &params,std::optional<GEViewport> viewport){
+TETessalationResult OmegaTessalationEngineContext::tessalateSync(const TETessalationParams &params,GEViewport * viewport){
     return _tessalatePriv(params,viewport);
 };
 

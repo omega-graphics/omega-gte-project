@@ -193,7 +193,7 @@ _NAMESPACE_BEGIN_
     GEMetalCommandQueue::GEMetalCommandQueue(NSSmartPtr & queue,unsigned size):
     GECommandQueue(size),
     commandQueue(queue),commandBuffers(0){
-         
+        
     };
 
     void GEMetalCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
@@ -220,6 +220,7 @@ _NAMESPACE_BEGIN_
 
     GEMetalCommandQueue::~GEMetalCommandQueue(){
         commandQueue.assertExists();
+        NSLog(@"Metal Command Queue Destroy");
     //    [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,commandQueue.handle()) autorelease];
     };
 

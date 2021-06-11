@@ -97,6 +97,13 @@ _NAMESPACE_BEGIN_
             
             return std::make_shared<GEMetalRenderPipelineState>(pipelineState);
         };
+        SharedHandle<GEFunctionLibrary> loadStdShaderLibrary() override{
+            /// NOTE: This a temporary fix.. Please optimize!
+            NSString *shaderMapURL = [[NSBundle bundleWithIdentifier:@"org.omegagraphics.OmegaGTE"] pathForResource:@"std" ofType:@"shadermap" inDirectory:@"stdshaderlib"];
+            NSLog(@"Resource Path: %@",shaderMapURL);
+            return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
+            // return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
+        };
         SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) override{
             /// Load OmegaSL Shadermap
             std::ifstream in(path.string(),std::ios::binary | std::ios::in);
@@ -112,28 +119,43 @@ _NAMESPACE_BEGIN_
                     char *name = new char[entNameLen];
                     in.read(name,sizeof(char) * entNameLen);
                     std::string_view str(name,entNameLen);
-                    NSURL *fileUrl = [NSURL fileURLWithFileSystemRepresentation:str.data() isDirectory:NO relativeToURL:nil];
+                    NSString *file = [[NSString alloc] initWithUTF8String:path.replace_filename(std::filesystem::path(str).filename()).string().c_str()];
+                    NSLog(@"FILE LOC:%@",file);
                     NSError *error;
-                    NSSmartPtr mtlLibrary = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithURL:fileUrl error:&error] };
+                    NSSmartPtr mtlLibrary = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithFile:file error:&error] };
                     
+                    if(mtlLibrary.handle() == nil){
+                        DEBUG_STREAM("Failed to Load Metal Library From:" << path);
+                    };
+                     
                     unsigned shaderCount;
                     in.read((char *)&shaderCount,sizeof(shaderCount));
+                    DEBUG_STREAM("Metal Lib ShaderCount:" << shaderCount);
                     while(shaderCount > 0){
                         unsigned funcNameLen;
                         in.read((char *)&funcNameLen,sizeof(funcNameLen));
-                        char *name = new char[funcNameLen];
+                        char *name = new char[funcNameLen + 1];
                         in.read(name,sizeof(char) * funcNameLen);
+                        name[funcNameLen] = '\0';
                         std::string_view func_name(name,funcNameLen);
+                        
+                        std::cout << "FUNC:" << func_name << std::endl;
 
                         NSString *str = [[NSString alloc] initWithUTF8String:func_name.data()];
+                        
                         NSSmartPtr mtlFunc = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,mtlLibrary.handle()) newFunctionWithName:str] };
-                        funcLibrary->functions.push_back(std::make_shared<GEMetalFunction>(mtlFunc));
+
+                        if(mtlFunc.handle() == nil){
+                            DEBUG_STREAM("Failed to Load Metal Shader \"" << func_name << "\" from path:" << path);
+                        };
+                        funcLibrary->functions.insert(std::make_pair(func_name,std::make_shared<GEMetalFunction>(mtlFunc)));
 
                         --shaderCount;
                     };
 
                     --b;
                 };
+                in.close();
                 return funcLibrary;
             }
             else {

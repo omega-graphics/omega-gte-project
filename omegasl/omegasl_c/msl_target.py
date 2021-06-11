@@ -98,7 +98,7 @@ class MSLTarget(Target):
         
         in_stage = params["input"]
         self.out.write(in_stage)
-        self.out.write(" in [[stage_in]]")
+        self.out.write(" input [[stage_in]]")
         
         for k in params:
             if k == "input":
@@ -106,6 +106,7 @@ class MSLTarget(Target):
             self.out.write(", ")
             self.out.write(params[k])
         self.out.write(")")
+        self.out.writeShaderEntryToMap(self.dist_file,utf8str_to_bytes(name))
     def beginBlock(self):
         self.out.write(" {\n")
         return

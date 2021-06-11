@@ -117,12 +117,12 @@ struct OMEGAGTE_EXPORT TETessalationResult {
 class OMEGAGTE_EXPORT OmegaTessalationEngineContext {
     friend class OmegaTessalationEngine;
 protected:
-
+    GEViewport defaultViewport;
     std::vector<std::thread *> activeThreads;
 
-    void translateCoordsDefaultImpl(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result);
-    virtual void translateCoords(float x, float y,float z,std::optional<GEViewport> & viewport, float *x_result, float *y_result,float *z_result) = 0;
-    inline TETessalationResult _tessalatePriv(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
+    void translateCoordsDefaultImpl(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result);
+    virtual void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result) = 0;
+    inline TETessalationResult _tessalatePriv(const TETessalationParams & params,GEViewport * viewport);
 public:
     ~OmegaTessalationEngineContext();
     /**
@@ -131,7 +131,7 @@ public:
      @param viewport
      @returns TETessalationResult
     */
-    TETessalationResult tessalateSync(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
+    TETessalationResult tessalateSync(const TETessalationParams & params,GEViewport * viewport = nullptr);
 
     /**
       Performs tessalation like `tessalateSync` (@see tessalateSync), 
@@ -140,7 +140,7 @@ public:
      @param viewport
      @returns std::future<TETessalationResult>
     */
-    virtual std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams & params,std::optional<GEViewport> viewport = {}) = 0;
+    virtual std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams & params,GEViewport * viewport = nullptr) = 0;
 
     /**
       Performs tessalation like `tessalateSync` (@see tessalateSync), 
@@ -149,7 +149,7 @@ public:
      @param viewport
      @returns std::future<TETessalationResult>
     */
-    std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,std::optional<GEViewport> viewport = {});
+    std::future<TETessalationResult> tessalateAsync(const TETessalationParams & params,GEViewport * viewport = nullptr);
     /**
      Convert a TETessalationResult into a platform specfic Vertex Buffer ready to be used.
      @param[in] graphicsEngine

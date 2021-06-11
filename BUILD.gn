@@ -150,7 +150,7 @@ if(is_mac){
             "./src/Info.plist",
             "$root_out_dir/shaders/stdshaderlib"
         ]
-        frameworks = ["Foundation.framework","QuartzCore.framework","Metal.framework"]
+        frameworks = ["QuartzCore.framework","Metal.framework","Cocoa.framework"]
         output_dir = "$root_out_dir/Frameworks"
     }
 }
@@ -195,6 +195,26 @@ else {
             "src/OmegaGTE.cpp"
         ] + rhi_srcs
     }
+
+    static_library("OmegaGTE-C"){
+        sources = [
+            "./wrappers/c/OmegaGTE_C.cpp"
+        ]
+        include_dirs = [
+            "./include"
+        ]
+        public_deps = []
+    } 
+
+    static_library("OmegaGTESwift"){
+        include_dirs = [
+            "./wrappers/c"
+        ]
+        public_deps = [
+            ":OmegaGTE-C"
+        ]
+    }
+
 }
 
 if(!external_project){

@@ -4,6 +4,8 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <iostream>
+#include <new>
 
 
 #ifndef OMEGAGTE_GTEBASE_H
@@ -30,7 +32,6 @@ _NAMESPACE_BEGIN_
     /// A vector that preallocates a certain amount of memory but can be resized at any time.
     template<class T>
     class OMEGAGTE_EXPORT VectorHeap {
-        std::allocator<T> alloc;
         T * _data;
     public:
         using size_type = unsigned;
@@ -42,7 +43,7 @@ _NAMESPACE_BEGIN_
         size_type maxSize;
         size_type len;
         void _push_el(const T & el){
-            assert(len < maxSize && "Maxium size of VectorHeap has been hit, please resize.");
+            assert(len < maxSize && "Maximum size of VectorHeap has been hit, please resize.");
             auto dest = _data + len;
             memmove(_data + len,&el,sizeof(T));
             ++len;
@@ -61,9 +62,9 @@ _NAMESPACE_BEGIN_
         bool full(){return len == maxSize;}
 
         void resize(unsigned newSize){
-            auto temp = alloc.allocate(newSize);
+            auto temp = ::new T[newSize];
             std::move(begin(),end(),temp);
-            alloc.deallocate(_data,maxSize);
+            delete [] _data;
             maxSize = newSize;
             _data = temp;
         };
@@ -81,21 +82,21 @@ _NAMESPACE_BEGIN_
         };
         size_type length(){ return len; };
 
-        explicit VectorHeap(unsigned maxSize):maxSize(maxSize),len(0),_data(alloc.allocate(maxSize)){
+        explicit VectorHeap(unsigned maxSize):maxSize(maxSize),len(0),_data(::new T[maxSize]){
             
         };
         VectorHeap(const VectorHeap & other){
             maxSize = other.maxSize;
             len = other.len;
-            _data = alloc.allocate(maxSize);
-            std::copy(other.cbegin(),other.cend(),begin());
+            // _data = ::new;
+            memcpy(_data,other.cbegin(),other.len * sizeof(T));
         };
 
         VectorHeap(VectorHeap & other){
             maxSize = other.maxSize;
             len = other.len;
-            _data = alloc.allocate(maxSize);
-            std::copy(other.begin(),other.end(),begin());
+            _data = ::new T[maxSize];
+            memcpy(_data,other.begin(),other.len * sizeof(T));
         };
         // VectorHeap operator=(VectorHeap &other){
         //     maxSize = other.maxSize;
@@ -103,12 +104,19 @@ _NAMESPACE_BEGIN_
         //     _data = alloc.allocate(maxSize);
         //     std::copy(other.begin(),other.end(),begin());
         // };
-        // VectorHeap(VectorHeap &&) = delete;
+        VectorHeap(VectorHeap && other){
+            maxSize = other.maxSize;
+            len = other.len;
+            _data = ::new T[maxSize];
+            memcpy(_data,other._data,other.len * sizeof(T));
+        };
         ~VectorHeap(){
-            for(auto & obj : *this){
-                obj.~T();
-            };
-            alloc.deallocate(_data,maxSize);
+            if(_data != nullptr){
+                for(auto & obj : *this){
+                    obj.~T();
+                };
+                delete [] _data;
+            }
         };
     };
 
@@ -513,15 +521,15 @@ _NAMESPACE_BEGIN_
 
    template<class _Ty>
    class Matrix {
-       VectorHeap<VectorHeap<_Ty>> rows;
+       std::vector<std::vector<_Ty> *> rows;
     private:
-        Matrix(unsigned h,unsigned w):rows(w){
+        Matrix(unsigned h,unsigned w):rows(){
             /// Intialize Matrix with zeros.
             while(w > 0){
                 auto n_h = h;
-                rows.push(VectorHeap<_Ty>(h));
+                rows.push_back(new std::vector<_Ty>());
                 while(n_h > 0) {
-                    rows.last().push(0.f);
+                    rows.back()->push_back(0.f);
                     --n_h;
                 }
                 --w;
@@ -531,9 +539,12 @@ _NAMESPACE_BEGIN_
         Matrix(const Matrix & other):rows(other.rows){
            
         };
+        Matrix(Matrix && other):rows(other.rows){
+
+        };
         _Ty & valueAt(unsigned row,unsigned column){
             auto row_it = rows.begin() + (row-1);
-            auto column_it = (row_it->begin()) + (column-1);
+            auto column_it = ((*row_it)->begin()) + (column-1);
             return *column_it;
         };
        /** @brief Create an empty Matrix with the specified width and height.
@@ -542,7 +553,7 @@ _NAMESPACE_BEGIN_
            @returns Matrix
        */
        static Matrix Create(unsigned h,unsigned w){
-           return Matrix(h,w);
+           return {h,w};
        };
        static Matrix Identity(unsigned h,unsigned w){
            auto m = Create(h,w);
@@ -553,14 +564,18 @@ _NAMESPACE_BEGIN_
        };
        static Matrix Color(float r,float g,float b,float a){
            auto m = Create(1,4);
+           std::cout << "Created Matrix" << std::endl;
            m.valueAt(1,1) = r;
            m.valueAt(1,2) = g;
            m.valueAt(1,3) = b;
            m.valueAt(1,4) = a;
+           std::cout << "Return Matrix" << std::endl;
            return std::move(m);
        };
        ~Matrix(){
-           
+           for(auto & r : rows){
+               delete r;
+           };
        };
    };
 

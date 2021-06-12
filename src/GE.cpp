@@ -31,7 +31,7 @@ GEColoredVertex::GEColoredVertex(GEColoredVertex & vertex):GEVertex({vertex.pos}
 };
 
 GEColoredVertex GEColoredVertex::FromGPoint3D(GPoint3D &pt, FMatrix &color){
-    return {FVector3D(pt.x,pt.y,pt.z),color};
+    return {{pt.x,pt.y,pt.z},color};
 };
 
 SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){

@@ -1,0 +1,16 @@
+#! mode = python3
+
+omegasl_py = abspath("../omegasl/_main.py")
+
+print(omegasl_py)
+
+def omegasl_shader_lib(name:str,src:str,output_dir:str,temp_dir:str):
+    t:str
+    if is_mac:
+        t = "metal"
+    elif is_win:
+        t = "hlsl"
+    else:
+        t = "glsl"
+    Script(f"{name}_omegasl",[src],[],omegasl_py,["--target",t,"--temp",abspath(f"{root_out_dir}/{temp_dir}"),"-o",abspath(f"{root_out_dir}/{output_dir}"),abspath(src)],[f"{gen_root_out_dir}/{output_dir}"])
+

@@ -5,9 +5,21 @@ project(OmegaGTE C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# if(CMAKE_GENERATOR STREQUAL "Ninja")
-#     message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
-# endif()
+
+if(CMAKE_GENERATOR STREQUAL "Ninja")
+    message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
+endif()
+
+
+if(XCODE)
+    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_IDENTITY ${CODE_SIGNATURE})
+    # set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ${CODE_SIGNATURE})
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
+
+include(OmegaGTE)
+
 
 set(_TARGET_SOURCES)
 
@@ -69,6 +81,7 @@ if(TARGET_METAL)
     find_library(METAL_FOUND "Metal")
     find_library(COREANIMATION_FOUND "QuartzCore")
     find_library(FOUNDATION_FOUND "Foundation")
+    find_library(APPKIT_FOUND "AppKit")
     if(METAL_FOUND)
         message("Found Metal.framework (Path:${METAL_FOUND})")
     endif()
@@ -95,24 +108,29 @@ add_library("OmegaGTE" SHARED
 "src/OmegaGTE.cpp"
 ${_TARGET_SOURCES})
 
+add_omegasl_lib("std" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/std.omegasl" "${CMAKE_BINARY_DIR}/stdshaderlib")
+
 # set_target_properties("OmegaGTE" PROPERTIES LINK_FLAGS "")
 
 if(TARGET_METAL)
 
 set_target_properties("OmegaGTE" PROPERTIES 
 FRAMEWORK TRUE
-FRAMEWORK_VERSION "0.1"
-FRAMEWORK_IDENTIFIER "org.omegagraphics.OmegaGTE"
+FRAMEWORK_VERSION "0.2"
+MACOSX_FRAMEWORK_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist"
 RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Frameworks")
 
-target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND} ${COREANIMATION_FOUND} ${FOUNDATION_FOUND})
+target_sources("OmegaGTE" PRIVATE "${CMAKE_BINARY_DIR}/stdshaderlib")
+set_source_files_properties("${CMAKE_BINARY_DIR}/stdshaderlib" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources" GENERATED TRUE)
+
+target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND} ${COREANIMATION_FOUND} ${FOUNDATION_FOUND} ${APPKIT_FOUND})
 endif()
 
 if(TARGET_VULKAN)
 set_target_properties("OmegaGTE" PROPERTIES INCLUDE_DIRECTORIES ${GTK_INCLUDE_DIRS} LINK_DIRECTORIES ${GTK_LIBRARY_DIRS} COMPILE_FLAGS ${GTK_CFLAGS_OTHER} LINK_LIBRARIES ${GTK_LIBRARIES})
 endif()
 
-
+add_dependencies("OmegaGTE" "std")
 
 target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
 

@@ -8,15 +8,19 @@ function(add_metal_test)
     add_executable(${_ARG_NAME} MACOSX_BUNDLE ${_ARG_SOURCES} ${_ARG_RESOURCES})
     add_dependencies(${_ARG_NAME} "OmegaGTE")
     
-    set_target_properties(${_ARG_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${_ARG_PLIST} RESOURCE "${_ARG_RESOURCES}")
-
     set(_FRAMEWORKS)
     foreach(f ${_ARG_FRAMEWORKS})
         find_library("__${f}" ${f})
         list(APPEND _FRAMEWORKS "${__${f}}")
     endforeach()
-    
+
     target_link_libraries(${_ARG_NAME} PRIVATE "OmegaGTE" ${_ARG_LIBS} ${_FRAMEWORKS})
+
+    set_target_properties(${_ARG_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${_ARG_PLIST} RESOURCE "${_ARG_RESOURCES}"  XCODE_EMBED_FRAMEWORKS "OmegaGTE")
+
+   
+    
+   
     # target_sources(${_ARG_NAME} PRIVATE ${OMEGA_GTE_LIB})
     # set_source_files_properties(${OMEGA_GTE_LIB} PROPERTIES MACOSX_PACKAGE_LOCATION "Frameworks")
 endfunction()

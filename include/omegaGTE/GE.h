@@ -73,6 +73,7 @@ _NAMESPACE_BEGIN_
     public:
         virtual size_t size() = 0;
         virtual void *data() = 0;
+        virtual ~GEBuffer(){};
     };
 
     struct  OMEGAGTE_EXPORT HeapDescriptor {
@@ -111,9 +112,9 @@ _NAMESPACE_BEGIN_
     };
 
     struct GEColoredVertex : public GEVertex {
-        FMatrix color;
+        FMatrix & color;
     private:
-        GEColoredVertex(FVector3D pos,FMatrix color);
+        GEColoredVertex(FVector3D pos,FMatrix & color);
     public:
         static GEColoredVertex FromGPoint3D(GPoint3D & pt,FMatrix & color);
         GEColoredVertex(GEColoredVertex && vertex);

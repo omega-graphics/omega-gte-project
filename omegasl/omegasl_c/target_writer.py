@@ -7,9 +7,9 @@ class TargetWriter(object):
 
     target: Target
 
-    resourceQueue : list[ast.AnnAssign]
+    resourceQueue : "list[ast.AnnAssign]"
 
-    declared_vars: list[str]
+    declared_vars: "list[str]"
 
     def __init__(self,t:Target):
         self.target = t 

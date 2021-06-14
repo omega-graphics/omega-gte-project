@@ -34,6 +34,7 @@ public:
     size_t size();
     void * data();
     GEMetalBuffer(NSSmartPtr & buffer);
+    ~GEMetalBuffer();
 };
 
 class GEMetalFence : public GEFence {

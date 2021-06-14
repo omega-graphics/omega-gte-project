@@ -4,6 +4,8 @@
 #include "d3d12/GED3D12.h"
 #endif
 
+
+
 #ifdef TARGET_METAL
 #include "metal/GEMetal.h"
 #endif
@@ -14,7 +16,7 @@
 
 _NAMESPACE_BEGIN_
 
-GEColoredVertex::GEColoredVertex(FVector3D pos,FMatrix color):GEVertex({pos}),color(color){
+GEColoredVertex::GEColoredVertex(FVector3D pos,FMatrix & color):GEVertex({pos}),color(color){
 
 };
 
@@ -31,6 +33,7 @@ GEColoredVertex::GEColoredVertex(GEColoredVertex & vertex):GEVertex({vertex.pos}
 };
 
 GEColoredVertex GEColoredVertex::FromGPoint3D(GPoint3D &pt, FMatrix &color){
+    std::cout << "Creating Point3D" << std::endl;
     return {{pt.x,pt.y,pt.z},color};
 };
 

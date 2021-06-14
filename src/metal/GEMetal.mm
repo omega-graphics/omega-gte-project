@@ -32,6 +32,10 @@ _NAMESPACE_BEGIN_
         return [NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer.handle()) contents];
     };
 
+    GEMetalBuffer::~GEMetalBuffer(){
+        
+    };
+
     GEMetalFence::GEMetalFence(NSSmartPtr & fence):metalFence(fence){};
 
     class GEMetalEngine : public OmegaGraphicsEngine {
@@ -90,7 +94,7 @@ _NAMESPACE_BEGIN_
             NSError *error;
             NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newRenderPipelineStateWithDescriptor:pipelineDesc error:&error]};
             
-            if(error.code < 0){
+            if(pipelineState.handle() == nil){
                 DEBUG_STREAM("Failed to Create Render Pipeline State");
                 exit(1);
             };

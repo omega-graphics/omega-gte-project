@@ -525,22 +525,40 @@ _NAMESPACE_BEGIN_
     private:
         Matrix(unsigned h,unsigned w):rows(){
             /// Intialize Matrix with zeros.
-            while(w > 0){
-                auto n_h = h;
-                rows.push_back(new std::vector<_Ty>());
-                while(n_h > 0) {
-                    rows.back()->push_back(0.f);
-                    --n_h;
+            while(h > 0){
+                auto n_w = w;
+                auto vec = new std::vector<_Ty>();
+                while(n_w > 0) {
+                    vec->push_back(0.f);
+                    --n_w;
                 }
-                --w;
+                rows.push_back(vec);
+                --h;
             }
         };
    public:
-        Matrix(const Matrix & other):rows(other.rows){
-           
+        Matrix(const Matrix & other){
+            for(auto & col : other.rows){
+                auto vec = new std::vector<_Ty>();
+                for(auto & val : *col){
+                    vec->push_back(val);
+                };
+                rows.push_back(vec);
+            };
         };
-        Matrix(Matrix && other):rows(other.rows){
-
+        Matrix(Matrix && other){
+            for(auto & col : other.rows){
+                auto vec = new std::vector<_Ty>();
+                for(auto & val : *col){
+                    vec->push_back(val);
+                };
+                rows.push_back(vec);
+            };
+        };
+        void setValueAt(unsigned row,unsigned column,_Ty val){
+            auto row_it = rows.begin() + (row-1);
+            auto column_it = ((*row_it)->begin()) + (column-1);
+            *column_it = val;
         };
         _Ty & valueAt(unsigned row,unsigned column){
             auto row_it = rows.begin() + (row-1);
@@ -565,10 +583,10 @@ _NAMESPACE_BEGIN_
        static Matrix Color(float r,float g,float b,float a){
            auto m = Create(1,4);
            std::cout << "Created Matrix" << std::endl;
-           m.valueAt(1,1) = r;
-           m.valueAt(1,2) = g;
-           m.valueAt(1,3) = b;
-           m.valueAt(1,4) = a;
+           m.setValueAt(1,1,r);
+           m.setValueAt(1,2,g);
+           m.setValueAt(1,3,b);
+           m.setValueAt(1,4,a);
            std::cout << "Return Matrix" << std::endl;
            return std::move(m);
        };

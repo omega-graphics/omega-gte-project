@@ -145,7 +145,8 @@ _NAMESPACE_BEGIN_
         else if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::TriangleStrip){
             primativeType = MTLPrimitiveTypeTriangleStrip;
         };
-        [rp drawPrimitives:primativeType vertexStart:startIdx vertexCount:vertexCount instanceCount:1];
+        std::cout << "CALLING DRAW PRIMITIVES" << std::endl;
+        [rp drawPrimitives:primativeType vertexStart:startIdx vertexCount:vertexCount];
     };
 
     void GEMetalCommandBuffer::finishRenderPass(){

@@ -18,6 +18,70 @@ static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> fragmentFunc;
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
+
+static void render(){
+
+    OmegaGTE::GRect rect;
+    rect.h = 100;
+    rect.w = 100;
+    rect.pos.x = 0;
+    rect.pos.y = 0;
+    auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
+
+    std::cout << "Tessalated GRect" << std::endl;
+    OmegaGTE::FMatrix color = OmegaGTE::FMatrix::Color(1.f,0.f,0.f,1.f);
+    std::cout << "Created Matrix GRect" << std::endl;
+    OmegaGTE::ColoredVertexVector vertexVector;
+
+    for(auto & mesh : rect_mesh.meshes){
+        std::cout << "Mesh 1:" << std::endl;
+        for(auto &tri : mesh.vertexTriangles){
+            std::ostringstream ss;
+            ss << "Triangle: {\n  A:";
+            formatGPoint3D(ss,tri.a);
+            ss << "\n  B:";
+            formatGPoint3D(ss,tri.b);
+            ss << "\n  C:";
+            formatGPoint3D(ss,tri.c);
+            ss << "\n}";
+            std::cout << ss.str() << std::endl;
+            std::cout << "Create Vertex" << std::endl;
+            auto vertex = OmegaGTE::GEColoredVertex::FromGPoint3D(tri.a,color);
+                std::cout << "Created Vertex 1" << std::endl;
+            vertexVector.push_back(vertex);
+            std::cout << "Pushed Vertex" << std::endl;
+            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.b,color));
+            std::cout << "Created Vertex 2" << std::endl;
+            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.c,color));
+            std::cout << "Created Vertex 3" << std::endl;
+        };
+    };
+
+    auto vertexBuffer = tessContext->convertToVertexBuffer(gte.graphicsEngine,vertexVector);
+        
+
+    auto commandBuffer = nativeRenderTarget->commandBuffer();
+    NSLog(@"Command Buffer Created");
+    OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
+    using RenderPassDesc = OmegaGTE::GERenderTarget::RenderPassDesc;
+    renderPass.colorAttachment = new RenderPassDesc::ColorAttachment(RenderPassDesc::ColorAttachment::ClearColor(1.f,1.f,1.f,1.f),RenderPassDesc::ColorAttachment::Clear);
+    NSLog(@"Starting Render Pass");
+    commandBuffer->startRenderPass(renderPass);
+    commandBuffer->setRenderPipelineState(renderPipeline);
+    commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
+    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,vertexBuffer->size(),0);
+    NSLog(@"Ending Render Pass");
+    commandBuffer->endRenderPass();
+    NSLog(@"Ended Render Pass");
+    nativeRenderTarget->submitCommandBuffer(commandBuffer);
+    NSLog(@"Command Buffer Scheduled for Execution");
+
+    nativeRenderTarget->commitAndPresent();
+    NSLog(@"Presenting Frame"); 
+
+
+};
+
 @interface MyWindowController : NSWindowController<NSWindowDelegate>
 @end
 
@@ -47,61 +111,8 @@ void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
 
         tessContext = gte.tessalationEngine->createTEContextFromNativeRenderTarget(nativeRenderTarget);
         
-        OmegaGTE::GRect rect;
-        rect.h = 100;
-        rect.w = 100;
-        rect.pos.x = 0;
-        rect.pos.y = 0;
-        auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
-        std::cout << "Tessalated GRect" << std::endl;
-        // OmegaGTE::FMatrix color = OmegaGTE::FMatrix::Color(1.f,0.f,0.f,1.f);
-        std::cout << "Created Matrix GRect" << std::endl;
-        // OmegaGTE::ColoredVertexVector vertexVector;
-
-        // for(auto & mesh : rect_mesh.meshes){
-        //     std::cout << "Mesh 1:" << std::endl;
-        //     for(auto &tri : mesh.vertexTriangles){
-        //         std::ostringstream ss;
-        //         ss << "Triangle: {\n  A:";
-        //         formatGPoint3D(ss,tri.a);
-        //         ss << "\n  B:";
-        //         formatGPoint3D(ss,tri.b);
-        //         ss << "\n  C:";
-        //         formatGPoint3D(ss,tri.c);
-        //         ss << "\n}";
-        //         std::cout << ss.str() << std::endl;
-        //         std::cout << "Create Vertex" << std::endl;
-        //         auto vertex = OmegaGTE::GEColoredVertex::FromGPoint3D(tri.a,color);
-        //          std::cout << "Created Vertex 1" << std::endl;
-        //         vertexVector.push_back(vertex);
-        //         std::cout << "Pushed Vertex" << std::endl;
-        //         vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.b,color));
-        //         std::cout << "Created Vertex 2" << std::endl;
-        //         vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.c,color));
-        //         std::cout << "Created Vertex 3" << std::endl;
-        //     };
-        // };
-
-        // auto vertexBuffer = tessContext->convertToVertexBuffer(gte.graphicsEngine,vertexVector);
-        
-
-        auto commandBuffer = nativeRenderTarget->commandBuffer();
-        NSLog(@"Command Buffer Created");
-        OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
-        using RenderPassDesc = OmegaGTE::GERenderTarget::RenderPassDesc;
-        renderPass.colorAttachment = new RenderPassDesc::ColorAttachment(RenderPassDesc::ColorAttachment::ClearColor(0.f,1.f,1.f,1.f),RenderPassDesc::ColorAttachment::Clear);
-        NSLog(@"Starting Render Pass");
-        commandBuffer->startRenderPass(renderPass);
-        // commandBuffer->setRenderPipelineState(renderPipeline);
-        // commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
-        NSLog(@"Ending Render Pass");
-        commandBuffer->endRenderPass();
-        NSLog(@"Ended Render Pass");
-        nativeRenderTarget->submitCommandBuffer(commandBuffer);
-        NSLog(@"Command Buffer Scheduled for Execution");
-
-        nativeRenderTarget->commitAndPresent();
-        NSLog(@"Presenting Frame"); 
+        render();
+    
         [rootView addSubview:view];
 
         [self.window setContentView:rootView];
@@ -140,16 +151,16 @@ int main(int argc,const char * argv[]){
     
     gte = OmegaGTE::Init();
 
-    funcLib = gte.graphicsEngine->loadStdShaderLibrary();
+   funcLib = gte.graphicsEngine->loadStdShaderLibrary();
 
-    std::cout << "LIBRARY SIZE:" << funcLib->functions.size() << std::endl;
+   std::cout << "LIBRARY SIZE:" << funcLib->functions.size() << std::endl;
 
-    OmegaGTE::RenderPipelineDescriptor pipelineDesc;
-    vertexFunc = funcLib->functions[STD_COLOREDVERTEX_FUNC];
-    fragmentFunc = funcLib->functions[STD_FRAGMENTVERTEX_FUNC];
-    pipelineDesc.vertexFunc = vertexFunc;
-    pipelineDesc.fragmentFunc = fragmentFunc;
-    renderPipeline = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
+   OmegaGTE::RenderPipelineDescriptor pipelineDesc;
+   vertexFunc = funcLib->functions[STD_COLOREDVERTEX_FUNC];
+   fragmentFunc = funcLib->functions[STD_FRAGMENTVERTEX_FUNC];
+   pipelineDesc.vertexFunc = vertexFunc;
+   pipelineDesc.fragmentFunc = fragmentFunc;
+   renderPipeline = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
 
 
     return NSApplicationMain(argc,argv);

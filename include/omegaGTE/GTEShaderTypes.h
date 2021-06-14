@@ -41,11 +41,11 @@ struct OmegaGTEVertex {
     simd_float3 pos;
 };
 
-struct OmegaGTEColorVertex : OmegaGTEVertex {
+struct OmegaGTEColorVertex : public OmegaGTEVertex {
     simd_float4 color;
 };
 
-struct OmegaGTETexturedVertex : OmegaGTEVertex {
+struct OmegaGTETexturedVertex : public OmegaGTEVertex {
     simd_float2 texturePos;
 };
 

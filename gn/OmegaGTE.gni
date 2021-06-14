@@ -22,7 +22,7 @@ template("shader_library"){
         sources = [invoker.source]
         args = ["--temp",rebase_path(invoker.temp_dir),"-o",rebase_path(invoker.output_dir),"--target"]
         if(is_mac){
-            args += ["metal"]
+            args += ["metal","--use-simd"]
         }
         else if(is_windows){
             args += ["hlsl"]

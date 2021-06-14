@@ -1,5 +1,6 @@
-from .target import *
 
+from .target import *
+import sys
 class MSLTargetOptions(object):
     use_simd:bool
     def __init__(self,use_simd:bool):
@@ -24,6 +25,7 @@ class MSLTarget(Target):
         self.out.write("#include <metal_stdlib>\n")
         if self.opts.use_simd:
             self.out.write("#include <simd/simd.h>\n")
+        self.out.write("using namespace metal;\n")
         self.out.write("\n")
 
     def convertTypeIfStandard(self,type:str) -> str:

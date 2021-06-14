@@ -9,7 +9,8 @@ _NAMESPACE_BEGIN_
 
 OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
     auto * v = new OmegaGTEColorVertex();
-    v->color = {vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4)};
+    v->color = simd_float4{vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4)};
+    std::cout << "R:" << v->color.r << "G:" << v->color.g << "B:" << v->color.b << "A:" << v->color.a << std::endl;
     v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
     return v;
 };

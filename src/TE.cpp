@@ -196,7 +196,7 @@ SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(Shar
     bufferDesc.len = sizeof(OmegaGTEColorVertex) * vertices.size();
     auto buffer = graphicsEngine->makeBuffer(bufferDesc);
 
-    memmove(buffer->data(),(const void *)vertices.data(),buffer->size());
+    memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
     return buffer;
 };
     
@@ -210,7 +210,7 @@ SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(Shar
     bufferDesc.len = sizeof(OmegaGTETexturedVertex) * vertices.size();
     auto buffer = graphicsEngine->makeBuffer(bufferDesc);
 
-    memmove(buffer->data(),(const void *)vertices.data(),buffer->size());
+    memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
     return buffer;
 };
 

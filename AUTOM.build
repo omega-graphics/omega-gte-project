@@ -1,0 +1,58 @@
+#! mode = python3
+
+include("./gn/OmegaGTE.autom")
+
+Project("OmegaGTE","0.3")
+
+enable_tests = True
+
+if is_external_project:
+    enable_tests = False
+
+t:Library
+
+omega_gte_headers = glob("./include/omegaGTE/*.h") + ["./include/OmegaGTE.h"]
+
+
+omega_gte_main_srcs = [
+    "./src/GE.cpp",
+    "./src/GECommandQueue.cpp",
+    "./src/GEPipeline.cpp",
+    "./src/GERenderTarget.cpp",
+    "./src/GTEBase.cpp",
+    "./src/OmegaGTE.cpp",
+    "./src/TE.cpp"
+]
+
+defines = []
+if is_mac:
+    defines += ["TARGET_METAL"]
+    omega_gte_main_srcs += glob("./src/metal/*.mm") + glob("./src/metal/*.h") + ["./src/MetalTEContext.mm"]
+
+omegasl_shader_lib(name="std",src="./shaders/std.omegasl",output_dir="stdshaderlib",temp_dir="temp")
+
+all_srcs = omega_gte_main_srcs + omega_gte_headers
+
+if is_mac:
+    FrameworkBundle("OmegaGTE",all_srcs,["std_omegasl"],"Frameworks","0.3")
+    set_property("OmegaGTE","resources",["./src/Info.plist",f"{gen_root_out_dir}/stdshaderlib"])
+    set_property("OmegaGTE","frameworks",["Cocoa.framework","QuartzCore.framework","Metal.framework"])
+else:
+    SharedLibrary("OmegaGTE",all_srcs,["std_omegasl"],"lib")
+
+
+set_property("OmegaGTE","defines",defines)
+set_property("OmegaGTE","include_dirs",["./include"])
+
+
+if enable_tests:
+    if is_mac:
+        AppBundle("2DTest",["./tests/metal/2DTest/main.mm"],["OmegaGTE"],"tests")
+        set_property("2DTest","framework_dirs",[f"{gen_root_out_dir}/Frameworks"])
+        set_property("2DTest","frameworks",["OmegaGTE.framework","Cocoa.framework"])
+
+
+
+
+
+

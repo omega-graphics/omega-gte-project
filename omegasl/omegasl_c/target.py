@@ -62,7 +62,7 @@ class ShaderType(Enum):
 class TargetOutputContext(object):
     source_file:str
     output_dir:str
-    b:dict[str,list[bytes]]
+    b:"dict[str,list[bytes]]"
     def __init__(self):
         self.b = {}
         return

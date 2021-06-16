@@ -1,6 +1,5 @@
 
 
-#include <filesystem>
 #include <initializer_list>
 #if defined(TARGET_DIRECTX)
 #include <windows.h>
@@ -152,7 +151,7 @@ _NAMESPACE_BEGIN_
          @param path Path to a `.shadermap` file.
          @returns SharedHandle<GEFunctionLibrary>
         */
-        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) = 0;
+        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path) = 0;
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

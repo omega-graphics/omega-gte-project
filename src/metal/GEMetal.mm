@@ -33,7 +33,7 @@ _NAMESPACE_BEGIN_
     };
 
     GEMetalBuffer::~GEMetalBuffer(){
-        
+
     };
 
     GEMetalFence::GEMetalFence(NSSmartPtr & fence):metalFence(fence){};
@@ -108,9 +108,9 @@ _NAMESPACE_BEGIN_
             return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
             // return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
         };
-        SharedHandle<GEFunctionLibrary> loadShaderLibrary(std::filesystem::path path) override{
+        SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path) override{
             /// Load OmegaSL Shadermap
-            std::ifstream in(path.string(),std::ios::binary | std::ios::in);
+            std::ifstream in(path.str(),std::ios::binary | std::ios::in);
             
             if(in.is_open()){
                 SharedHandle<GEFunctionLibrary> funcLibrary = std::make_shared<GEFunctionLibrary>();
@@ -123,13 +123,13 @@ _NAMESPACE_BEGIN_
                     char *name = new char[entNameLen];
                     in.read(name,sizeof(char) * entNameLen);
                     std::string_view str(name,entNameLen);
-                    NSString *file = [[NSString alloc] initWithUTF8String:path.replace_filename(std::filesystem::path(str).filename()).string().c_str()];
+                    NSString *file = [[NSString alloc] initWithUTF8String:path.str().c_str()];
                     NSLog(@"FILE LOC:%@",file);
                     NSError *error;
                     NSSmartPtr mtlLibrary = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithFile:file error:&error] };
                     
                     if(mtlLibrary.handle() == nil){
-                        DEBUG_STREAM("Failed to Load Metal Library From:" << path);
+                        DEBUG_STREAM("Failed to Load Metal Library From:" << path.str());
                     };
                      
                     unsigned shaderCount;
@@ -150,7 +150,7 @@ _NAMESPACE_BEGIN_
                         NSSmartPtr mtlFunc = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,mtlLibrary.handle()) newFunctionWithName:str] };
 
                         if(mtlFunc.handle() == nil){
-                            DEBUG_STREAM("Failed to Load Metal Shader \"" << func_name << "\" from path:" << path);
+                            DEBUG_STREAM("Failed to Load Metal Shader \"" << func_name << "\" from path:" << path.str());
                         };
                         funcLibrary->functions.insert(std::make_pair(func_name,std::make_shared<GEMetalFunction>(mtlFunc)));
 

@@ -4,6 +4,12 @@
     },
     "commands":[ 
         {
+            "type":"clone",
+            "url":"https://github.com/omega-graphics/common.git",
+            "dest":"./omega-common",
+            "branch":"default"
+        },
+        {
             "type":"gnpkg",
             "command":"utils --get"
         },

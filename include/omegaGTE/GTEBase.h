@@ -7,6 +7,8 @@
 #include <iostream>
 #include <new>
 
+#include <omega-common/common.h>
+
 
 #ifndef OMEGAGTE_GTEBASE_H
 #define OMEGAGTE_GTEBASE_H
@@ -23,7 +25,7 @@
 #define _NAMESPACE_END_ }
 
 _NAMESPACE_BEGIN_
-
+    using namespace OmegaCommon;
     typedef enum : int {
         CodeOk,
         CodeFailed

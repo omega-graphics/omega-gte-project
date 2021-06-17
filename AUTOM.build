@@ -31,6 +31,10 @@ if is_mac:
     defines += ["TARGET_METAL"]
     omega_gte_main_srcs += glob("./src/metal/*.mm") + glob("./src/metal/*.h") + ["./src/MetalTEContext.mm"]
 
+elif is_win:
+    defines += ["TARGET_DIRECTX"]
+    omega_gte_main_srcs += glob("./src/d3d12/*.cpp") + glob("./src/d3d12/*.h") + ["./src/D3D12TEContext.cpp"]
+
 omegasl_shader_lib(name="std",src="./shaders/std.omegasl",output_dir="stdshaderlib",temp_dir="temp")
 
 all_srcs = omega_gte_main_srcs + omega_gte_headers
@@ -41,6 +45,7 @@ if is_mac:
     set_property("OmegaGTE","frameworks",["Cocoa.framework","QuartzCore.framework","Metal.framework"])
 else:
     SharedLibrary("OmegaGTE",all_srcs,["std_omegasl","omega-common"],"lib")
+    set_property("OmegaGTE","libs",["user32.lib"])
 
 
 set_property("OmegaGTE","defines",defines)

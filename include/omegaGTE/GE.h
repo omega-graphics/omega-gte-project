@@ -106,11 +106,11 @@ _NAMESPACE_BEGIN_
 
     };
 
-    struct GEVertex {
+    struct OMEGAGTE_EXPORT GEVertex {
         FVector3D pos;
     };
 
-    struct GEColoredVertex : public GEVertex {
+    struct OMEGAGTE_EXPORT GEColoredVertex : public GEVertex {
         FMatrix & color;
     private:
         GEColoredVertex(FVector3D pos,FMatrix & color);
@@ -121,7 +121,7 @@ _NAMESPACE_BEGIN_
         GEColoredVertex(const GEColoredVertex & vertex);
     };
 
-    struct GETexturedVertex : public GEVertex {
+    struct OMEGAGTE_EXPORT GETexturedVertex : public GEVertex {
         FVector2D textureCoord;
         GETexturedVertex(GEColoredVertex && vertex);
     };

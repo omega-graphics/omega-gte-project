@@ -2,6 +2,7 @@
 
 #include "d3dx12.h"
 #include <dxgi1_4.h>
+#include <dxgi1_6.h>
 #include <d3d12shader.h>
 #include <DirectXColors.h>
 #include <DirectXMath.h>
@@ -74,7 +75,8 @@ _NAMESPACE_BEGIN_
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
         void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
-        SharedHandle<GEFunction> loadFunction(std::filesystem::path path);
+        SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path);
+        SharedHandle<GEFunctionLibrary> loadStdShaderLibrary();
         SharedHandle<GEFence> makeFence();
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);

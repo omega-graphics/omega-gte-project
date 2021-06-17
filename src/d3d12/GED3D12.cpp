@@ -15,9 +15,32 @@ SharedHandle<GEBuffer> GED3D12Heap::makeBuffer(const BufferDescriptor &desc){
     if(FAILED(hr)){
         exit(1);
     };
+
+    D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
+    descHeapDesc.NumDescriptors = 1;
+    descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    descHeapDesc.NodeMask = engine->d3d12_device->GetNodeCount();
+    descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    ID3D12DescriptorHeap *descHeap;
+    hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
+    if(FAILED(hr)){
+
+    };
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
+    res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+    res_view_desc.Buffer.StructureByteStride = desc.objectStride;
+    res_view_desc.Buffer.FirstElement = 0;
+    res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    res_view_desc.Buffer.NumElements = desc.len/desc.objectStride;
+
+    engine->d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+
+
     auto alloc_info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
     currentOffset += alloc_info.SizeInBytes;
-    return std::make_shared<GED3D12Buffer>(buffer);
+    return std::make_shared<GED3D12Buffer>(buffer,descHeap);
 };
 
 SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
@@ -102,7 +125,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         ComPtr<IDXGIFactory6> factory6;
 
         BOOL hasDxgiFactory6 = SUCCEEDED(dxgi_factory->QueryInterface(IID_PPV_ARGS(&factory6)));
-     
+      
         HRESULT hr = S_OK;
         UINT adapterIdx = 0;
         while(hr != DXGI_ERROR_NOT_FOUND){
@@ -460,11 +483,10 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return std::make_shared<GED3D12Buffer>(buffer,descHeap);
     };
 
-    SharedHandle<GEFunction> GED3D12Engine::loadFunction(std::filesystem::path path){
-        ID3DBlob *blob;
-        D3DReadFileToBlob(path.wstring().c_str(),&blob);
-        auto rc = std::make_shared<GED3D12Function>();
-        rc->funcData = blob;
-        return rc;
+    SharedHandle<GEFunctionLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
+        return nullptr;
+    };
+    SharedHandle<GEFunctionLibrary> GED3D12Engine::loadStdShaderLibrary(){
+        return nullptr;
     };
 _NAMESPACE_END_

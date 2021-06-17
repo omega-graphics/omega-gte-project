@@ -383,7 +383,7 @@ _NAMESPACE_BEGIN_
     template<class _Pt_Ty>
     class  OMEGAGTE_EXPORT GVectorPath_Base {
         public:
-        struct Node {
+        struct OMEGAGTE_EXPORT Node {
             _Pt_Ty *pt;
             Node *next = nullptr;
             Node(_Pt_Ty *pt):pt(pt){};
@@ -522,7 +522,7 @@ _NAMESPACE_BEGIN_
 
 
    template<class _Ty>
-   class Matrix {
+   class OMEGAGTE_EXPORT Matrix {
        std::vector<std::vector<_Ty> *> rows;
     private:
         Matrix(unsigned h,unsigned w):rows(){

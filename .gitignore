@@ -18,6 +18,7 @@ shaderc
 sphinx*
 .build
 omega-common
+*.gn
 
 # Prerequisites
 *.d

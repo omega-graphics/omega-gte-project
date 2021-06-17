@@ -48,15 +48,20 @@ else:
     set_property("OmegaGTE","libs",["user32.lib"])
 
 
-set_property("OmegaGTE","defines",defines)
-set_property("OmegaGTE","include_dirs",["./include","./omega-common/include"])
-
+Config("OmegaGTE_conf",["omega-common"],["./include"],defines)
+set_property("OmegaGTE","configs",["OmegaGTE_conf","omega-common_conf"])
 
 if enable_tests:
     if is_mac:
         AppBundle("2DTest",["./tests/metal/2DTest/main.mm"],["OmegaGTE"],"tests")
         set_property("2DTest","framework_dirs",[f"{gen_root_out_dir}/Frameworks"])
         set_property("2DTest","frameworks",["OmegaGTE.framework","Cocoa.framework"])
+    elif is_win:
+        EMBED = abspath("./tests/directx/2DTest/app.exe.manifest")
+        conf = f"./conf-out/manifest.rc"
+        configure("./tests/directx/2DTest/manifest.rc.in",conf)
+        Executable("2DTest",["./tests/directx/2DTest/main.cpp",conf],["OmegaGTE"],"tests")
+        set_property("2DTest","configs",["OmegaGTE_conf","omega-common_conf"])
 
 
 

@@ -484,9 +484,39 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     };
 
     SharedHandle<GEFunctionLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
-        return nullptr;
+        unsigned entryCount;
+        std::ifstream in(path.absPath(),std::ios::binary);
+        if(in.is_open()){
+            auto library = std::make_shared<GEFunctionLibrary>();
+            in.read((char *)&entryCount,sizeof(entryCount));
+            while(entryCount > 0){
+                unsigned entryNameCharC;
+                in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
+                String entryName;
+                entryName.reserve(entryNameCharC);
+                in.read(entryName.data(),entryNameCharC);
+                unsigned entryShaderCount;
+                in.read((char *)&entryCount,sizeof(entryShaderCount));
+            
+                unsigned shaderNameCount;
+                in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
+                String str;
+                str.resize(shaderNameCount);
+                in.read(str.data(),shaderNameCount);
+
+                ATL::CStringW wstr(str.data());
+                ID3DBlob *blob;
+                D3DReadFileToBlob(wstr.GetString(),&blob);
+
+                library->functions[entryName] = std::make_shared<GED3D12Function>(blob);
+                
+                --entryCount;
+            };
+            in.close();
+        };
     };
+
     SharedHandle<GEFunctionLibrary> GED3D12Engine::loadStdShaderLibrary(){
-        return nullptr;
+        return loadShaderLibrary("./stdshaderlib/std.shadermap");
     };
 _NAMESPACE_END_

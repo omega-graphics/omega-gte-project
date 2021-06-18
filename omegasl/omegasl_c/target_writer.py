@@ -30,8 +30,8 @@ class TargetWriter(object):
             if self.resourceExists(res_name.id) is not None:
                 raise RuntimeError("Resources must have unique names")
 
-        if self.target.type == TargetType.HLSL:
-            self.outputStr.write(self.target.annotationToString(expr))
+        # if self.target.type == TargetType.HLSL:
+        #     self.outputStr.write(self.target.annotationToString(expr))
         self.resourceQueue.append(expr)
         return
 
@@ -170,7 +170,10 @@ class TargetWriter(object):
 
         class_name = struct.name
         self.target.writeStructDecl(class_name)
-        self.target.beginBlock()
+        if self.target.type == TargetType.METAL:
+            self.target.beginBlock()
+        elif self.target.type == TargetType.HLSL:
+            self.target.header_out.write("{\n")
 
         for prop in struct.body:
             if isinstance(prop,ast.AnnAssign):
@@ -180,16 +183,27 @@ class TargetWriter(object):
             else:
                 raise RuntimeError("Only Variable Decls are allowed")
             # print(prop)
-        self.target.endBlock()
+        if self.target.type == TargetType.METAL:
+            self.target.endBlock()
+        elif self.target.type == TargetType.HLSL:
+            self.target.header_out.write("\n};\n\n")
 
         return
     def writeShaderFunction(self,func:ast.FunctionDef):
+
         decorator_count = len(func.decorator_list)
         if decorator_count  == 0 or decorator_count > 1:
             raise RuntimeError("A Shader Function must have one and ONLY one type")
 
         func_decor:ast.Call = func.decorator_list[0]
         shader_type:str = func_decor.func.id
+        
+        if self.target.type == TargetType.HLSL:
+            out_file = f"{self.target.out.temp_dir}/{func.name}.hlsl"
+            self.target.out.out = io.open(out_file,"w")
+            self.target.out.write(file_header)
+            self.target.out.write(f"#include \"structs.h\"\n")
+            self.out = self.target.out
 
         params:"dict[str,str]" = {}
 
@@ -204,6 +218,10 @@ class TargetWriter(object):
             if self.target.type == TargetType.METAL:
                 t = self.target.annotationToString(res)
                 params[arg.id] = t
+            elif self.target.type == TargetType.HLSL:
+                t = self.target.annotationToString(res)
+                self.target.out.write(t)
+
 
         ret:ast.Name = func.returns
         if ret is None:
@@ -231,3 +249,4 @@ class TargetWriter(object):
                 self.writeDecl(stmt,shader_type)
             self.outputStr.write(";\n")
         self.target.endBlock()
+        self.target.out.out.close()

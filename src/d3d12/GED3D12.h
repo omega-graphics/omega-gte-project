@@ -9,6 +9,7 @@
 #include <d3dcompiler.h>
 #include <pix.h>
 #include <iostream>
+#include <atlstr.h>
 
 #include <wrl.h>
 

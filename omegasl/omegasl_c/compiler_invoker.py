@@ -31,7 +31,7 @@ class TargetCompilerInvoker(object):
 
     def compile(self,inputFile:str,shaderName:str,shaderProfile:str,output:str):
         if self.target.type == TargetType.HLSL:
-            os.system(f"dxc -Fo{output} -E{shaderName} -T{shaderProfile} {inputFile}")
+            os.system(f"dxc -nologo -Od -Fo{output} -E{shaderName} -T{shaderProfile} {inputFile}")
         elif self.target.type == TargetType.METAL:
             os.system(f"xcrun -sdk macosx metal -c {inputFile} -o {output}")
         

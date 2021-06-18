@@ -2,6 +2,8 @@
 
 _NAMESPACE_BEGIN_
 
+GED3D12Function::GED3D12Function(ID3DBlob *blob):funcData(blob){};
+
 GED3D12RenderPipelineState::GED3D12RenderPipelineState(ID3D12PipelineState *state):pipelineState(state){};
 
 GED3D12ComputePipelineState::GED3D12ComputePipelineState(ID3D12PipelineState *state):pipelineState(state){};

@@ -1,12 +1,16 @@
 #include <OmegaGTE.h>
 #include <windows.h>
+#include <pathcch.h>
 
+#pragma comment(lib,"Pathcch.lib")
 
 LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 
 OmegaGTE::GTE gte;
+static OmegaGTE::SharedHandle<OmegaGTE::GEFunctionLibrary> library;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> renderTarget;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
+static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipelineState;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBuffer> vertexBuffer;
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
@@ -26,6 +30,7 @@ void tessalate(){
     OmegaGTE::FMatrix color = OmegaGTE::FMatrix::Color(1.f,0.f,0.f,1.f);
     std::cout << "Created Matrix GRect" << std::endl;
     OmegaGTE::ColoredVertexVector vertexVector;
+
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
@@ -56,6 +61,14 @@ void tessalate(){
 };
 
 APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
+    WCHAR name[MAX_PATH];
+    
+    GetModuleFileNameW(hInstance,name,MAX_PATH);
+    PathCchRemoveExtension(name,MAX_PATH);
+    PathCchRemoveFileSpec(name,MAX_PATH);
+    
+    SetCurrentDirectoryW(name);
+    MessageBoxW(GetForegroundWindow(),(std::wstring(L"Current Dir:") + name).c_str(),L"NOTE",MB_OK);
 
     gte = OmegaGTE::Init();
 
@@ -83,12 +96,22 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
          MessageBoxA(GetForegroundWindow(),"Failed to Create Window","NOTE",MB_OK);
         exit(1);
     };
+
+    MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 0","NOTE",MB_OK);
+    library = gte.graphicsEngine->loadStdShaderLibrary();
+    MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 1","NOTE",MB_OK);
+
     OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc;
 
     renderTargetDesc.hwnd = hwnd;
     renderTargetDesc.isHwnd = true;
 
+    OmegaGTE::RenderPipelineDescriptor pipelineDesc;
+    pipelineDesc.vertexFunc = library->functions[STD_COLOREDVERTEX_FUNC];
+    pipelineDesc.fragmentFunc = library->functions[STD_FRAGMENTVERTEX_FUNC];
 
+    renderPipelineState = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
+    MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 2","NOTE",MB_OK);
 
 
     MessageBoxA(GetForegroundWindow(),"App Started..","NOTE",MB_OK);
@@ -110,6 +133,9 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(1.f,0.f,0.f,1.f),ColorAttachment::Clear);
 
     commandBuffer->startRenderPass(renderPassDesc);
+    commandBuffer->setRenderPipelineState(renderPipelineState);
+    commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
+    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,vertexBuffer->size(),0);
     MessageBoxA(GetForegroundWindow(),"Loaded Stage 3","NOTE",MB_OK);
     commandBuffer->endRenderPass();
      MessageBoxA(GetForegroundWindow(),"Loaded Stage 4","NOTE",MB_OK);

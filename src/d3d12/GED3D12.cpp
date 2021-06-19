@@ -484,8 +484,13 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     };
 
     SharedHandle<GEFunctionLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
+        MessageBoxA(GetForegroundWindow(),("PathStr:" + path.str()).c_str(),"NOTE",MB_OK);
+        MessageBoxA(GetForegroundWindow(),("AbsPath:" + path.absPath()).c_str(),"NOTE",MB_OK);
+         MessageBoxA(GetForegroundWindow(),("Dir:" + path.dir()).c_str(),"NOTE",MB_OK);
+        MessageBoxA(GetForegroundWindow(),("FName:" + path.filename()).c_str(),"NOTE",MB_OK);
+        MessageBoxA(GetForegroundWindow(),("Extension:" + path.ext()).c_str(),"NOTE",MB_OK);
         unsigned entryCount;
-        std::ifstream in(path.absPath(),std::ios::binary);
+        std::ifstream in(path.absPath(),std::ios::in | std::ios::binary);
         if(in.is_open()){
             auto library = std::make_shared<GEFunctionLibrary>();
             in.read((char *)&entryCount,sizeof(entryCount));
@@ -508,11 +513,15 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                 ID3DBlob *blob;
                 D3DReadFileToBlob(wstr.GetString(),&blob);
 
-                library->functions[entryName] = std::make_shared<GED3D12Function>(blob);
+                library->functions.insert(std::make_pair(entryName, std::make_shared<GED3D12Function>(blob)));
                 
                 --entryCount;
             };
             in.close();
+            return library;
+        }
+        else {
+            return nullptr;
         };
     };
 

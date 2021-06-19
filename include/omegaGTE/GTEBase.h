@@ -14,6 +14,7 @@
 #define OMEGAGTE_GTEBASE_H
 
 #ifdef TARGET_DIRECTX
+#include <Windows.h>
 #define OMEGAGTE_EXPORT __declspec( dllexport ) 
 #else 
 #define OMEGAGTE_EXPORT
@@ -525,11 +526,13 @@ _NAMESPACE_BEGIN_
    class OMEGAGTE_EXPORT Matrix {
        std::vector<std::vector<_Ty> *> rows;
     private:
-        Matrix(unsigned h,unsigned w):rows(){
-            /// Intialize Matrix with zeros.
+        Matrix(unsigned h,unsigned w){
+            /// Initialize Matrix with zeros.
+            MessageBoxA(GetForegroundWindow(),"Creating Matrix",NULL,MB_OK);
             while(h > 0){
                 auto n_w = w;
                 auto vec = new std::vector<_Ty>();
+                 MessageBoxA(GetForegroundWindow(),"Creating Matrix -- New Vector",NULL,MB_OK);
                 while(n_w > 0) {
                     vec->push_back(0.f);
                     --n_w;
@@ -537,6 +540,7 @@ _NAMESPACE_BEGIN_
                 rows.push_back(vec);
                 --h;
             }
+             MessageBoxA(GetForegroundWindow(),"Finishing Creating Matrix",NULL,MB_OK);
         };
    public:
         Matrix(const Matrix & other){
@@ -583,7 +587,9 @@ _NAMESPACE_BEGIN_
            
        };
        static Matrix Color(float r,float g,float b,float a){
+            MessageBoxA(GetForegroundWindow(),"Create Matrix",NULL,MB_OK);
            auto m = Create(1,4);
+           MessageBoxA(GetForegroundWindow(),"Created Matrix",NULL,MB_OK);
            std::cout << "Created Matrix" << std::endl;
            m.setValueAt(1,1,r);
            m.setValueAt(1,2,g);

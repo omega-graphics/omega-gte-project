@@ -151,7 +151,7 @@ _NAMESPACE_BEGIN_
             topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
         };
         commandList->IASetPrimitiveTopology(topology);
-        commandList->DrawInstanced(1,vertexCount,startIdx,0);
+        commandList->DrawInstanced(vertexCount,1,startIdx,0);
     };
 
     void GED3D12CommandBuffer::finishRenderPass(){

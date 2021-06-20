@@ -8,7 +8,7 @@ _NAMESPACE_BEGIN_
 
 struct GED3D12Function : public __GEFunctionInternal {
     ComPtr<ID3DBlob> funcData;
-    GED3D12Function(ID3DBlob *blob);
+    GED3D12Function(ID3DBlob *blob):funcData(blob){};
 };
 
 class GED3D12RenderPipelineState : public __GERenderPipelineState {

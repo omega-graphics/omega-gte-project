@@ -39,8 +39,8 @@ _NAMESPACE_BEGIN_
 
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
         std::vector<InputAttributeDesc> vertexInputAttributes;
-        SharedHandle<GEFunction> vertexFunc;
-        SharedHandle<GEFunction> fragmentFunc;
+        GEFunction * vertexFunc;
+        GEFunction * fragmentFunc;
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {

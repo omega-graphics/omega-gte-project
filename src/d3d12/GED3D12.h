@@ -83,8 +83,8 @@ _NAMESPACE_BEGIN_
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount);
         SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
-        SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor &desc);
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc);
+        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc);
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc);
         SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc);
         SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc);
         IDXGISwapChain3 *createSwapChainForComposition(DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue);

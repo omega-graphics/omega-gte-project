@@ -118,43 +118,43 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
 };
 
-    void GED3D12Engine::getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,
-                                           __out IDXGIAdapter1 **adapter){
-        ComPtr<IDXGIAdapter1> _out;
+    // void GED3D12Engine::getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,
+    //                                        __out IDXGIAdapter1 **adapter){
+    //     ComPtr<IDXGIAdapter1> _out;
 
-        ComPtr<IDXGIFactory6> factory6;
+    //     ComPtr<IDXGIFactory6> factory6;
 
-        BOOL hasDxgiFactory6 = SUCCEEDED(dxgi_factory->QueryInterface(IID_PPV_ARGS(&factory6)));
+    //     BOOL hasDxgiFactory6 = SUCCEEDED(dxgi_factory->QueryInterface(IID_PPV_ARGS(&factory6)));
       
-        HRESULT hr = S_OK;
-        UINT adapterIdx = 0;
-        while(hr != DXGI_ERROR_NOT_FOUND){
+    //     HRESULT hr = S_OK;
+    //     UINT adapterIdx = 0;
+    //     while(hr != DXGI_ERROR_NOT_FOUND){
             
-            if(hasDxgiFactory6){
-                hr = factory6->EnumAdapterByGpuPreference(adapterIdx,DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,IID_PPV_ARGS(&_out));
-            }
-            else {
-                hr = dxgi_factory->EnumAdapters1(adapterIdx,&_out);
-            }
+    //         if(hasDxgiFactory6){
+    //             hr = factory6->EnumAdapterByGpuPreference(adapterIdx,DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,IID_PPV_ARGS(&_out));
+    //         }
+    //         else {
+    //             hr = dxgi_factory->EnumAdapters1(adapterIdx,&_out);
+    //         }
 
-            if(hr == DXGI_ERROR_NOT_FOUND)
-                break;
+    //         if(hr == DXGI_ERROR_NOT_FOUND)
+    //             break;
             
-            DXGI_ADAPTER_DESC1 adapterDesc;
-            _out->GetDesc1(&adapterDesc);
+    //         DXGI_ADAPTER_DESC1 adapterDesc;
+    //         _out->GetDesc1(&adapterDesc);
 
-            if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE){
-                /// Skip DXGI Software Warp Adapter.
-                continue;
-            }
-            else {
-                break;
-            }
-            ++adapterIdx;
-        };
+    //         if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE){
+    //             /// Skip DXGI Software Warp Adapter.
+    //             continue;
+    //         }
+    //         else {
+    //             break;
+    //         }
+    //         ++adapterIdx;
+    //     };
 
-        *adapter = _out.Detach();
-    };
+    //     *adapter = _out.Detach();
+    // };
 
 
     GED3D12Engine::GED3D12Engine(){
@@ -166,10 +166,10 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             exit(1);
         };
 
-        ComPtr<IDXGIAdapter1> hardwareAdapter;
-        getHardwareAdapter(dxgi_factory.Get(),&hardwareAdapter);
+        // ComPtr<IDXGIAdapter1> hardwareAdapter;
+        // getHardwareAdapter(dxgi_factory.Get(),&hardwareAdapter);
 
-        hr = D3D12CreateDevice(hardwareAdapter.Get(),D3D_FEATURE_LEVEL_12_1,IID_PPV_ARGS(d3d12_device.GetAddressOf()));
+        hr = D3D12CreateDevice(NULL,D3D_FEATURE_LEVEL_12_0,IID_PPV_ARGS(&d3d12_device));
         if(FAILED(hr)){
             exit(1);
         };
@@ -232,71 +232,81 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return nullptr;
     };
 
-    SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(const RenderPipelineDescriptor &desc){
-        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
-        std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
-        for(auto & attr : desc.vertexInputAttributes){
-            D3D12_INPUT_ELEMENT_DESC inputEl;
-            switch (attr.type) {
-                case InputAttributeDesc::FLOAT : {
-                    inputEl.Format = DXGI_FORMAT_R32_FLOAT;
-                    break;
-                }
-                case InputAttributeDesc::FLOAT2 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32_FLOAT;
-                    break;
-                }
-                case InputAttributeDesc::FLOAT3 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-                    break;
-                }
-                case InputAttributeDesc::FLOAT4 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-                    break;
-                }
-                case InputAttributeDesc::INT : {
-                    inputEl.Format = DXGI_FORMAT_R32_SINT;
-                    break;
-                }
-                case InputAttributeDesc::INT2 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32_SINT;
-                    break;
-                }
-                case InputAttributeDesc::INT3 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32B32_SINT;
-                    break;
-                }
-                case InputAttributeDesc::INT4 : {
-                    inputEl.Format = DXGI_FORMAT_R32G32B32A32_SINT;
-                    break;
-                }
-            };
+    SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(RenderPipelineDescriptor &desc){
+        // D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
+        // std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
+        // for(auto & attr : desc.vertexInputAttributes){
+        //     D3D12_INPUT_ELEMENT_DESC inputEl;
+        //     switch (attr.type) {
+        //         case InputAttributeDesc::FLOAT : {
+        //             inputEl.Format = DXGI_FORMAT_R32_FLOAT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::FLOAT2 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32_FLOAT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::FLOAT3 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::FLOAT4 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::INT : {
+        //             inputEl.Format = DXGI_FORMAT_R32_SINT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::INT2 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32_SINT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::INT3 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32B32_SINT;
+        //             break;
+        //         }
+        //         case InputAttributeDesc::INT4 : {
+        //             inputEl.Format = DXGI_FORMAT_R32G32B32A32_SINT;
+        //             break;
+        //         }
+        //     };
             
-            inputEl.InputSlot = 0;
-            inputEl.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-            inputEl.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-            inputs.push_back(inputEl);
+        //     inputEl.InputSlot = 0;
+        //     inputEl.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+        //     inputEl.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+        //     inputs.push_back(inputEl);
             
-        };
+        // };
 
-        inputLayoutDesc.pInputElementDescs = inputs.data();
-        inputLayoutDesc.NumElements = inputs.size();
-
+        // inputLayoutDesc.pInputElementDescs = inputs.data();
+        // inputLayoutDesc.NumElements = inputs.size();
+        MessageBoxA(GetForegroundWindow(),"Creating Pipeline State","NOTE",MB_OK);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d;
         d.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         d.NodeMask = d3d12_device->GetNodeCount();
         
         HRESULT hr;
-        GED3D12Function *vertexFunc = (GED3D12Function *)desc.vertexFunc.get();
-        GED3D12Function *fragmentFunc = (GED3D12Function *)desc.fragmentFunc.get();
+        auto vertexFunc = (GED3D12Function *)desc.vertexFunc;
+        auto fragmentFunc = (GED3D12Function *)desc.fragmentFunc;
+        MessageBoxA(GetForegroundWindow(),"Getting Functions","NOTE",MB_OK);
+        if(vertexFunc == nullptr)
+            MessageBoxA(GetForegroundWindow(),"VS has been released too early!","NOTE",MB_OK);
+        if(fragmentFunc  == nullptr)
+            MessageBoxA(GetForegroundWindow(),"PS has been released too early!","NOTE",MB_OK);
         d.VS = CD3DX12_SHADER_BYTECODE(vertexFunc->funcData.Get());
         d.PS = CD3DX12_SHADER_BYTECODE(fragmentFunc->funcData.Get());
+        MessageBoxA(GetForegroundWindow(),"Create Bytecode Funcs","NOTE",MB_OK);
         ID3D12PipelineState *state;
         hr = d3d12_device->CreateGraphicsPipelineState(&d,IID_PPV_ARGS(&state));
+        if(FAILED(hr)){
+            MessageBoxA(GetForegroundWindow(),"Failed to Create Pipeline State","NOTE",MB_OK);
+            exit(1);
+        };
         return std::make_shared<GED3D12RenderPipelineState>(state);
     };
-    SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(const ComputePipelineDescriptor &desc){
+    SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(ComputePipelineDescriptor &desc){
         D3D12_COMPUTE_PIPELINE_STATE_DESC d;
         HRESULT hr;
         ID3D12PipelineState *state;
@@ -492,16 +502,18 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         unsigned entryCount;
         std::ifstream in(path.absPath(),std::ios::in | std::ios::binary);
         if(in.is_open()){
+            MessageBoxA(GetForegroundWindow(),("OpenedFile" + path.absPath()).c_str(),"NOTE",MB_OK);
             auto library = std::make_shared<GEFunctionLibrary>();
             in.read((char *)&entryCount,sizeof(entryCount));
+            MessageBoxA(GetForegroundWindow(),("EntryCount:" + std::to_string(entryCount)).c_str(),"NOTE",MB_OK);
             while(entryCount > 0){
                 unsigned entryNameCharC;
                 in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
                 String entryName;
-                entryName.reserve(entryNameCharC);
+                entryName.resize(entryNameCharC);
                 in.read(entryName.data(),entryNameCharC);
                 unsigned entryShaderCount;
-                in.read((char *)&entryCount,sizeof(entryShaderCount));
+                in.read((char *)&entryShaderCount,sizeof(entryShaderCount));
             
                 unsigned shaderNameCount;
                 in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
@@ -509,16 +521,22 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                 str.resize(shaderNameCount);
                 in.read(str.data(),shaderNameCount);
 
-                ATL::CStringW wstr(str.data());
                 ID3DBlob *blob;
-                D3DReadFileToBlob(wstr.GetString(),&blob);
 
-                library->functions.insert(std::make_pair(entryName, std::make_shared<GED3D12Function>(blob)));
-                
+                ATL::CStringW wstr(entryName.data());
+
+                auto dir_name = path.dir();
+                SetCurrentDirectoryA(dir_name.c_str());
+
+                D3DReadFileToBlob(wstr.GetBuffer(),&blob); 
+                MessageBoxA(GetForegroundWindow(),("Will Insert Pair:" + str).c_str(),"NOTE",MB_OK);
+                library->functions.insert(std::make_pair(str,new GED3D12Function(blob)));
+                MessageBoxA(GetForegroundWindow(),"Done;","NOTE",MB_OK);
                 --entryCount;
             };
             in.close();
-            return library;
+            MessageBoxA(GetForegroundWindow(),"Returning","NOTE",MB_OK);
+            return std::move(library);
         }
         else {
             return nullptr;

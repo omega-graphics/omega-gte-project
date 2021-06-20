@@ -107,8 +107,13 @@ APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     renderTargetDesc.isHwnd = true;
 
     OmegaGTE::RenderPipelineDescriptor pipelineDesc;
-    pipelineDesc.vertexFunc = library->functions[STD_COLOREDVERTEX_FUNC];
-    pipelineDesc.fragmentFunc = library->functions[STD_FRAGMENTVERTEX_FUNC];
+    MessageBoxA(GetForegroundWindow(),"Loading Funcs","NOTE",MB_OK);
+
+    pipelineDesc.vertexFunc = library->functions[STD_COLOREDVERTEX_FUNC].get();
+    MessageBoxA(GetForegroundWindow(),"Setting Func","NOTE",MB_OK);
+
+    pipelineDesc.fragmentFunc = library->functions[STD_FRAGMENTVERTEX_FUNC].get();
+    MessageBoxA(GetForegroundWindow(),"Setting Func","NOTE",MB_OK);
 
     renderPipelineState = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 2","NOTE",MB_OK);

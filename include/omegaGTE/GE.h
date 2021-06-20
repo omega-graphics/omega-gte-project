@@ -189,14 +189,14 @@ _NAMESPACE_BEGIN_
          @param[in] desc The Render Pipeline Descriptor
          @returns SharedHandle<GERenderPipelineState>
         */
-        virtual SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor & desc) = 0;
+        virtual SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor & desc) = 0;
 
         /** 
          @brief Creates a GEComputePipelineState from a ComputePipelineDescriptor.
          @param[in] desc The Compute Pipeline State
          @returns SharedHandle<GEComputePipelineState>
         */
-        virtual SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor & desc) = 0;
+        virtual SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor & desc) = 0;
         virtual SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor & desc) = 0;
         virtual SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor & desc) = 0;
         virtual SharedHandle<GECommandQueue> makeCommandQueue(unsigned maxBufferCount) = 0;

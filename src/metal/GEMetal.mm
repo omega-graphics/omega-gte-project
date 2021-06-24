@@ -54,7 +54,7 @@ _NAMESPACE_BEGIN_
             NSSmartPtr buffer ({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newBufferWithLength:desc.len options:MTLResourceStorageModeShared]});
             return std::make_shared<GEMetalBuffer>(buffer);
         };
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(const ComputePipelineDescriptor &desc) override{
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override{
             // GEMetalFunction *computeFunc = (GEMetalFunction *)desc.computeFunc.get();
             // NSError *error;
             // id<MTLComputePipelineState> pipelineState = [metalDevice newComputePipelineStateWithFunction:computeFunc->function error:&error];
@@ -79,12 +79,12 @@ _NAMESPACE_BEGIN_
             auto commandQueue = makeCommandQueue(100);
             return std::make_shared<GEMetalNativeRenderTarget>(commandQueue,desc.metalLayer);
         };
-        SharedHandle<GERenderPipelineState> makeRenderPipelineState(const RenderPipelineDescriptor &desc) override{
+        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override{
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
             
-            GEMetalFunction *vertexFunc = (GEMetalFunction *)desc.vertexFunc.get();
-            GEMetalFunction *fragmentFunc = (GEMetalFunction *)desc.fragmentFunc.get();
+            GEMetalFunction *vertexFunc = (GEMetalFunction *)desc.vertexFunc;
+            GEMetalFunction *fragmentFunc = (GEMetalFunction *)desc.fragmentFunc;
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
             pipelineDesc.vertexFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,vertexFunc->function.handle());

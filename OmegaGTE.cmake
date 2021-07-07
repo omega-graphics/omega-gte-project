@@ -19,9 +19,9 @@ function(add_omegasl_lib _NAME _SRC _OUTPUT)
         set(TARGET_SHADER_ARCH "metal")
     endif()
 
-    add_custom_target(${_NAME} DEPENDS ${_OUTPUT}/${_NAME}.shadermap)
+    add_custom_target(${_NAME} DEPENDS "${_OUTPUT}")
     
-    add_custom_command(OUTPUT ${_OUTPUT}/${_NAME}.shadermap
+    add_custom_command(OUTPUT "${_OUTPUT}"
                        COMMAND ${PYTHON_EXEC} ${OMEGASLC_PY} --target ${TARGET_SHADER_ARCH} --temp ${CMAKE_CURRENT_BINARY_DIR} --out ${_OUTPUT} ${_SRC}
                        DEPENDS ${_SRC})
     

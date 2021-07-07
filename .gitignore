@@ -17,7 +17,7 @@ shaderc
 .idea
 sphinx*
 .build
-omega-common
+common
 *.gn
 
 # Prerequisites

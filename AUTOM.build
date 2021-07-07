@@ -11,7 +11,7 @@ enable_tests = True
 
 t:Library
 
-subdir("./omega-common")
+subdir("./common")
 
 omega_gte_headers = glob("./include/omegaGTE/*.h") + ["./include/OmegaGTE.h"]
 
@@ -40,21 +40,22 @@ omegasl_shader_lib(name="std",src="./shaders/std.omegasl",output_dir="stdshaderl
 all_srcs = omega_gte_main_srcs + omega_gte_headers
 
 if is_mac:
-    FrameworkBundle("OmegaGTE",all_srcs,["std_omegasl","omega-common"],"Frameworks","0.3")
-    set_property("OmegaGTE","resources",["./src/Info.plist",f"{gen_root_out_dir}/stdshaderlib"])
+    FrameworkBundle("OmegaGTE",all_srcs,["std_omegasl"],"Frameworks","0.3")
+    set_property("OmegaGTE","resources",["./src/Info.plist",f"{root_out_dir}/stdshaderlib"])
     set_property("OmegaGTE","frameworks",["Cocoa.framework","QuartzCore.framework","Metal.framework"])
 else:
-    SharedLibrary("OmegaGTE",all_srcs,["std_omegasl","omega-common"],"lib")
+    SharedLibrary("OmegaGTE",all_srcs,["std_omegasl"],"lib")
     set_property("OmegaGTE","libs",["user32.lib"])
 
 
 Config("OmegaGTE_conf",["omega-common"],["./include"],defines)
-set_property("OmegaGTE","configs",["OmegaGTE_conf","omega-common_conf"])
+set_property("OmegaGTE_conf","configs",["omega-common_conf"])
+set_property("OmegaGTE","configs",["OmegaGTE_conf"])
 
 if enable_tests:
     if is_mac:
         AppBundle("2DTest",["./tests/metal/2DTest/main.mm"],["OmegaGTE"],"tests")
-        set_property("2DTest","configs",["OmegaGTE_conf","omega-common_conf"])
+        set_property("2DTest","configs",["OmegaGTE_conf"])
         set_property("2DTest","info_plist","./tests/metal/2DTest/Info.plist")
         set_property("2DTest","resources",["./tests/metal/2DTest/MainMenu.nib"])
         set_property("2DTest","framework_dirs",[f"{gen_root_out_dir}/Frameworks"])

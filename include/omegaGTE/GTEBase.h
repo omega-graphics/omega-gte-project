@@ -430,10 +430,7 @@ _NAMESPACE_BEGIN_
                 return *this;
             };
             Segment operator*(){
-                Segment seg;
-                seg.pt_A = &pt_A;
-                seg.pt_b = &pt_B;
-                return seg;
+                return {&(pt_A->pt),&(pt_B->pt)};
             };
 
         };

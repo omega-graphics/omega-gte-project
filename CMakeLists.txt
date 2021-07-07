@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.13)
+
+add_subdirectory("common")
 
 project(OmegaGTE C CXX)
 
@@ -6,17 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 
-if(CMAKE_GENERATOR STREQUAL "Ninja")
-    message(FATAL_ERROR "Ninja is not allowed wit the CMake Build System.. If you wish to build this project using Ninja, use our GN")
-endif()
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/common/include")
 
-
-if(XCODE)
-    set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_IDENTITY ${CODE_SIGNATURE})
-    # set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ${CODE_SIGNATURE})
-endif()
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
 include(OmegaGTE)
 
@@ -76,7 +70,7 @@ if(CMAKE_HOST_UNIX AND NOT CMAKE_HOST_APPLE)
     endif()
 endif()
 
-set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
+set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 if(TARGET_METAL)
     find_library(METAL_FOUND "Metal")
     find_library(COREANIMATION_FOUND "QuartzCore")
@@ -114,23 +108,24 @@ add_omegasl_lib("std" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/std.omegasl" "${CMAKE
 
 if(TARGET_METAL)
 
+
 set_target_properties("OmegaGTE" PROPERTIES 
 FRAMEWORK TRUE
 FRAMEWORK_VERSION "0.2"
 MACOSX_FRAMEWORK_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist"
-RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Frameworks")
+LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Frameworks")
 
+add_dependencies("OmegaGTE" "std")
 target_sources("OmegaGTE" PRIVATE "${CMAKE_BINARY_DIR}/stdshaderlib")
 set_source_files_properties("${CMAKE_BINARY_DIR}/stdshaderlib" PROPERTIES MACOSX_PACKAGE_LOCATION "Resources" GENERATED TRUE)
 
-target_link_libraries("OmegaGTE" PRIVATE ${METAL_FOUND} ${COREANIMATION_FOUND} ${FOUNDATION_FOUND} ${APPKIT_FOUND})
+target_link_libraries("OmegaGTE" PRIVATE "omega-common" ${METAL_FOUND} ${COREANIMATION_FOUND} ${FOUNDATION_FOUND} ${APPKIT_FOUND})
 endif()
 
 if(TARGET_VULKAN)
 set_target_properties("OmegaGTE" PROPERTIES INCLUDE_DIRECTORIES ${GTK_INCLUDE_DIRS} LINK_DIRECTORIES ${GTK_LIBRARY_DIRS} COMPILE_FLAGS ${GTK_CFLAGS_OTHER} LINK_LIBRARIES ${GTK_LIBRARIES})
 endif()
 
-add_dependencies("OmegaGTE" "std")
 
 target_include_directories("OmegaGTE" PUBLIC ${INCLUDE_DIR})
 

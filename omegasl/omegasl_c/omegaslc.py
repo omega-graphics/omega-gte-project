@@ -95,7 +95,6 @@ def main():
         outstream.write(file_header)
         ctxt.out = outstream
         t = MSLTarget(out=ctxt,opts=MSLTargetOptions(args.use_simd))
-
         compiler = TargetCompilerInvoker(target=t,targetCtxt=ctxt)
         
        

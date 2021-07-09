@@ -11,8 +11,8 @@ static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
 
-static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> vertexFunc;
-static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> fragmentFunc;
+// static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> vertexFunc;
+// static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> fragmentFunc;
 // static OmegaGTE::SharedHandle<OmegaGTE::GERenderTarget::CommandBuffer> commandBuffer;
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
@@ -156,10 +156,8 @@ int main(int argc,const char * argv[]){
    std::cout << "LIBRARY SIZE:" << funcLib->functions.size() << std::endl;
 
    OmegaGTE::RenderPipelineDescriptor pipelineDesc;
-   vertexFunc = funcLib->functions[STD_COLOREDVERTEX_FUNC];
-   fragmentFunc = funcLib->functions[STD_FRAGMENTVERTEX_FUNC];
-   pipelineDesc.vertexFunc = vertexFunc;
-   pipelineDesc.fragmentFunc = fragmentFunc;
+   pipelineDesc.vertexFunc = funcLib->functions[STD_COLOREDVERTEX_FUNC].get();
+   pipelineDesc.fragmentFunc = funcLib->functions[STD_FRAGMENTVERTEX_FUNC].get();
    renderPipeline = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
 
 

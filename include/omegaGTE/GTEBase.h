@@ -430,10 +430,7 @@ _NAMESPACE_BEGIN_
                 return *this;
             };
             Segment operator*(){
-                Segment seg;
-                seg.pt_A = &pt_A;
-                seg.pt_b = &pt_B;
-                return seg;
+                return {&(pt_A->pt),&(pt_B->pt)};
             };
 
         };
@@ -528,11 +525,11 @@ _NAMESPACE_BEGIN_
     private:
         Matrix(unsigned h,unsigned w){
             /// Initialize Matrix with zeros.
-            MessageBoxA(GetForegroundWindow(),"Creating Matrix",NULL,MB_OK);
+            // MessageBoxA(GetForegroundWindow(),"Creating Matrix",NULL,MB_OK);
             while(h > 0){
                 auto n_w = w;
                 auto vec = new std::vector<_Ty>();
-                 MessageBoxA(GetForegroundWindow(),"Creating Matrix -- New Vector",NULL,MB_OK);
+                //  MessageBoxA(GetForegroundWindow(),"Creating Matrix -- New Vector",NULL,MB_OK);
                 while(n_w > 0) {
                     vec->push_back(0.f);
                     --n_w;
@@ -540,7 +537,7 @@ _NAMESPACE_BEGIN_
                 rows.push_back(vec);
                 --h;
             }
-             MessageBoxA(GetForegroundWindow(),"Finishing Creating Matrix",NULL,MB_OK);
+            //  MessageBoxA(GetForegroundWindow(),"Finishing Creating Matrix",NULL,MB_OK);
         };
    public:
         Matrix(const Matrix & other){
@@ -587,9 +584,9 @@ _NAMESPACE_BEGIN_
            
        };
        static Matrix Color(float r,float g,float b,float a){
-            MessageBoxA(GetForegroundWindow(),"Create Matrix",NULL,MB_OK);
+            // MessageBoxA(GetForegroundWindow(),"Create Matrix",NULL,MB_OK);
            auto m = Create(1,4);
-           MessageBoxA(GetForegroundWindow(),"Created Matrix",NULL,MB_OK);
+        //    MessageBoxA(GetForegroundWindow(),"Created Matrix",NULL,MB_OK);
            std::cout << "Created Matrix" << std::endl;
            m.setValueAt(1,1,r);
            m.setValueAt(1,2,g);

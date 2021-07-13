@@ -19,6 +19,8 @@ struct OMEGAGTE_EXPORT GTE {
     SharedHandle<OmegaTessalationEngine> tessalationEngine;
 };
 
+
+
 OMEGAGTE_EXPORT GTE Init();
 OMEGAGTE_EXPORT void Close(GTE &gte);
 

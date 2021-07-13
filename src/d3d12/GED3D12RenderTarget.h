@@ -11,6 +11,7 @@ _NAMESPACE_BEGIN_
         ComPtr<IDXGISwapChain3> swapChain;
         SharedHandle<GECommandQueue> commandQueue;
     public:
+        void *getSwapChain();
         SharedHandle<CommandBuffer> commandBuffer();
         void commitAndPresent();
         void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer);

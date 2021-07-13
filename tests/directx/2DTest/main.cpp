@@ -6,7 +6,7 @@
 
 LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 
-OmegaGTE::GTE gte;
+static OmegaGTE::GTE gte;
 static OmegaGTE::SharedHandle<OmegaGTE::GEFunctionLibrary> library;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> renderTarget;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
@@ -60,7 +60,7 @@ void tessalate(){
 
 };
 
-APIENTRY int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
     WCHAR name[MAX_PATH];
     
     GetModuleFileNameW(hInstance,name,MAX_PATH);

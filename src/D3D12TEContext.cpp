@@ -29,9 +29,13 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessalationEngineContext {
         };
     };
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){};
+    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){
+        return {};
+    };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    D3D12NativeRenderTargetTEContext(GED3D12NativeRenderTarget * target):target(target){};
+    D3D12NativeRenderTargetTEContext(GED3D12NativeRenderTarget * target):target(target){
+
+    };
 };
 
 class D3D12TextureRenderTargetTEContext : public OmegaTessalationEngineContext {
@@ -46,7 +50,9 @@ class D3D12TextureRenderTargetTEContext : public OmegaTessalationEngineContext {
         };
     };
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){};
+    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){
+        return {};
+    };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
     D3D12TextureRenderTargetTEContext(GED3D12TextureRenderTarget * target):target(target){};
 };

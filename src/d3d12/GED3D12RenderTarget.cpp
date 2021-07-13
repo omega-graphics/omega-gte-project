@@ -14,6 +14,10 @@ _NAMESPACE_BEGIN_
         
     };
 
+    void *GED3D12NativeRenderTarget::getSwapChain(){
+        return (void *)swapChain.Get();
+    };
+
     void GED3D12NativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer){
         commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
     };

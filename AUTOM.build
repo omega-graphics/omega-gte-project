@@ -46,6 +46,7 @@ if is_mac:
 else:
     SharedLibrary("OmegaGTE",all_srcs,["std_omegasl"],"lib")
     set_property("OmegaGTE","libs",["user32.lib"])
+    set_property("OmegaGTE","defines",["__BUILD__"])
 
 
 Config("OmegaGTE_conf",["omega-common"],["./include"],defines)
@@ -68,7 +69,8 @@ if enable_tests:
         Executable("2DTest",["./tests/directx/2DTest/main.cpp",conf],["OmegaGTE"],"tests")
         set_property("2DTest","configs",["OmegaGTE_conf","omega-common_conf"])
         set_property("2DTest","libs",["user32.lib"])
-        Copy("OmegaGTE_Copy",[f"{gen_root_out_dir}/lib/OmegaGTE.dll",f"{gen_root_out_dir}/stdshaderlib"],["OmegaGTE"],f"{gen_root_out_dir}/tests")
+        
+        Copy("OmegaGTE_Copy",[f"{root_out_dir}/lib/OmegaGTE.dll",f"{root_out_dir}/stdshaderlib"],["OmegaGTE"],f"{gen_root_out_dir}/tests")
 
 
 

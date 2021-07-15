@@ -15,7 +15,11 @@
 
 #ifdef TARGET_DIRECTX
 #include <Windows.h>
+#ifdef __BUILD__
 #define OMEGAGTE_EXPORT __declspec( dllexport ) 
+#else 
+#define OMEGAGTE_EXPORT __declspec( dllimport ) 
+#endif 
 #else 
 #define OMEGAGTE_EXPORT
 #endif
@@ -34,7 +38,7 @@ _NAMESPACE_BEGIN_
 
     /// A vector that preallocates a certain amount of memory but can be resized at any time.
     template<class T>
-    class OMEGAGTE_EXPORT VectorHeap {
+    class VectorHeap {
         T * _data;
     public:
         using size_type = unsigned;
@@ -123,11 +127,11 @@ _NAMESPACE_BEGIN_
         };
     };
 
-    extern const long double PI;
+    OMEGAGTE_EXPORT extern const long double PI;
 
 
     template<class _Num_Ty,typename _Angle_Ty>
-    class  OMEGAGTE_EXPORT Vector2D_Base {
+    class  Vector2D_Base {
         _Num_Ty i;
         _Num_Ty j;
         public:
@@ -191,7 +195,7 @@ _NAMESPACE_BEGIN_
     typedef Vector2D_Base<int,float> IVector2D;
 
     template<class _Num_Ty,typename _Angle_Ty>
-    class  OMEGAGTE_EXPORT Vector3D_Base {
+    class  Vector3D_Base {
         _Num_Ty i,j,k;
         public:
         Vector3D_Base(_Num_Ty _i,_Num_Ty _j,_Num_Ty _k):i(_i),j(_j),k(_k){};
@@ -382,9 +386,9 @@ _NAMESPACE_BEGIN_
 
 
     template<class _Pt_Ty>
-    class  OMEGAGTE_EXPORT GVectorPath_Base {
+    class  GVectorPath_Base {
         public:
-        struct OMEGAGTE_EXPORT Node {
+        struct Node {
             _Pt_Ty *pt;
             Node *next = nullptr;
             Node(_Pt_Ty *pt):pt(pt){};
@@ -396,12 +400,12 @@ _NAMESPACE_BEGIN_
             };
         };
 
-        struct  OMEGAGTE_EXPORT Segment {
+        struct  Segment {
             _Pt_Ty ** pt_A;
             _Pt_Ty ** pt_B;
         };
 
-        class  OMEGAGTE_EXPORT Path_Iterator {
+        class  Path_Iterator {
             Node *pt_A;
             Node *pt_B;
             unsigned pos;
@@ -520,7 +524,7 @@ _NAMESPACE_BEGIN_
 
 
    template<class _Ty>
-   class OMEGAGTE_EXPORT Matrix {
+   class Matrix {
        std::vector<std::vector<_Ty> *> rows;
     private:
         Matrix(unsigned h,unsigned w){
@@ -578,7 +582,7 @@ _NAMESPACE_BEGIN_
        };
        static Matrix Identity(unsigned h,unsigned w){
            auto m = Create(h,w);
-           
+           return {h,w};
        };
        static Matrix FromVector2D(Vector2D_Base<_Ty,float> vector){
            

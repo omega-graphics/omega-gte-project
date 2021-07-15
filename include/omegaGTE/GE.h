@@ -134,13 +134,13 @@ _NAMESPACE_BEGIN_
      @brief The Omega Graphics Engine
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
-    /**
-        @brief Creates an Instance of the Omega Graphics Engine
+    public:
+        /** 
+        @brief Creates an Instance of the Omega Graphics Engine  
+        (NEVER CALL THIS FUNCTION! Please invoke GTE::Init())
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();
-        IN_INIT_SCOPE
-    public:
         /**
         @brief Loads the Omega GTE Shader Library
         @returns SharedHandle<GEFunctionLibrary>

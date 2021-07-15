@@ -183,7 +183,7 @@ OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex);
 
 
 SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TETessalationResult & result){
-    
+    return nullptr;
 };
 
 SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,ColoredVertexVector & vertexVector){

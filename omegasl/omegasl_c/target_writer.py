@@ -14,7 +14,7 @@ class TargetWriter(object):
     def __init__(self,t:Target):
         self.target = t 
         self.resourceQueue = []
-        self.outputStr = t.out.out
+        # self.outputStr = t.out.out
         return 
 
     def resourceExists(self,name:str):
@@ -203,7 +203,9 @@ class TargetWriter(object):
             self.target.out.out = io.open(out_file,"w")
             self.target.out.write(file_header)
             self.target.out.write(f"#include \"structs.h\"\n")
+            self.outputStr = self.target.out.out
         self.out = self.target.out
+        
 
         params:"dict[str,str]" = {}
 

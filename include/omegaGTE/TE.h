@@ -179,9 +179,11 @@ public:
  @brief The Omega Tessalation Engine
 */
 class OMEGAGTE_EXPORT OmegaTessalationEngine {
-    static SharedHandle<OmegaTessalationEngine> Create();
-    IN_INIT_SCOPE
 public:
+  /**
+   NEVER CALL THIS FUNCTION! Please invoke GTE::Init()
+  */
+  static SharedHandle<OmegaTessalationEngine> Create();
     /**
         Create a Tessalation Context from a GENativeRenderTarget
         @param[in] renderTarget

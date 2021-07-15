@@ -93,6 +93,10 @@ _NAMESPACE_BEGIN_
     class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {
         public:
         virtual void commitAndPresent() = 0;
+        #ifdef _WIN32 
+        /// @returns IDXGISwapChain1 * if D3D11, else IDXGISwapChain3 *
+        virtual void *getSwapChain() = 0;
+        #endif
      };
      class  OMEGAGTE_EXPORT GETextureRenderTarget : public GERenderTarget {
          public:

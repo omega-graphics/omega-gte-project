@@ -56,11 +56,11 @@ if enable_tests:
     if is_mac:
         AppBundle("2DTest",["./tests/metal/2DTest/main.mm"],["OmegaGTE"],"tests")
         set_property("2DTest","configs",["OmegaGTE_conf"])
-        set_property("2DTest","info_plist","./tests/metal/2DTest/Info.plist")
-        set_property("2DTest","resources",["./tests/metal/2DTest/MainMenu.nib"])
-        set_property("2DTest","framework_dirs",[f"{gen_root_out_dir}/Frameworks"])
+        set_property("2DTest","info_plist",abspath("./tests/metal/2DTest/Info.plist"))
+        set_property("2DTest","resources",[abspath("./tests/metal/2DTest/MainMenu.nib")])
+        # set_property("2DTest","framework_dirs",[f"{gen_root_out_dir}/Frameworks"])
         set_property("2DTest","embedded_frameworks",["OmegaGTE.framework"])
-        set_property("2DTest","frameworks",["OmegaGTE.framework","Cocoa.framework","QuartzCore.framework"])
+        set_property("2DTest","frameworks",["Cocoa.framework","QuartzCore.framework"])
     elif is_win:
         EMBED = abspath("./tests/directx/2DTest/app.exe.manifest")
         conf = f"./conf-out/manifest.rc"

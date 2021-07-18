@@ -204,6 +204,17 @@ class TargetWriter(object):
             self.target.out.write(file_header)
             self.target.out.write(f"#include \"structs.h\"\n")
             self.outputStr = self.target.out.out
+        elif self.target.type == TargetType.GLSL:
+            glsl_file_ext:str
+            if shader_type == "vertex":
+                glsl_file_ext = "vert"
+            elif shader_type == "fragment":
+                glsl_file_ext = "frag"
+            out_file = f"{self.target.out.temp_dir}/{func.name}.{glsl_file_ext}"
+            self.target.out.out = io.open(out_file,"w")
+            self.target.out.write(file_header)
+            self.target.out.write(f"#include \"structs.h\"\n")
+            self.outputStr = self.target.out.out
         self.out = self.target.out
         
 
@@ -220,7 +231,10 @@ class TargetWriter(object):
             if self.target.type == TargetType.METAL:
                 t = self.target.annotationToString(res)
                 params[arg.id] = t
-            elif self.target.type == TargetType.HLSL:
+            else:
+                """
+                For Targets HLSL and GLSL (Vulkan)
+                """
                 t = self.target.annotationToString(res)
                 self.target.out.write(t)
 

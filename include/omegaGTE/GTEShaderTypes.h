@@ -8,7 +8,7 @@
 #endif
 
 #ifdef TARGET_VULKAN
-#include <glm/glm.h>
+#include <glm/glm.hpp>
 #endif
 
 
@@ -47,6 +47,22 @@ struct OmegaGTEColorVertex : public OmegaGTEVertex {
 
 struct OmegaGTETexturedVertex : public OmegaGTEVertex {
     simd_float2 texturePos;
+};
+
+#endif
+
+#ifdef TARGET_VULKAN
+
+struct OmegaGTEVertex {
+   glm::fvec3 pos;
+};
+
+struct OmegaGTEColorVertex : public OmegaGTEVertex {
+    glm::fvec4 color;
+};
+
+struct OmegaGTETexturedVertex : public OmegaGTEVertex {
+    glm::fvec2 texturePos;
 };
 
 #endif

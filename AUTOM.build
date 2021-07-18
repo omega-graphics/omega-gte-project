@@ -35,18 +35,28 @@ elif is_win:
     defines += ["TARGET_DIRECTX"]
     omega_gte_main_srcs += glob("./src/d3d12/*.cpp") + glob("./src/d3d12/*.h") + ["./src/D3D12TEContext.cpp"]
 
-omegasl_shader_lib(name="std",src="./shaders/std.omegasl",output_dir="stdshaderlib",temp_dir="temp")
+elif is_linux:
+    defines += ["TARGET_VULKAN"]
+    omega_gte_main_srcs += glob("./src/vulkan/*.cpp") + glob("./src/vulkan/*.h") + ["./src/VulkanTEContext.cpp"]
+
+# omegasl_shader_lib(name="std",src="./shaders/std.omegasl",output_dir="stdshaderlib",temp_dir="temp")
 
 all_srcs = omega_gte_main_srcs + omega_gte_headers
+
+vulkan_include_dirs = ["./external-libs/vulkan-memory-allocator/include",
+                       "./external-libs/vulkan_sdk/1.2.182.0/x86_64/include","./external-libs/glm"]
 
 if is_mac:
     FrameworkBundle("OmegaGTE",all_srcs,["std_omegasl"],"Frameworks","0.3")
     set_property("OmegaGTE","resources",["./src/Info.plist",f"{root_out_dir}/stdshaderlib"])
     set_property("OmegaGTE","frameworks",["Cocoa.framework","QuartzCore.framework","Metal.framework"])
-else:
+elif is_win:
     SharedLibrary("OmegaGTE",all_srcs,["std_omegasl"],"lib")
     set_property("OmegaGTE","libs",["user32.lib"])
     set_property("OmegaGTE","defines",["__BUILD__"])
+elif is_linux:
+    SharedLibrary("OmegaGTE",all_srcs,[],"lib")
+    set_property("OmegaGTE","include_dirs",vulkan_include_dirs)
 
 
 Config("OmegaGTE_conf",["omega-common"],["./include"],defines)

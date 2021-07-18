@@ -12,16 +12,20 @@ struct GEVulkanFunction : public __GEFunctionInternal {
 };
 
 class GEVulkanRenderPipelineState : public __GERenderPipelineState {
-    vk::UniquePipeline pipeline;
-    vk::UniquePipelineLayout layout;
 public:
-    GEVulkanRenderPipelineState(vk::UniquePipeline & pipeline,vk::UniquePipelineLayout & layout);
+    vk::UniquePipelineCache cache;
+
+    vk::GraphicsPipelineCreateInfo pipelineInfo;
+    vk::UniquePipelineLayout layout;
+
+    GEVulkanRenderPipelineState(vk::GraphicsPipelineCreateInfo & pipelineInfo,vk::UniquePipelineLayout & layout,vk::UniquePipelineCache & cache);
 };
 
 class GEVulkanComputePipelineState : public __GEComputePipelineState {
-    vk::UniquePipeline pipeline;
-    vk::UniquePipelineLayout layout;
 public:
+    vk::GraphicsPipelineCreateInfo pipeline;
+    vk::UniquePipelineLayout layout;
+    
     GEVulkanComputePipelineState(vk::UniquePipeline & pipeline,vk::UniquePipelineLayout & layout);
 };
 

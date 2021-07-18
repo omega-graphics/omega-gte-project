@@ -1,6 +1,7 @@
 #include <memory>
 #include <vector>
 #include <cmath>
+#include <cassert>
 #include <string>
 #include <sstream>
 #include <algorithm>

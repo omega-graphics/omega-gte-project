@@ -5,17 +5,7 @@
 #include <initializer_list>
 #include <iostream>
 _NAMESPACE_BEGIN_
-    class GEVulkanBuffer : public GEBuffer {
-        vk::UniqueBuffer buffer;
-    public: 
-        GEVulkanBuffer(vk::UniqueBuffer & buffer):buffer(std::move(buffer)){};
-    };
 
-    class GEVulkanHeap : public GEHeap {
-        
-        // public:
-        // GEVulkanHeap(vk::MemoryHeap & heap):heap(heap){};
-    };
 
     GEVulkanEngine::GEVulkanEngine(){
         vk::Result res;
@@ -27,7 +17,17 @@ _NAMESPACE_BEGIN_
           exit(1);
        }
 
-    
+        VmaAllocatorCreateInfo info;
+        info.instance = instance;
+        info.device = device;
+        info.physicalDevice = physicalDevice;
+        info.vulkanApiVersion = VK_API_VERSION_1_2;
+        auto _res = vmaCreateAllocator(&info,&memAllocator);
+
+        if(_res != VK_SUCCESS){
+            printf("Failed to Create Allocator");
+            exit(1);
+        };
       
        
        auto physicalDevices = instance.enumeratePhysicalDevices();
@@ -56,7 +56,7 @@ _NAMESPACE_BEGIN_
         buffer_desc.sharingMode = vk::SharingMode::eExclusive;
         buffer_desc.usage = BufferUsageFlagBits::eStorageBuffer | BufferUsageFlagBits::eVertexBuffer;
         vk::UniqueBuffer buffer = device.createBufferUnique(buffer_desc);
-        return std::make_shared<GEVulkanBuffer>(buffer);
+        return std::make_shared<GEVulkanBuffer>(buffer,memAllocator);
     };
     SharedHandle<GEHeap> GEVulkanEngine::makeHeap(const HeapDescriptor &desc){
         return nullptr;
@@ -78,6 +78,12 @@ _NAMESPACE_BEGIN_
         image_desc.initialLayout = vk::ImageLayout::eGeneral;
         vk::UniqueImage img = device.createImageUnique(image_desc);
 
+        VmaAllocationCreateInfo create_alloc_info;
+        create_alloc_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        VmaAllocation alloc;
+        VmaAllocationInfo alloc_info;
+        vmaAllocateMemoryForImage(memAllocator,img.get(),&create_alloc_info,&alloc,&alloc_info);
+
         vk::ImageViewCreateInfo image_view_desc;
         image_view_desc.viewType = vk::ImageViewType::e2D;
         image_view_desc.image = img.get();
@@ -86,10 +92,10 @@ _NAMESPACE_BEGIN_
         image_view_desc.format = vk::Format::eR8G8B8A8Unorm;
         vk::UniqueImageView img_view = device.createImageViewUnique(image_view_desc);
 
-        return std::make_shared<GEVulkanTexture>(img,img_view);
+        return std::make_shared<GEVulkanTexture>(img,img_view,alloc_info,alloc);
     };
 
-    SharedHandle<GERenderPipelineState> GEVulkanEngine::makeRenderPipelineState(const RenderPipelineDescriptor &desc){
+    SharedHandle<GERenderPipelineState> GEVulkanEngine::makeRenderPipelineState(RenderPipelineDescriptor &desc){
         vk::PipelineLayoutCreateInfo layout_info;
         layout_info.pSetLayouts = nullptr;
         layout_info.setLayoutCount = 0;
@@ -101,13 +107,13 @@ _NAMESPACE_BEGIN_
         vk::GraphicsPipelineCreateInfo pipeline_desc;
         pipeline_desc.basePipelineIndex = -1;
 
-        GEVulkanFunction *vertexFunc = (GEVulkanFunction *)desc.vertexFunc.get();
+        GEVulkanFunction *vertexFunc = (GEVulkanFunction *)desc.vertexFunc;
         vk::PipelineShaderStageCreateInfo vertexStage;
         vertexStage.stage = vk::ShaderStageFlagBits::eVertex;
         vertexStage.module = vertexFunc->shaderModule.get();
         vertexStage.pName = "main";
 
-        GEVulkanFunction *fragmentFunc = (GEVulkanFunction *)desc.fragmentFunc.get();
+        GEVulkanFunction *fragmentFunc = (GEVulkanFunction *)desc.fragmentFunc;
         vk::PipelineShaderStageCreateInfo fragmentStage;
         fragmentStage.stage = vk::ShaderStageFlagBits::eFragment;
         fragmentStage.module = fragmentFunc->shaderModule.get();
@@ -117,13 +123,16 @@ _NAMESPACE_BEGIN_
         
         pipeline_desc.pStages = stages.begin();
         pipeline_desc.stageCount = 2;
-        auto pipeline = device.createGraphicsPipelineUnique(nullptr,pipeline_desc);
-        if(!VK_RESULT_SUCCEEDED(pipeline.result)){
-            exit(1);
-        };
-        return std::make_shared<GEVulkanRenderPipelineState>(pipeline.value,pipeline_layout);
+
+        vk::PipelineCacheCreateInfo info;
+        info.initialDataSize = 0;
+        info.pInitialData = nullptr;
+
+        auto cache = device.createPipelineCacheUnique(info);
+      
+        return std::make_shared<GEVulkanRenderPipelineState>(pipeline_desc,pipeline_layout,cache);
     };
-    SharedHandle<GEComputePipelineState> GEVulkanEngine::makeComputePipelineState(const ComputePipelineDescriptor &desc){
+    SharedHandle<GEComputePipelineState> GEVulkanEngine::makeComputePipelineState(ComputePipelineDescriptor &desc){
         vk::PipelineLayoutCreateInfo layout_info;
         layout_info.pSetLayouts = nullptr;
         layout_info.setLayoutCount = 0;
@@ -159,6 +168,14 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GETextureRenderTarget> GEVulkanEngine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
         return nullptr;
+    };
+
+    SharedHandle<GEFunctionLibrary> GEVulkanEngine::loadShaderLibrary(FS::Path path){
+
+    };
+
+    SharedHandle<GEFunctionLibrary> GEVulkanEngine::loadStdShaderLibrary(){
+        
     };
 
 _NAMESPACE_END_

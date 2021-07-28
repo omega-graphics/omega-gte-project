@@ -73,7 +73,10 @@ if enable_tests:
         Copy("OmegaGTE_Copy",[f"{root_out_dir}/lib/OmegaGTE.dll",f"{root_out_dir}/stdshaderlib"],["OmegaGTE"],f"{gen_root_out_dir}/tests")
 
 
+# print(python_include_dir)
 
+# SharedLibrary("pybindOmegaGTE",["./wrappers/python/pybind.cpp"],["OmegaGTE"],"wrappers/python")
+# append_property("pybindOmegaGTE","include_dirs",[python_include_dir])
 
 
 

@@ -1,5 +1,6 @@
 from enum import Enum 
 import io,ast,os
+import re
 # from shutil import which
 
 
@@ -59,6 +60,11 @@ class ShaderType(Enum):
     FRAGMENT = 1,
     COMPUTE = 2
 
+r = re.compile(r'(?:\/|\.|-)',re.MULTILINE | re.DOTALL)
+
+def clean_name(subject:str) -> str:
+    return r.sub('_',subject)
+
 
 class TargetOutputContext(object):
     source_file:str
@@ -73,6 +79,7 @@ class TargetOutputContext(object):
 
     def write(self,content:str):
         self.out.write(content)
+    
     def writeShaderMap(self):
        l = len(self.b)
        self.shaderMapOut.write(int_to_bn_uint(l))
@@ -87,6 +94,40 @@ class TargetOutputContext(object):
         if self.b.get(filename) is None:
             self.b[filename] = []
         self.b[filename].append(data)
+    
+    def writeEBinConfig(self,ebin:io.TextIOWrapper):
+        """
+        Writes .ebin file
+        """
+        for e in self.b:
+            ebin.write(clean_name(e))
+            ebin.write("=")
+            ebin.write(e)
+    def writeShaderLibEmbeddedBridge(self,lib_name:str,src:io.TextIOWrapper,header:io.TextIOWrapper):
+        r"""
+        Writes to lib_name.omegasl.c and a lib_name.omegasl.h
+        """
+        src.write(f'// Warning. This file was created by omegaslc. DO NOT EDIT!\n#include"{lib_name}.omegasl.h"\n')
+        for e in self.b:
+            src.write(f"extern const char {clean_name(e)}[];\n")
+        header.write(f'// Warning. This file was created by omegaslc. DO NOT EDIT!\n#include "omegasl.h"\n#include <string>\n#include <unordered_map>\nvoid {lib_name}_omegasl_load(std::unordered_map<std::string,omegasl_lib_entry> & out);')
+        src.write(f"void {lib_name}_omegasl_load(std::unordered_map<std::string,omegasl_lib_entry> & out)")
+        src.write("{\n")
+        for e in self.b:
+            src.write(f'out.insert(std::make_pair("{clean_name(e)}",\n')
+            src.write("{")
+            src.write(f'"{clean_name(e)}",')
+            src.write(clean_name(e) + ",")
+            src.write("{")
+            
+            for s in self.b[e]:
+                src.write(f'"{s.decode("utf-8")}"')
+                src.write(",")
+            src.write("},")
+            src.write(str(len(self.b[e])))
+            src.write("}")
+            src.write("));\n")
+        src.write("}")
    
 
 class Target(object):

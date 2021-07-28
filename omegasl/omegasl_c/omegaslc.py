@@ -10,11 +10,17 @@ import argparse
 
 
 
+
 def main():
     parser = argparse.ArgumentParser(prog="omegaslc",description=
     """
     A cross platform shading language transpiler for HLSL (Direct3D 12), MSL (Metal), and GLSL (Vulkan and OpenGL)
     """,usage="omegaslc [options] file")
+
+    parser.add_argument("--ebin",type=str,help=
+    f"""
+    Embed all binary shader files into single c source using omega-ebin
+    """)
 
     parser.add_argument("--temp",type=str,help=
     f"""
@@ -101,6 +107,9 @@ def main():
     
 
     writer = TargetWriter(t=t)
+
+    if args.target == "metal":
+        writer.outputStr = outstream
     
     m = ast.parse(istream.read(),args.file)
 
@@ -136,9 +145,27 @@ def main():
     elif args.target == "metal":     
         compiler.compile(inputFile=f"{temp_file}.metal",shaderName="NULL",shaderProfile="",output=f"{temp_file}.air")
         compiler.link(inputs=[f"{temp_file}.air"],output=os.path.join(args.output,f"{f}.metallib"))
-    ctxt.writeShaderMap()
+    
+    if args.ebin:
+        ebin_src = os.path.abspath(os.path.join(args.output,f"{f}__omegasl.ebin"))
+        ebin = io.open(ebin_src,"w")
+        ctxt.writeEBinConfig(ebin)
+        ebin.close()
+        embedded_bin = os.path.join(args.output,f'{f}.omegasl.src.c')
+        cmd = os.path.abspath(args.ebin) + f" -i {ebin_src} -o {embedded_bin}"
+        print(cmd)
+        os.system(cmd)
+        embedded_bin_is = io.open(os.path.join(args.output,f'{f}.omegasl.cc'),"w")
+        embedded_bin_h_is = io.open(os.path.join(args.output,f'{f}.omegasl.h'),"w")
+        ctxt.writeShaderLibEmbeddedBridge(f,embedded_bin_is,embedded_bin_h_is)
+        embedded_bin_is.close()
+        embedded_bin_h_is.close()
+    else:
+        ctxt.writeShaderMap()
 
-main()
+
+
+# main()
     
 
 

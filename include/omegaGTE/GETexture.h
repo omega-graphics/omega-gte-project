@@ -19,6 +19,7 @@ _NAMESPACE_BEGIN_
             CPUWrite = 0x03,
             RenderTarget = 0x04
         } GETextureUsage;
+        virtual void copyBytes(void *bytes,size_t len) = 0;
     };
     struct  OMEGAGTE_EXPORT TextureDescriptor {
         GETexture::GETextureType type;

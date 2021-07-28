@@ -7,10 +7,15 @@
 _NAMESPACE_BEGIN_
 
 class GEVulkanTexture : public GETexture {
+public:
     vk::UniqueImage img;
     vk::UniqueImageView img_view;
-    public:
-    GEVulkanTexture(vk::UniqueImage & img,vk::UniqueImageView & img_view);
+
+    VmaAllocationInfo alloc_info;
+    VmaAllocation alloc;
+
+
+    GEVulkanTexture(vk::UniqueImage & img,vk::UniqueImageView & img_view,VmaAllocationInfo alloc_info,VmaAllocation alloc);
 };
 
 _NAMESPACE_END_

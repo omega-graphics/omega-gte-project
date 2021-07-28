@@ -18,6 +18,10 @@ class GLSLTarget(Target):
         self.out = out 
         self.opts = opts
         return
+
+    def annotationToString(self, n: ast.AnnAssign) -> str:
+        
+        return
     def writeVertexShaderDecl(self,name:str,type_str:str,params:"dict[str,str]"): 
         pass
     

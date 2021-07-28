@@ -7,11 +7,11 @@
 _NAMESPACE_BEGIN_
 
 class GEVulkanNativeRenderTarget : public GENativeRenderTarget {
+public:
     Window x11_window;
     vk::UniqueSurfaceKHR surfaceKHR;
     vk::UniqueFramebuffer frameBuffer;
     vk::UniqueSwapchainKHR swapchainKHR;
-public:
     
 };
 

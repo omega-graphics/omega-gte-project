@@ -11,6 +11,7 @@ class GEMetalTexture : public GETexture {
     TextureDescriptor desc;
     friend class GEMetalCommandBuffer;
 public:
+    void copyBytes(void *bytes,size_t len) override;
     GEMetalTexture(id<MTLTexture> texture,const TextureDescriptor & desc);
 };
 

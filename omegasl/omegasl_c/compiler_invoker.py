@@ -34,7 +34,8 @@ class TargetCompilerInvoker(object):
             os.system(f"dxc -nologo -Od -Fo{output} -E{shaderName} -T{shaderProfile} {inputFile}")
         elif self.target.type == TargetType.METAL:
             os.system(f"xcrun -sdk macosx metal -c {inputFile} -o {output}")
-        
+        elif self.target.type == TargetType.GLSL:
+            os.system(f"glslc -c --target-env=vulkan1.2 -o {output} -c {inputFile}")
         return
 
     def link(self,inputs:"list[str]",output:str):

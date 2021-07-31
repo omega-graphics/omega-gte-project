@@ -23,6 +23,15 @@
             ]
         },
         {
+            "type":"git_clone",
+            "url":"https://github.com/g-truc/glm.git",
+            "branch":"default",
+            "dest":"$(external_lib_path)/glm",
+            "platforms":[
+                "linux"
+            ]
+        },
+        {
             "type":"system",
             "path":"mkdir temp && curl https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz --output ./temp/vulkan-sdk.tar.gz",
             "platforms":[

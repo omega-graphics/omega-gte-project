@@ -79,6 +79,7 @@ if enable_tests:
         Executable("2DTest",["./tests/directx/2DTest/main.cpp",conf],["OmegaGTE"],"tests")
         set_property("2DTest","configs",["OmegaGTE_conf","omega-common_conf"])
         set_property("2DTest","libs",["user32.lib"])
+        set_property("2DTest","ldflags",["/ENTRY:WinMainCRTStartup"])
         
         Copy("OmegaGTE_Copy",[f"{root_out_dir}/lib/OmegaGTE.dll",f"{root_out_dir}/stdshaderlib"],["OmegaGTE"],f"{gen_root_out_dir}/tests")
 

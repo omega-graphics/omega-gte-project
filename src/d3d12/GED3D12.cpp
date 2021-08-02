@@ -174,6 +174,8 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             exit(1);
         };
 
+        DEBUG_STREAM("GED3D12Engine Intialized!");
+
         // D3D12_DESCRIPTOR_HEAP_DESC desc;
         // desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         // desc.NodeMask = d3d12_device->GetNodeCount();

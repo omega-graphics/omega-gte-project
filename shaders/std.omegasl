@@ -11,11 +11,9 @@ class ColoredVertexOut:
     color:Color
 
 
-vertexBuffer:ConstBuffer[OmegaGTEColorVertex,0]
 
 
-
-@vertex(vertexBuffer)
+@vertex()
 def coloredVertexShader() -> ColoredVertexOut:
 
     v:OmegaGTEColorVertex = vertexBuffer[vertexID]

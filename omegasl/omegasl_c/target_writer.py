@@ -1,13 +1,14 @@
 from .target import *
 import io
 
+
 class TargetWriter(object):
 
-    outputStr : io.TextIOWrapper
+    outputStr: io.TextIOWrapper
 
     target: Target
 
-    resourceQueue : "list[ast.AnnAssign]"
+    resourceQueue: "list[ast.AnnAssign]"
 
     declared_vars: "list[str]"
 

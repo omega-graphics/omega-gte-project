@@ -32,8 +32,8 @@ _NAMESPACE_BEGIN_
         Shared
     } StorageOpts;
 
-    typedef struct __GEFunctionInternal GEFunction;
-    struct GEFunctionLibrary;
+    typedef struct __GEShaderInternal GEShader;
+    struct GEShaderLibrary;
     class GETexture;
     typedef class __GEComputePipelineState GEComputePipelineState;
     typedef class __GERenderPipelineState  GERenderPipelineState;
@@ -72,7 +72,7 @@ _NAMESPACE_BEGIN_
     public:
         virtual size_t size() = 0;
         virtual void *data() = 0;
-        virtual ~GEBuffer(){};
+        virtual ~GEBuffer() = default;
     };
 
     struct  OMEGAGTE_EXPORT HeapDescriptor {
@@ -106,29 +106,29 @@ _NAMESPACE_BEGIN_
 
     };
 
-    struct OMEGAGTE_EXPORT GEVertex {
-        FVector3D pos;
-    };
+    // struct OMEGAGTE_EXPORT GEVertex {
+    //     FVector3D pos;
+    // };
 
-    struct OMEGAGTE_EXPORT GEColoredVertex : public GEVertex {
-        FMatrix & color;
-    private:
-        GEColoredVertex(FVector3D pos,FMatrix & color);
-    public:
-        static GEColoredVertex FromGPoint3D(GPoint3D & pt,FMatrix & color);
-        GEColoredVertex(GEColoredVertex && vertex);
-        GEColoredVertex(GEColoredVertex & vertex);
-        GEColoredVertex(const GEColoredVertex & vertex);
-    };
+    // struct OMEGAGTE_EXPORT GEColoredVertex : public GEVertex {
+    //     FMatrix & color;
+    // private:
+    //     GEColoredVertex(FVector3D pos,FMatrix & color);
+    // public:
+    //     static GEColoredVertex FromGPoint3D(GPoint3D & pt,FMatrix & color);
+    //     GEColoredVertex(GEColoredVertex && vertex);
+    //     GEColoredVertex(GEColoredVertex & vertex);
+    //     GEColoredVertex(const GEColoredVertex & vertex);
+    // };
 
-    struct OMEGAGTE_EXPORT GETexturedVertex : public GEVertex {
-        FVector2D textureCoord;
-        GETexturedVertex(GEColoredVertex && vertex);
-    };
+    // struct OMEGAGTE_EXPORT GETexturedVertex : public GEVertex {
+    //     FVector2D textureCoord;
+    //     GETexturedVertex(GEColoredVertex && vertex);
+    // };
 
 
-    typedef std::vector<GEColoredVertex> ColoredVertexVector;
-    typedef std::vector<GETexturedVertex> TexturedVertexVector;
+    // typedef std::vector<GEColoredVertex> ColoredVertexVector;
+    // typedef std::vector<GETexturedVertex> TexturedVertexVector;
 
     /**
      @brief The Omega Graphics Engine
@@ -143,15 +143,15 @@ _NAMESPACE_BEGIN_
         static SharedHandle<OmegaGraphicsEngine> Create();
         /**
         @brief Loads the Omega GTE Shader Library
-        @returns SharedHandle<GEFunctionLibrary>
+        @returns SharedHandle<GEShaderLibrary>
         */
-        virtual SharedHandle<GEFunctionLibrary> loadStdShaderLibrary() = 0;
+        virtual SharedHandle<GEShaderLibrary> loadStdShaderLibrary() = 0;
         /**
          @brief Loads an OmegaSL Shader Library,
-         @param path Path to a `.shadermap` file.
-         @returns SharedHandle<GEFunctionLibrary>
+         @param path Path to a `.omegasllib` file.
+         @returns SharedHandle<GEShaderLibrary>
         */
-        virtual SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path) = 0;
+        virtual SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path) = 0;
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

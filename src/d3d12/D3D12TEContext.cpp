@@ -1,4 +1,4 @@
-#include "d3d12/GED3D12RenderTarget.h"
+#include "GED3D12RenderTarget.h"
 #include "omegaGTE/TE.h"
 #include "omegaGTE/GTEShaderTypes.h"
 

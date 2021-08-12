@@ -1,5 +1,5 @@
 #include "omegaGTE/TE.h"
-#include "metal/GEMetalRenderTarget.h"
+#include "GEMetalRenderTarget.h"
 #include "omegaGTE/GTEShaderTypes.h"
 
 #import <simd/simd.h>

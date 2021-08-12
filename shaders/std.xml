@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OmegaSLLib>
+
+    <Shader name="coloredVertex" type="vertex">
+        
+    </Shader>
+    <Shader name="coloredFragment" type="fragment">
+
+    </Shader>
+</OmegaSLLib>

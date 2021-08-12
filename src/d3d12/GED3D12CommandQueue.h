@@ -38,6 +38,7 @@ _NAMESPACE_BEGIN_
 
         GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
         void reset();
+        ~GED3D12CommandBuffer();
     };
 
     class GED3D12CommandQueue : public GECommandQueue {
@@ -54,6 +55,7 @@ _NAMESPACE_BEGIN_
         void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer);
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
+        ~GED3D12CommandQueue();
     };
 _NAMESPACE_END_
 #endif

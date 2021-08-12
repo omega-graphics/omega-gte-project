@@ -1,1 +1,0 @@
-gn gen out   --args="debug = true d3d11 = false omega_sl = false" --export-compile-commands

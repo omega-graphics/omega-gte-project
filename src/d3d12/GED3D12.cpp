@@ -4,6 +4,8 @@
 #include "GED3D12RenderTarget.h"
 #include "GED3D12Pipeline.h"
 
+#include <atlstr.h>
+
 
 _NAMESPACE_BEGIN_
 
@@ -513,7 +515,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                 in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
                 String entryName;
                 entryName.resize(entryNameCharC);
-                in.read(entryName.data(),entryNameCharC);
+                in.read((char *)entryName.data(),entryNameCharC);
                 unsigned entryShaderCount;
                 in.read((char *)&entryShaderCount,sizeof(entryShaderCount));
             
@@ -521,7 +523,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                 in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
                 String str;
                 str.resize(shaderNameCount);
-                in.read(str.data(),shaderNameCount);
+                in.read((char *)str.data(),shaderNameCount);
 
                 ID3DBlob *blob;
 

@@ -1,4 +1,5 @@
 #include "GTEBase.h"
+#include "GTEShader.h"
 #include <initializer_list>
 #include <map>
 
@@ -11,14 +12,9 @@
 
 _NAMESPACE_BEGIN_
 
-    typedef struct __GEFunctionInternal GEFunction;
 
-    struct GEFunctionLibrary {
-        std::map<std::string,SharedHandle<GEFunction>> functions;
-    };
-
-    #define STD_COLOREDVERTEX_FUNC "coloredVertexShader"
-    #define STD_FRAGMENTVERTEX_FUNC "coloredFragmentShader"
+    // #define STD_COLOREDVERTEX_FUNC "coloredVertexShader"
+    // #define STD_FRAGMENTVERTEX_FUNC "coloredFragmentShader"
 
     struct OMEGAGTE_EXPORT InputAttributeDesc {
         typedef enum : int {
@@ -34,18 +30,18 @@ _NAMESPACE_BEGIN_
         InputType type;
     };
 
-    OMEGAGTE_EXPORT std::vector<InputAttributeDesc> ColoredVertexAttributes();
-    OMEGAGTE_EXPORT std::vector<InputAttributeDesc> TexturedVertexAttributes();
+    // OMEGAGTE_EXPORT OmegaCommon::vector<InputAttributeDesc> ColoredVertexAttributes();
+    // OMEGAGTE_EXPORT OmegaCommon::vector<InputAttributeDesc> TexturedVertexAttributes();
 
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
-        std::vector<InputAttributeDesc> vertexInputAttributes;
-        GEFunction * vertexFunc;
-        GEFunction * fragmentFunc;
+        OmegaCommon::Vector<InputAttributeDesc> vertexInputAttributes;
+        SharedHandle<GTEShader> vertexFunc;
+        SharedHandle<GTEShader> fragmentFunc;
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
         std::vector<InputAttributeDesc> inputAttributes;
-        SharedHandle<GEFunction> computeFunc;
+        SharedHandle<GTEShader> computeFunc;
 
     };
     typedef class __GERenderPipelineState  GERenderPipelineState;

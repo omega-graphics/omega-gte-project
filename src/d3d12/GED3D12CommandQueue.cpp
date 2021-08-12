@@ -173,6 +173,10 @@ _NAMESPACE_BEGIN_
         inComputePass = false;
     };
 
+    GED3D12CommandBuffer::~GED3D12CommandBuffer(){
+        
+    };
+
     // void GED3D12CommandBuffer::commitToQueue(){
     //     HRESULT hr;
     //     hr = commandList->Close();
@@ -214,5 +218,9 @@ _NAMESPACE_BEGIN_
         if(FAILED(hr)){
             exit(1);
         };
+    };
+
+    GED3D12CommandQueue::~GED3D12CommandQueue(){
+
     };
 _NAMESPACE_END_

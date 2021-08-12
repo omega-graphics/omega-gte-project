@@ -3,12 +3,13 @@ from .hlsl_target import *
 from .msl_target import *
 from shutil import which
 
-class TargetCompilerInvoker(object):
+
+class TargetCompilerInvoker:
     """
     Invokes the native compiler for the corresponding targets
     """
-    target:Target
-    targetCtxt:TargetOutputContext
+    target: Target
+    targetCtxt: TargetOutputContext
     def __init__(self,target:Target,targetCtxt:TargetOutputContext):
         self.target = target
         self.targetCtxt = targetCtxt

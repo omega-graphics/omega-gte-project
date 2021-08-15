@@ -1,26 +1,26 @@
 #include "omegaGTE/TE.h"
 #include "GEMetalRenderTarget.h"
-#include "omegaGTE/GTEShaderTypes.h"
+// #include "omegaGTE/GTEShaderTypes.h"
 
 #import <simd/simd.h>
 #import <AppKit/AppKit.h>
 
 _NAMESPACE_BEGIN_
 
-OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
-    auto * v = new OmegaGTEColorVertex();
-    v->color = simd_float4{vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4)};
-    std::cout << "R:" << v->color.r << "G:" << v->color.g << "B:" << v->color.b << "A:" << v->color.a << std::endl;
-    v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
-    return v;
-};
-
-OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex){
-    auto * v = new OmegaGTETexturedVertex();
-    v->texturePos = {vertex.textureCoord.getI(),vertex.textureCoord.getJ()};
-    v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
-    return v;
-};
+// OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
+//     auto * v = new OmegaGTEColorVertex();
+//     v->color = simd_float4{vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4)};
+//     std::cout << "R:" << v->color.r << "G:" << v->color.g << "B:" << v->color.b << "A:" << v->color.a << std::endl;
+//     v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
+//     return v;
+// };
+//
+// OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex){
+//     auto * v = new OmegaGTETexturedVertex();
+//     v->texturePos = {vertex.textureCoord.getI(),vertex.textureCoord.getJ()};
+//     v->pos = {vertex.pos.getI(),vertex.pos.getI(),vertex.pos.getK()};
+//     return v;
+// };
 
 
 class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {

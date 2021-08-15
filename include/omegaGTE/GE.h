@@ -141,17 +141,17 @@ _NAMESPACE_BEGIN_
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();
-        /**
-        @brief Loads the Omega GTE Shader Library
-        @returns SharedHandle<GEShaderLibrary>
-        */
-        virtual SharedHandle<GEShaderLibrary> loadStdShaderLibrary() = 0;
-        /**
-         @brief Loads an OmegaSL Shader Library,
-         @param path Path to a `.omegasllib` file.
-         @returns SharedHandle<GEShaderLibrary>
-        */
-        virtual SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path) = 0;
+        // /**
+   //      @brief Loads the Omega GTE Shader Library
+   //      @returns SharedHandle<GEShaderLibrary>
+   //      */
+   //      virtual SharedHandle<GEShaderLibrary> loadStdShaderLibrary() = 0;
+   //      /**
+   //       @brief Loads an OmegaSL Shader Library,
+   //       @param path Path to a `.omegasllib` file.
+   //       @returns SharedHandle<GEShaderLibrary>
+   //      */
+   //      virtual SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path) = 0;
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

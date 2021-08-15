@@ -1,5 +1,5 @@
 #include "omegaGTE/TE.h"
-#include "omegaGTE/GTEShaderTypes.h"
+// #include "omegaGTE/GTEShaderTypes.h"
 #include <optional>
 #include <thread>
 #include <iostream>
@@ -176,43 +176,43 @@ TETessalationResult OmegaTessalationEngineContext::tessalateSync(const TETessala
 
 /// @name Private API Calls
 /// @{
-OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex);
-OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex);
+// OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex);
+// OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex);
 /// @}
 
 
 
-SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TETessalationResult & result){
-    return nullptr;
-};
+// SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TETessalationResult & result){
+//     return nullptr;
+// };
 
-SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,ColoredVertexVector & vertexVector){
-    std::vector<OmegaGTEColorVertex> vertices;
-    for(auto & v : vertexVector){
-        vertices.push_back(*convertVertex(v));
-    };
-    BufferDescriptor bufferDesc;
-    bufferDesc.opts = StorageOpts::Shared;
-    bufferDesc.len = sizeof(OmegaGTEColorVertex) * vertices.size();
-    auto buffer = graphicsEngine->makeBuffer(bufferDesc);
-
-    memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
-    return buffer;
-};
-    
-SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TexturedVertexVector & vertexVector){
-    std::vector<OmegaGTETexturedVertex> vertices;
-    for(auto & v : vertexVector){
-        vertices.push_back(*convertVertex(v));
-    };
-    BufferDescriptor bufferDesc;
-    bufferDesc.opts = StorageOpts::Shared;
-    bufferDesc.len = sizeof(OmegaGTETexturedVertex) * vertices.size();
-    auto buffer = graphicsEngine->makeBuffer(bufferDesc);
-
-    memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
-    return buffer;
-};
+// SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,ColoredVertexVector & vertexVector){
+//     std::vector<OmegaGTEColorVertex> vertices;
+//     for(auto & v : vertexVector){
+//         vertices.push_back(*convertVertex(v));
+//     };
+//     BufferDescriptor bufferDesc;
+//     bufferDesc.opts = StorageOpts::Shared;
+//     bufferDesc.len = sizeof(OmegaGTEColorVertex) * vertices.size();
+//     auto buffer = graphicsEngine->makeBuffer(bufferDesc);
+//
+//     memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
+//     return buffer;
+// };
+//
+// SharedHandle<GEBuffer> OmegaTessalationEngineContext::convertToVertexBuffer(SharedHandle<OmegaGraphicsEngine> & graphicsEngine,TexturedVertexVector & vertexVector){
+//     std::vector<OmegaGTETexturedVertex> vertices;
+//     for(auto & v : vertexVector){
+//         vertices.push_back(*convertVertex(v));
+//     };
+//     BufferDescriptor bufferDesc;
+//     bufferDesc.opts = StorageOpts::Shared;
+//     bufferDesc.len = sizeof(OmegaGTETexturedVertex) * vertices.size();
+//     auto buffer = graphicsEngine->makeBuffer(bufferDesc);
+//
+//     memcpy(buffer->data(),(const void *)vertices.data(),buffer->size());
+//     return buffer;
+// };
 
 OmegaTessalationEngineContext::~OmegaTessalationEngineContext(){
     for(auto t : activeThreads){

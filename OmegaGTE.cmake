@@ -1,16 +1,16 @@
 
-if(NOT PYTHON_EXEC)
-    set(PYTHON_EXEC)
-    if(WIN32)
-        set(PYTHON_EXEC "py -3")
-    else()
-        set(PYTHON_EXEC "python3")
-    endif()
-endif()
-
-
-
-set(OMEGASLC_PY "${CMAKE_CURRENT_LIST_DIR}/omegasl/_main.py")
+# if(NOT PYTHON_EXEC)
+#     set(PYTHON_EXEC)
+#     if(WIN32)
+#         set(PYTHON_EXEC "py -3")
+#     else()
+#         set(PYTHON_EXEC "python3")
+#     endif()
+# endif()
+#
+#
+#
+# set(OMEGASLC_PY "${CMAKE_CURRENT_LIST_DIR}/omegasl/_main.py")
 
 function(add_omegasl_lib _NAME _SRC _OUTPUT)
 

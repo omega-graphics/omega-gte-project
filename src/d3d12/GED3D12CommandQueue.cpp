@@ -2,6 +2,7 @@
 #include "GED3D12RenderTarget.h"
 #include "GED3D12Pipeline.h"
 #include "GED3D12Texture.h"
+
 _NAMESPACE_BEGIN_
     // GED3D12CommandBuffer::GED3D12CommandBuffer(){};
     // void GED3D12CommandBuffer::commitToBuffer(){};
@@ -139,6 +140,16 @@ _NAMESPACE_BEGIN_
             ++rects_it;
         };
         commandList->RSSetScissorRects(d3d12_rects.size(),d3d12_rects.data());
+    };
+
+    void GED3D12CommandBuffer::setVertexBuffer(SharedHandle<GEBuffer> &buffer)
+    {
+        auto *b = (GED3D12Buffer *)buffer.get();
+        D3D12_VERTEX_BUFFER_VIEW view;
+        view.BufferLocation = b->buffer->GetGPUVirtualAddress();
+        view.SizeInBytes = UINT(b->size());
+        view.StrideInBytes = 1;
+        commandList->IASetVertexBuffers(0,1,&view);
     };
 
     void GED3D12CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx){

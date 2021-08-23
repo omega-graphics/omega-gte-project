@@ -1,21 +1,21 @@
 #include "GED3D12RenderTarget.h"
 #include "omegaGTE/TE.h"
-#include "omegaGTE/GTEShaderTypes.h"
+// #include "omegaGTE/GTEShaderTypes.h"
 
 _NAMESPACE_BEGIN_
 
-OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex){
-    auto rc = new OmegaGTETexturedVertex();
-    rc->pos = DirectX::XMFLOAT3(vertex.pos.getI(),vertex.pos.getJ(),vertex.pos.getK());
-    rc->texturePos = DirectX::XMFLOAT2(vertex.textureCoord.getI(),vertex.textureCoord.getJ());
-    return rc;
-};
-OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
-    auto rc = new OmegaGTEColorVertex();
-    rc->pos = DirectX::XMFLOAT3(vertex.pos.getI(),vertex.pos.getJ(),vertex.pos.getK());
-    rc->color = DirectX::XMFLOAT4(vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4));
-    return rc;
-};
+// OmegaGTETexturedVertex *convertVertex(OmegaGTE::GETexturedVertex & vertex){
+//     auto rc = new OmegaGTETexturedVertex();
+//     rc->pos = DirectX::XMFLOAT3(vertex.pos.getI(),vertex.pos.getJ(),vertex.pos.getK());
+//     rc->texturePos = DirectX::XMFLOAT2(vertex.textureCoord.getI(),vertex.textureCoord.getJ());
+//     return rc;
+// };
+// OmegaGTEColorVertex *convertVertex(OmegaGTE::GEColoredVertex & vertex){
+//     auto rc = new OmegaGTEColorVertex();
+//     rc->pos = DirectX::XMFLOAT3(vertex.pos.getI(),vertex.pos.getJ(),vertex.pos.getK());
+//     rc->color = DirectX::XMFLOAT4(vertex.color.valueAt(1,1),vertex.color.valueAt(1,2),vertex.color.valueAt(1,3),vertex.color.valueAt(1,4));
+//     return rc;
+// };
 
 class D3D12NativeRenderTargetTEContext : public OmegaTessalationEngineContext {
     SharedHandle<GED3D12NativeRenderTarget> target;

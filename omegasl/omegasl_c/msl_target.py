@@ -90,7 +90,7 @@ class MSLTarget(Target):
         for k in params:
             self.out.write(params[k])
             self.out.write(", ")
-        self.out.write("unsigned vertexID [[vertex_id]]")
+        # self.out.write("unsigned vertexID [[vertex_id]]")
         self.out.write(")")
 
        

@@ -44,8 +44,8 @@ _NAMESPACE_BEGIN_
          */
         virtual void startRenderPass(const GERenderPassDescriptor & desc) = 0;
         virtual void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState) = 0;
-        // /// For DirectX
-        // virtual void setVertexBuffer(SharedHandle<GEBuffer> & buffer) = 0;
+        //
+        virtual void setVertexBuffer(SharedHandle<GEBuffer> & buffer) = 0;
         
         virtual void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index) = 0;
         virtual void setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index) = 0;

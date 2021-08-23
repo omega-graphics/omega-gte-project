@@ -2,9 +2,10 @@
 
 _NAMESPACE_BEGIN_
 
-struct __GEFunctionInternal {
+struct GTEShader {
     
 };
+
 
 class __GERenderPipelineState {
 

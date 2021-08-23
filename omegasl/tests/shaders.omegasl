@@ -1,32 +1,31 @@
 
 
-@struct 
-class MyVertex:
+struct MyVertex {
    pos:float2
    color:float4
+}
+
+texture:Texture2D [0]
 
 
-buff:ConstBuffer[MyVertex,0]
+[in texture]
+@kernel myKernel(){
 
-text:Texture2D[float,1]
-
-
-@struct
-class VertexOut:
-   pos:Position
-   color:float4
+}
 
 
-@vertex(buff)
-def myVertexShader() -> VertexOut:
-    vertex:VertexOut
-    vertex.pos = [0.0,1.0,0.0,1.0]
-    vertex.color = [1.0,1.0,1.0,1.0]
+@render main(MyVertex) {
+   var pos_final = float4{pos,1.0}
 
-    return vertex
+   pass {pos_final : Position,color : Color}
+
+   return color;
+}
 
 
 
-@fragment(text)
-def myFragmentShader(input:VertexOut) -> float4:
-    return input.color
+
+
+
+
+

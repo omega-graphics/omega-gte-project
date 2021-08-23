@@ -21,6 +21,7 @@ _NAMESPACE_BEGIN_
         void finishBlitPass();
 
         void startRenderPass(const GERenderPassDescriptor &desc);
+        void setVertexBuffer(SharedHandle<GEBuffer> &buffer);
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
         void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
         void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index);

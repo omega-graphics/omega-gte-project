@@ -5,7 +5,7 @@
 
 _NAMESPACE_BEGIN_
 
-typedef struct __GTEFunctionInternal GTEShader;
+struct GTEShader;
 
 struct GTEShaderLibrary {
     std::map<std::string,SharedHandle<GTEShader>> shaders;
@@ -47,14 +47,45 @@ namespace Shader {
     } Type;
 }
 
-// class GTEShaderBuilder {
-//     void startShader(Shader::Type type);
-//     void create(TStrRef name,Shader::DataType type);
-//     void set(TStrRef name);
-//     void op(TStrRef var1,TStrRef var2,TStrRef var_result,Shader::OpType op);
-//     void invoke(TStrRef func,ArrayRef<TStrRef> args);
-//     SharedHandle<GTEShader> finishShader();
-// };
+class OmegaGraphicsEngine;
+
+class OMEGAGTE_EXPORT GTEShaderBuilder {
+    OmegaGraphicsEngine *engine;
+    public:
+
+    GTEShaderBuilder(OmegaGraphicsEngine *engine);
+
+    std::ostringstream out;
+
+    public:
+    GTEShaderBuilder & startShader(Shader::Type type);
+    GTEShaderBuilder & createVariable(const TStrRef & name,Shader::DataType type);
+    
+    class OMEGAGTE_EXPORT Expression {
+        std::ostringstream out;
+    public:
+        Expression();
+        Expression & id(TStrRef id);
+        Expression & float_literal(float f);
+        Expression & int_literal(int i);
+        Expression & string_literal(const TStrRef & str);
+        Expression & op(Shader::OpType type,Expression &lhs,Expression &rhs);
+        Expression & array(std::vector<Expression> exprs);
+    };
+    
+    GTEShaderBuilder & exprStmt(const Expression &expr);
+    GTEShaderBuilder & setVariable(const TStrRef & name,const Expression & expr);
+   
+    SharedHandle<GTEShader> finishShader();
+};
+
+// void end(){
+//     GTEShaderBuilder builder;
+//     auto shader = builder.startShader(Shader::Vertex).
+//     createVariable("myVariable",Shader::float_1).
+//     setVariable("myVariable",GTEShaderBuilder::Expression().float_literal(1.f)).
+//     finishShader();
+// }
 
 _NAMESPACE_END_
 

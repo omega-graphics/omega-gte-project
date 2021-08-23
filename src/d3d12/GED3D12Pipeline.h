@@ -1,14 +1,14 @@
-#include "../GEPipeline.cpp"
 #include "GED3D12.h"
+#include "../GEPipeline.cpp"
 
 #ifndef OMEGAGTE_D3D12_GED3D12PIPELINE_H
 #define OMEGAGTE_D3D12_GED3D12PIPELINE_H
 
 _NAMESPACE_BEGIN_
 
-struct GED3D12Function : public __GEFunctionInternal {
+struct GED3D12Shader : public GTEShader {
     ComPtr<ID3DBlob> funcData;
-    GED3D12Function(ID3DBlob *blob):funcData(blob){};
+    GED3D12Shader(ID3DBlob *blob):funcData(blob){};
 };
 
 class GED3D12RenderPipelineState : public __GERenderPipelineState {

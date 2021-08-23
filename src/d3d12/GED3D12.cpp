@@ -292,8 +292,8 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d.NodeMask = d3d12_device->GetNodeCount();
         
         HRESULT hr;
-        auto vertexFunc = (GED3D12Function *)desc.vertexFunc;
-        auto fragmentFunc = (GED3D12Function *)desc.fragmentFunc;
+        auto vertexFunc = (GED3D12Shader *)desc.vertexFunc.get();
+        auto fragmentFunc = (GED3D12Shader *)desc.fragmentFunc.get();
         MessageBoxA(GetForegroundWindow(),"Getting Functions","NOTE",MB_OK);
         if(vertexFunc == nullptr)
             MessageBoxA(GetForegroundWindow(),"VS has been released too early!","NOTE",MB_OK);
@@ -315,7 +315,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         HRESULT hr;
         ID3D12PipelineState *state;
         d.NodeMask = d3d12_device->GetNodeCount();
-        GED3D12Function *computeFunc = (GED3D12Function *)desc.computeFunc.get();
+        auto *computeFunc = (GED3D12Shader *)desc.computeFunc.get();
         d.CS = CD3DX12_SHADER_BYTECODE(computeFunc->funcData.Get());
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
         return std::make_shared<GED3D12ComputePipelineState>(state);
@@ -497,57 +497,83 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return std::make_shared<GED3D12Buffer>(buffer,descHeap);
     };
 
-    SharedHandle<GEFunctionLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
-        MessageBoxA(GetForegroundWindow(),("PathStr:" + path.str()).c_str(),"NOTE",MB_OK);
-        MessageBoxA(GetForegroundWindow(),("AbsPath:" + path.absPath()).c_str(),"NOTE",MB_OK);
-         MessageBoxA(GetForegroundWindow(),("Dir:" + path.dir()).c_str(),"NOTE",MB_OK);
-        MessageBoxA(GetForegroundWindow(),("FName:" + path.filename()).c_str(),"NOTE",MB_OK);
-        MessageBoxA(GetForegroundWindow(),("Extension:" + path.ext()).c_str(),"NOTE",MB_OK);
-        unsigned entryCount;
-        std::ifstream in(path.absPath(),std::ios::in | std::ios::binary);
-        if(in.is_open()){
-            MessageBoxA(GetForegroundWindow(),("OpenedFile" + path.absPath()).c_str(),"NOTE",MB_OK);
-            auto library = std::make_shared<GEFunctionLibrary>();
-            in.read((char *)&entryCount,sizeof(entryCount));
-            MessageBoxA(GetForegroundWindow(),("EntryCount:" + std::to_string(entryCount)).c_str(),"NOTE",MB_OK);
-            while(entryCount > 0){
-                unsigned entryNameCharC;
-                in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
-                String entryName;
-                entryName.resize(entryNameCharC);
-                in.read((char *)entryName.data(),entryNameCharC);
-                unsigned entryShaderCount;
-                in.read((char *)&entryShaderCount,sizeof(entryShaderCount));
-            
-                unsigned shaderNameCount;
-                in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
-                String str;
-                str.resize(shaderNameCount);
-                in.read((char *)str.data(),shaderNameCount);
+    SharedHandle<GTEShader> GED3D12Engine::compileShaderSource(TStrRef src,Shader::Type ty){
+        TStrRef target;
 
-                ID3DBlob *blob;
-
-                ATL::CStringW wstr(entryName.data());
-
-                auto dir_name = path.dir();
-                SetCurrentDirectoryA(dir_name.c_str());
-
-                D3DReadFileToBlob(wstr.GetBuffer(),&blob); 
-                MessageBoxA(GetForegroundWindow(),("Will Insert Pair:" + str).c_str(),"NOTE",MB_OK);
-                library->functions.insert(std::make_pair(str,new GED3D12Function(blob)));
-                MessageBoxA(GetForegroundWindow(),"Done;","NOTE",MB_OK);
-                --entryCount;
-            };
-            in.close();
-            MessageBoxA(GetForegroundWindow(),"Returning","NOTE",MB_OK);
-            return std::move(library);
+        switch (ty) {
+            case Shader::Vertex : {
+                target = "vs_5_0";
+                break;
+            }
+            case Shader::Fragment : {
+                target = "ps_5_0";
+                break;
+            }
+            case Shader::Compute : {
+                target = "cs_5_0";
+                break;
+            }
         }
-        else {
-            return nullptr;
-        };
+
+        ID3DBlob *blob;
+        D3DCompile(src.data(),src.size(),"INLINE_SOURCE",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main",target.data(),0,0,&blob,nullptr);
+        
+        return std::make_shared<GED3D12Shader>(blob);
     };
 
-    SharedHandle<GEFunctionLibrary> GED3D12Engine::loadStdShaderLibrary(){
-        return loadShaderLibrary("./stdshaderlib/std.shadermap");
-    };
+    // SharedHandle<GEShaderLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
+        // MessageBoxA(GetForegroundWindow(),("PathStr:" + path.str()).c_str(),"NOTE",MB_OK);
+        // MessageBoxA(GetForegroundWindow(),("AbsPath:" + path.absPath()).c_str(),"NOTE",MB_OK);
+        //  MessageBoxA(GetForegroundWindow(),("Dir:" + path.dir()).c_str(),"NOTE",MB_OK);
+        // MessageBoxA(GetForegroundWindow(),("FName:" + path.filename()).c_str(),"NOTE",MB_OK);
+        // MessageBoxA(GetForegroundWindow(),("Extension:" + path.ext()).c_str(),"NOTE",MB_OK);
+        // unsigned entryCount;
+        // std::ifstream in(path.absPath(),std::ios::in | std::ios::binary);
+        // if(in.is_open()){
+        //     MessageBoxA(GetForegroundWindow(),("OpenedFile" + path.absPath()).c_str(),"NOTE",MB_OK);
+        //     auto library = std::make_shared<GEShaderLibrary>();
+        //     in.read((char *)&entryCount,sizeof(entryCount));
+        //     MessageBoxA(GetForegroundWindow(),("EntryCount:" + std::to_string(entryCount)).c_str(),"NOTE",MB_OK);
+        //     while(entryCount > 0){
+        //         unsigned entryNameCharC;
+        //         in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
+        //         String entryName;
+        //         entryName.resize(entryNameCharC);
+        //         in.read((char *)entryName.data(),entryNameCharC);
+        //         unsigned entryShaderCount;
+        //         in.read((char *)&entryShaderCount,sizeof(entryShaderCount));
+            
+        //         unsigned shaderNameCount;
+        //         in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
+        //         String str;
+        //         str.resize(shaderNameCount);
+        //         in.read((char *)str.data(),shaderNameCount);
+
+        //         ID3DBlob *blob;
+
+        //         ATL::CStringW wstr(entryName.data());
+
+        //         auto dir_name = path.dir();
+        //         SetCurrentDirectoryA(dir_name.c_str());
+
+        //         D3DReadFileToBlob(wstr.GetBuffer(),&blob); 
+        //         MessageBoxA(GetForegroundWindow(),("Will Insert Pair:" + str).c_str(),"NOTE",MB_OK);
+        //         libraryfunctions.insert(std::make_pair(str,new GED3D12Function(blob)));
+        //         MessageBoxA(GetForegroundWindow(),"Done;","NOTE",MB_OK);
+        //         --entryCount;
+        //     };
+        //     in.close();
+        //     MessageBoxA(GetForegroundWindow(),"Returning","NOTE",MB_OK);
+        //     return library;
+        // }
+        // else {
+        //     return nullptr;
+        // };
+    //     return nullptr;
+    // };
+
+    // SharedHandle<GEShaderLibrary> GED3D12Engine::loadStdShaderLibrary(){
+    //     // return loadShaderLibrary("./stdshaderlib/std.shadermap");
+    //     return nullptr;
+    // };
 _NAMESPACE_END_

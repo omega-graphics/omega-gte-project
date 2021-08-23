@@ -20,6 +20,7 @@
 #define DEBUG_STREAM(message) std::cout << "[" << DEBUG_ENGINE_PREFIX << "] - " << message << std::endl
 
 #include "GTEBase.h"
+#include "GTEShader.h"
 
 #ifndef OMEGAGTE_GE_H
 #define OMEGAGTE_GE_H
@@ -32,8 +33,8 @@ _NAMESPACE_BEGIN_
         Shared
     } StorageOpts;
 
-    typedef struct __GEShaderInternal GEShader;
-    struct GEShaderLibrary;
+    struct GTEShader;
+    struct GTEShaderLibrary;
     class GETexture;
     typedef class __GEComputePipelineState GEComputePipelineState;
     typedef class __GERenderPipelineState  GERenderPipelineState;
@@ -134,6 +135,9 @@ _NAMESPACE_BEGIN_
      @brief The Omega Graphics Engine
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
+        friend class GTEShaderBuilder;
+
+        virtual SharedHandle<GTEShader> compileShaderSource(TStrRef src,Shader::Type ty) = 0;
     public:
         /** 
         @brief Creates an Instance of the Omega Graphics Engine  

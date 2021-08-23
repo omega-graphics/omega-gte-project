@@ -73,8 +73,9 @@ _NAMESPACE_BEGIN_
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
         void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
-        SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path);
-        SharedHandle<GEFunctionLibrary> loadStdShaderLibrary();
+        SharedHandle<GTEShader> compileShaderSource(TStrRef src,Shader::Type ty);
+        // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);
+        // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
         SharedHandle<GEFence> makeFence();
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);

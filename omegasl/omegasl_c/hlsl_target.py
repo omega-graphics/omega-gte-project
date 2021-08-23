@@ -63,7 +63,7 @@ class HLSLTarget(Target):
         self.out.writeShaderEntryToMap(out_file,utf8str_to_bytes(name))
         self.shaders[name] = ShaderType.VERTEX
         self.out.write(f"{type_str} {name} (")
-        self.out.write(f"uint vertexID : SV_VertexID")
+        # self.out.write(f"uint vertexID : SV_VertexID")
         for k in params:
             self.out.write(",")
             self.out.write(params[k])

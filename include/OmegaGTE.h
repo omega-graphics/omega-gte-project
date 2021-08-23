@@ -17,6 +17,7 @@ _NAMESPACE_BEGIN_
 struct OMEGAGTE_EXPORT GTE {
     SharedHandle<OmegaGraphicsEngine> graphicsEngine;
     SharedHandle<OmegaTessalationEngine> tessalationEngine;
+    SharedHandle<GTEShaderBuilder> shaderBuilder;
 };
 
 

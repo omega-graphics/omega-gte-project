@@ -41,6 +41,9 @@ set(MAIN_SRCS ${MAIN_SRCS} ${RHI_SRCS})
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in" "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" @ONLY)
 
+file(GLOB OMEGASL_SRCS "omegasl/src/*.h" "omegasl/src/*.cpp")
+
+add_omega_graphics_tool("omegaslc" SOURCES ${OMEGASL_SRCS} LIBS "OmegaCommon")
 
 add_omega_graphics_module("OmegaGTE" FRAMEWORK INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" VERSION "0.5" HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" DEPENDS "OmegaCommon" SOURCES ${MAIN_SRCS})
 target_compile_definitions("OmegaGTE" PRIVATE OMEGAGTE__BUILD__) 

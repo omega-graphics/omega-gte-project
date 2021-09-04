@@ -218,7 +218,7 @@ _NAMESPACE_BEGIN_
         };
         /// Get magnitude
         virtual Num_Ty mag() override{
-            return parent::mag() + pow(k,2);
+            return sqrt(pow(this->getI(),2) + pow(this->getJ(),2) + pow(k,2));
         }
         /// Get the angle on the horizontal plane (Measured from `i`);
         typedef typename parent::angle angle_h;
@@ -734,11 +734,7 @@ _NAMESPACE_BEGIN_
            auto m = Create();
 
            for(unsigned _c = 0;_c < column;_c++){
-               for(unsigned _r = 0;_r < row;_r++){
-                    if(_r == _c){
-                        m[_c][_r] = 1;
-                    }
-               }
+                m[_c][_c] = 1;
            }
            return m;
        };

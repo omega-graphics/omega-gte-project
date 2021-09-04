@@ -1,0 +1,25 @@
+#ifndef OMEGASL_AST_DEF
+#define OMEGASL_AST_DEF
+
+typedef int ASTType;
+
+#define DECL 0x0
+#define EXPR 0x1
+
+#define FUNC_DECL (0x001 | DECL)
+#define SHADER_DECL (0x002 | DECL)
+#define RESOURCE_DECL (0x003 | DECL)
+#define VAR_DECL (0x004 | DECL)
+#define IF_DECL (0x005 | DECL)
+#define ELSE_DECL (0x006 | DECL)
+#define ELSEIF_DECL (0x007 | DECL)
+#define STRUCT_DECL (0x008 | DECL)
+
+#define ID_EXPR (0x001 | EXPR)
+#define LITERAL_EXPR (0x002 | EXPR)
+#define ARRAY_EXPR (0x003 | EXPR)
+#define CALL_EXPR (0x004 | EXPR)
+#define MEMBER_EXPR (0x005 | EXPR)
+#define BINARY_EXPR (0x006 | EXPR)
+
+#endif

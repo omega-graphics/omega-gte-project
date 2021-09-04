@@ -1,25 +1,33 @@
 
 
 struct MyVertex {
-   pos:float2
-   color:float4
+   float2 pos;
+   float2 hello;
+};
+
+Texture2D texture : 0;
+
+
+
+compute [1,1,1] [in texture]
+void myKernel(){
+
 }
 
-texture:Texture2D [0]
+struct RasterData internal {
+    VertexCoord pos;
+    Color color;
+    TexCoord2D coord;
+};
 
 
-[in texture]
-@kernel myKernel(){
+vertex
+RasterData myVertex(float2 pos,float2 texCoord){
 
 }
 
-
-@render main(MyVertex) {
-   var pos_final = float4{pos,1.0}
-
-   pass {pos_final : Position,color : Color}
-
-   return color;
+fragment Color myFragment(RasterData in){
+    return in.color;
 }
 
 

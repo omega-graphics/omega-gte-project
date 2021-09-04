@@ -59,22 +59,22 @@ class OMEGAGTE_EXPORT GTEShaderBuilder {
 
     public:
     GTEShaderBuilder & startShader(Shader::Type type);
-    GTEShaderBuilder & createVariable(const TStrRef & name,Shader::DataType type);
+    GTEShaderBuilder & createVariable(const StrRef & name, Shader::DataType type);
     
     class OMEGAGTE_EXPORT Expression {
         std::ostringstream out;
     public:
         Expression();
-        Expression & id(TStrRef id);
+        Expression & id(StrRef id);
         Expression & float_literal(float f);
         Expression & int_literal(int i);
-        Expression & string_literal(const TStrRef & str);
+        Expression & string_literal(const StrRef & str);
         Expression & op(Shader::OpType type,Expression &lhs,Expression &rhs);
         Expression & array(std::vector<Expression> exprs);
     };
     
     GTEShaderBuilder & exprStmt(const Expression &expr);
-    GTEShaderBuilder & setVariable(const TStrRef & name,const Expression & expr);
+    GTEShaderBuilder & setVariable(const StrRef & name, const Expression & expr);
    
     SharedHandle<GTEShader> finishShader();
 };

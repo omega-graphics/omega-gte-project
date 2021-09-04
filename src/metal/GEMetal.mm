@@ -12,6 +12,26 @@
 
 _NAMESPACE_BEGIN_
 
+    simd_float2 float2(const FVec<2> &mat){
+        return simd::make_float2(mat[0][0],mat[1][0]);
+    };
+    simd_float3 float3(const FVec<3> &mat){
+        return simd::make_float3(mat[0][0],mat[1][0],mat[2][0]);
+    };
+    simd_float4 float4(const FVec<4> &mat){
+        return simd::make_float4(mat[0][0],mat[1][0],mat[2][0],mat[3][0]);
+    };
+
+    simd_double2 double2(const DVec<2> &mat){
+        return simd::make_double2(mat[0][0],mat[1][0]);
+    };
+    simd_double3 double3(const DVec<3> &mat){
+        return simd::make_double3(mat[0][0],mat[1][0],mat[2][0]);
+    };
+    simd_double4 double4(const DVec<4> &mat){
+        return simd::make_double4(mat[0][0],mat[1][0],mat[2][0],mat[3][0]);
+    };
+
     NSSmartPtr::NSSmartPtr(const NSObjectHandle & handle):data(handle.data){
 
     };
@@ -47,12 +67,12 @@ _NAMESPACE_BEGIN_
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override{
             metalDevice.assertExists();
             NSSmartPtr commandQueue ({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newCommandQueueWithMaxCommandBufferCount:maxBufferCount]});
-            return std::make_shared<GEMetalCommandQueue>(commandQueue,maxBufferCount);
+            return std::shared_ptr<GECommandQueue>(new GEMetalCommandQueue(commandQueue,maxBufferCount));
         };
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override{
             metalDevice.assertExists();
             NSSmartPtr buffer ({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newBufferWithLength:desc.len options:MTLResourceStorageModeShared]});
-            return std::make_shared<GEMetalBuffer>(buffer);
+            return std::shared_ptr<GEBuffer>(new GEMetalBuffer(buffer));
         };
         SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override{
             // GEMetalFunction *computeFunc = (GEMetalFunction *)desc.computeFunc.get();
@@ -77,7 +97,7 @@ _NAMESPACE_BEGIN_
             metalDevice.assertExists();
             desc.metalLayer.device = NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle());
             auto commandQueue = makeCommandQueue(100);
-            return std::make_shared<GEMetalNativeRenderTarget>(commandQueue,desc.metalLayer);
+            return std::shared_ptr<GENativeRenderTarget>(new GEMetalNativeRenderTarget(commandQueue,desc.metalLayer));
         };
         SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override{
             metalDevice.assertExists();
@@ -99,7 +119,7 @@ _NAMESPACE_BEGIN_
                 exit(1);
             };
             
-            return std::make_shared<GEMetalRenderPipelineState>(pipelineState);
+            return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(pipelineState));
         };
         // SharedHandle<GEFunctionLibrary> loadStdShaderLibrary() override{
  //            /// NOTE: This a temporary fix.. Please optimize!

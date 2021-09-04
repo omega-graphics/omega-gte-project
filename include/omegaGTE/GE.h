@@ -136,8 +136,6 @@ _NAMESPACE_BEGIN_
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
         friend class GTEShaderBuilder;
-
-        virtual SharedHandle<GTEShader> compileShaderSource(TStrRef src,Shader::Type ty) = 0;
     public:
         /** 
         @brief Creates an Instance of the Omega Graphics Engine  

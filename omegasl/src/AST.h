@@ -35,6 +35,9 @@ namespace omegasl {
             DECLARE_BUILTIN_TYPE(int_type);
             DECLARE_BUILTIN_TYPE(uint_type);
             DECLARE_BUILTIN_TYPE(float_type);
+            DECLARE_BUILTIN_TYPE(float2_type);
+            DECLARE_BUILTIN_TYPE(float3_type);
+            DECLARE_BUILTIN_TYPE(float4_type);
 
             DECLARE_BUILTIN_TYPE(buffer_type);
             DECLARE_BUILTIN_TYPE(texture1d_type);
@@ -59,7 +62,7 @@ namespace omegasl {
         /// and retrieving StructDecls used in a ShaderDecl
         class SemFrontend {
         public:
-            virtual void getStructsInShaderDecl(ShaderDecl *shaderDecl,std::vector<StructDecl *> & out) = 0;
+            virtual void getStructsInShaderDecl(ShaderDecl *shaderDecl,std::vector<std::string> & out) = 0;
             /** @brief Retrieves the underlying Type associated with this TypeExpr
              * @param expr The TypeExpr to evalutate.
              * @returns Type **/
@@ -82,6 +85,12 @@ namespace omegasl {
             size_t registerNumber;
         };
 
+        struct AttributedFieldDecl {
+            TypeExpr *typeExpr;
+            OmegaCommon::String name;
+            std::optional<OmegaCommon::String> attributeName;
+        };
+
         struct VarDecl : public Decl {
             TypeExpr *typeExpr;
             struct Spec {
@@ -100,13 +109,13 @@ namespace omegasl {
         struct StructDecl : public Decl {
             OmegaCommon::String name;
             bool internal;
-            std::vector<VarDecl *> fields;
+            std::vector<AttributedFieldDecl> fields;
         };
 
         /// @brief Declares a Function
         struct FuncDecl : public Decl {
             OmegaCommon::String name;
-            OmegaCommon::Map<OmegaCommon::String,TypeExpr *> params;
+            OmegaCommon::Vector<AttributedFieldDecl> params;
             TypeExpr *returnType;
         };
 
@@ -172,6 +181,15 @@ namespace omegasl {
             OmegaCommon::String op;
             Expr *lhs;
             Expr *rhs;
+        };
+
+        struct PointerExpr : public Expr {
+            typedef enum : int {
+                AddressOf,
+                Dereference
+            } Type;
+            Type type;
+            Expr *expr;
         };
 
     }

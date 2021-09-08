@@ -5,6 +5,7 @@ namespace omegasl {
 
     struct SemContext {
         OmegaCommon::Vector<ast::Type *> typeMap;
+        OmegaCommon::Map<OmegaCommon::String,ast::ShaderDecl *> shaderDeclContextTypeMap;
     };
 
     /// @brief Impl of Semantics Provider.
@@ -19,12 +20,18 @@ namespace omegasl {
         explicit Sem():
         builtinsTypeMap({
             ast::builtins::int_type,
+            ast::builtins::uint_type,
+
             ast::builtins::float_type,
+            ast::builtins::float2_type,
+            ast::builtins::float3_type,
+            ast::builtins::float4_type,
+
             ast::builtins::uint_type}),currentContext(nullptr){
 
         };
 
-        void getStructsInShaderDecl(ast::ShaderDecl *shaderDecl, std::vector<ast::StructDecl *> &out) override {
+        void getStructsInShaderDecl(ast::ShaderDecl *shaderDecl, std::vector<std::string> &out) override {
 
         }
 
@@ -34,6 +41,11 @@ namespace omegasl {
 
         void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc){
             currentContext->typeMap.push_back(new ast::Type {name,loc});
+        }
+
+        void addTypeToCurrentContextWithShaderDeclContext(OmegaCommon::StrRef name, ast::Scope *loc,ast::ShaderDecl *shaderDeclContext){
+            addTypeToCurrentContext(name,loc);
+            currentContext->shaderDeclContextTypeMap.insert(std::make_pair(name,shaderDeclContext));
         }
 
         ast::Type * resolveTypeWithExpr(ast::TypeExpr *expr) override {
@@ -126,10 +138,72 @@ namespace omegasl {
         if(t.type == TOK_KW){
             /// Parse Struct
             if(t.str == KW_STRUCT && node == nullptr){
+                auto _decl = new ast::StructDecl();
+                _decl->type = STRUCT_DECL;
+                _decl->internal = false;
+                t = lexer->nextTok();
+                if(t.type != TOK_ID){
+                    // Expected ID.
+                }
+                _decl->name = t.str;
 
+                if(t.type == TOK_KW){
+                    if(t.str != KW_INTERNAL){
+                        // Expected No Keyword or Internal
+                    }
+                    _decl->internal = true;
+                    t = lexer->nextTok();
+                }
+
+                if(t.type == TOK_LBRACE){
+                    t = lexer->nextTok();
+                    while(t.type != TOK_RBRACE){
+                        auto var_ty = buildTypeRef(t);
+                        if(!var_ty){
+                            return nullptr;
+                        }
+                        t = lexer->nextTok();
+                        if(t.type != TOK_ID){
+                            /// ERROR!
+                            return nullptr;
+                        }
+                        auto var_id = t.str;
+                        t = lexer->nextTok();
+                        if(t.type == TOK_COLON){
+                            t = lexer->nextTok();
+                            if(t.type != TOK_ID){
+                                /// ERROR!
+                                return nullptr;
+                            }
+                            _decl->fields.push_back({var_ty,var_id,t.str});
+                        }
+                        else {
+                            _decl->fields.push_back({var_ty,var_id,nullptr});
+                        }
+
+                        if(t.type != TOK_SEMICOLON){
+                            /// Error. Expected Semicolon.
+                            return nullptr;
+                        }
+                        t = lexer->nextTok();
+                    }
+
+                    t = lexer->nextTok();
+
+                    if(t.type != TOK_SEMICOLON){
+                        /// Error. Expected Semicolon.
+                    }
+                    else {
+                        _decl->scope = ast::builtins::global_scope;
+                        return _decl;
+                    }
+                }
+                else {
+                    /// Error Unexpected Token
+                }
             }
             else if(t.str == KW_STRUCT) {
-                // Error . Struct cannot have resource properties.
+                // Error . Struct cannot have a resource map.
             }
 
             if(node == nullptr){
@@ -152,7 +226,7 @@ namespace omegasl {
             else {
                 /// TODO: Error! Unexpected Keyword!
             }
-
+            t = lexer->nextTok();
         }
 
 
@@ -181,6 +255,41 @@ namespace omegasl {
 
             funcDecl->name = id_for_decl;
             funcDecl->returnType = ty_for_decl;
+            t = lexer->nextTok();
+
+            while(t.type != TOK_RPAREN){
+                auto var_ty = buildTypeRef(t);
+                t = lexer->nextTok();
+                if(t.type != TOK_ID){
+                    /// ERROR!
+                    return nullptr;
+                }
+
+                auto var_id = t.str;
+
+                t = lexer->nextTok();
+                if(t.type == TOK_COLON){
+                    t = lexer->nextTok();
+                    if(t.type != TOK_ID){
+                        // Error!
+                        return nullptr;
+                    }
+
+                    funcDecl->params.push_back({var_ty,var_id,t.str});
+                    t = lexer->nextTok();
+                }
+                else {
+                    funcDecl->params.push_back({var_ty,var_id,nullptr});
+                }
+
+                if(t.type == TOK_COMMA){
+                    t = lexer->nextTok();
+                    if(t.type == TOK_RPAREN){
+                        /// Error; Unexpected TOken.
+                        return nullptr;
+                    }
+                }
+            }
 
         }
         else if(t.type == TOK_COLON){
@@ -201,7 +310,7 @@ namespace omegasl {
         return tokenBuffer[tokIdx + 1];
     }
 
-    ast::Stmt *Parser::parseStmt(Tok &first_tok) {
+    ast::Stmt *Parser::parseStmt(Tok &first_tok,BlockParseContext & ctxt) {
 
         ast::Stmt *stmt;
         tokIdx = 0;
@@ -300,7 +409,7 @@ namespace omegasl {
 
     }
 
-    ast::Block *Parser::parseBlock(Tok & first_tok) {
+    ast::Block *Parser::parseBlock(Tok & first_tok,BlockParseContext & ctxt) {
         /// First_Tok is equal to LBracket;
         auto *block = new ast::Block();
         while((first_tok = lexer->nextTok()).type != TOK_RBRACKET){

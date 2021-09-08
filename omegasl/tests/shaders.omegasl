@@ -1,33 +1,10 @@
 
-
-struct MyVertex {
-   float2 pos;
-   float2 hello;
+struct VertexRaster internal {
+    float4 pos : Position
 };
 
-Texture2D texture : 0;
+vertex VertexRaster myFragment(uint v_id : VertexID){
 
-
-
-compute [1,1,1] [in texture]
-void myKernel(){
-
-}
-
-struct RasterData internal {
-    VertexCoord pos;
-    Color color;
-    TexCoord2D coord;
-};
-
-
-vertex
-RasterData myVertex(float2 pos,float2 texCoord){
-
-}
-
-fragment Color myFragment(RasterData in){
-    return in.color;
 }
 
 

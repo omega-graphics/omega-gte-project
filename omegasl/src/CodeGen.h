@@ -9,11 +9,41 @@ namespace omegasl {
     struct CodeGenOpts {
         bool emitHeaderOnly;
         OmegaCommon::StrRef outputDir;
+        OmegaCommon::StrRef tempDir;
     };
 
     class InterfaceGen;
 
     struct CodeGen {
+        struct ResourceStore {
+        private:
+            typedef std::vector<ast::ResourceDecl *> data ;
+            data resources;
+        public:
+            inline void add(ast::ResourceDecl * res){
+                resources.push_back(res);
+            }
+            inline data::iterator begin(){
+                return resources.begin();
+            }
+            inline data::iterator find(const OmegaCommon::StrRef & name){
+                using namespace OmegaCommon;
+                auto it = resources.begin();
+                for(;it != resources.end();it++){
+                    auto & item = *it;
+                    if(item->name == name){
+                        break;
+                    }
+                }
+                return it;
+            };
+            inline data::iterator end(){
+                return resources.end();
+            }
+        };
+
+        ResourceStore resourceStore;
+
         ast::SemFrontend *typeResolver;
         std::shared_ptr<InterfaceGen> interfaceGen;
         CodeGenOpts & opts;
@@ -50,8 +80,8 @@ namespace omegasl {
             out << "struct " << decl->name << " {" << std::endl;
             for(auto p : decl->fields){
                 out << "    ";
-                writeCrossType(p->typeExpr);
-                out << " " << p->spec.name;
+                writeCrossType(p.typeExpr);
+                out << " " << p.name;
                 out << ";" << std::endl;
             }
             out << "};" << std::endl;

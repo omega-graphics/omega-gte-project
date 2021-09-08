@@ -8,7 +8,12 @@ namespace omegasl::ast {
         Scope *global_scope = Scope::Create("global",nullptr);
         Type *void_type = new Type{KW_TY_VOID,global_scope};
         Type *int_type = new Type{KW_TY_INT,global_scope};
+
         Type *float_type = new Type{KW_TY_FLOAT,global_scope};
+        Type *float2_type = new Type{KW_TY_FLOAT2,global_scope};
+        Type *float3_type = new Type{KW_TY_FLOAT3,global_scope};
+        Type *float4_type = new Type{KW_TY_FLOAT4,global_scope};
+
         Type *uint_type = new Type{KW_TY_UINT,global_scope};
     }
 

@@ -1,7 +1,8 @@
 
 struct VertexRaster internal {
-    float4 pos : Position
+    float4 pos : Position;
 };
+
 
 vertex VertexRaster myFragment(uint v_id : VertexID){
 

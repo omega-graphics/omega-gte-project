@@ -112,6 +112,67 @@ else return {t,s};
                     }
                     PUSH_TOK(TOK_STR_LITERAL);
                 }
+
+                case '=' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '+' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '-' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '>' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '<' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '!' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
                 case '*' : {
                     PUSH_CHAR(c);
                     PUSH_TOK(TOK_ASTERISK);

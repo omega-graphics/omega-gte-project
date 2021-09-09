@@ -67,7 +67,20 @@ namespace omegasl {
                 }
                 case STRUCT_DECL : {
                     auto *_decl = (ast::StructDecl *)decl;
+                    std::ostringstream out;
+                    out << "struct " << _decl->name << " {" << std::endl;
+                    for(auto p : _decl->fields){
+                        out << "    ";
+                        writeTypeExpr(p.typeExpr,out);
+                        out << " " << p.name;
+                        if(p.attributeName.has_value()){
+                            out << "[[" << p.attributeName.value() << "]]";
+                        }
+                        out << ";" << std::endl;
+                    }
+                    out << "};" << std::endl;
 
+                    generatedStructs.insert(std::make_pair(_decl->name,out.str()));
                     break;
                 }
                 case SHADER_DECL : {
@@ -76,7 +89,7 @@ namespace omegasl {
                     shaderOut << defaultHeaders;
 
                     std::vector<std::string> used_type_list;
-                    typeResolver->getStructsInShaderDecl(_decl,used_type_list);
+                    typeResolver->getStructsInFuncDecl(_decl,used_type_list);
 
                     if(!used_type_list.empty()){
                         for(auto & t : used_type_list){
@@ -111,14 +124,6 @@ namespace omegasl {
                         if(p.attributeName.has_value()){
                             shaderOut << "[[";
                             if(p.attributeName == ATTRIBUTE_VERTEX_ID){
-                                if(_decl->shaderType != ast::ShaderDecl::Vertex){
-                                    std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " attribute on a non vertex function param.";
-                                    return;
-                                }
-                                if(_decl->params.size() > 1){
-                                    std::cout << "Cannot declared more than one param on a vertex function if " << ATTRIBUTE_VERTEX_ID << " is a provided.";
-                                    return;
-                                }
                                 shaderOut << "vertex_id";
                             }
                             shaderOut << "]]";
@@ -141,10 +146,7 @@ namespace omegasl {
                 out << "    " << std::flush;
                 writeTypeExpr(p.typeExpr,out);
                 out << " " << p.name << " " << std::flush;
-//                if(p->spec.initializer.has_value()){
-//                    out << "= " << std::flush;
-//                    writeExpr(p->spec.initializer.value(),out);
-//                }
+//
                 out << ";" << std::endl;
             }
             out << "};" << std::endl;

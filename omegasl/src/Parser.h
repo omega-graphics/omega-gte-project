@@ -29,16 +29,15 @@ namespace omegasl {
         struct BlockParseContext {
             ast::Scope *parentScope;
             bool inShaderContext;
-            ast::ShaderDecl *shaderDecl;
         };
 
         ast::Block *parseBlock(Tok & first_tok,BlockParseContext & ctxt);
 
-        bool parseObjectExpr(Tok &first_tok,ast::Expr **expr);
-        bool parseArgsExpr(Tok &first_tok,Tok & second_tok,ast::Expr **expr);
-        bool parseOpExpr(Tok &first_tok,Tok & second_tok,ast::Expr **expr);
+        bool parseObjectExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
+        bool parseArgsExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
+        bool parseOpExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
 
-        ast::Expr *parseExpr(Tok &first_tok,Tok &second_tok,BlockParseContext & ctxt);
+        ast::Expr *parseExpr(Tok &first_tok,ast::Scope *parentScope);
         ast::Decl *parseGenericDecl(Tok &first_tok,BlockParseContext & ctxt);
         ast::Stmt *parseStmt(Tok &first_tok,BlockParseContext & ctxt);
         ast::Decl *parseGlobalDecl();

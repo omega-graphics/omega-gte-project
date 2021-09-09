@@ -24,7 +24,8 @@ namespace omegasl {
         struct Type {
             OmegaCommon::String name;
             Scope *declaredScope;
-//            std::vector<std::string> typeArgs;
+            bool builtin = true;
+//           std::vector<std::string> typeArgs;
         };
 
         namespace builtins {
@@ -54,7 +55,7 @@ namespace omegasl {
             bool compare(TypeExpr *other);
         };
 
-        struct ShaderDecl;
+        struct FuncDecl;
         struct StructDecl;
 
         /// @brief Provides useful semantics info about AST Nodes.
@@ -62,7 +63,7 @@ namespace omegasl {
         /// and retrieving StructDecls used in a ShaderDecl
         class SemFrontend {
         public:
-            virtual void getStructsInShaderDecl(ShaderDecl *shaderDecl,std::vector<std::string> & out) = 0;
+            virtual void getStructsInFuncDecl(FuncDecl *funcDecl,std::vector<std::string> & out) = 0;
             /** @brief Retrieves the underlying Type associated with this TypeExpr
              * @param expr The TypeExpr to evalutate.
              * @returns Type **/
@@ -117,6 +118,7 @@ namespace omegasl {
             OmegaCommon::String name;
             OmegaCommon::Vector<AttributedFieldDecl> params;
             TypeExpr *returnType;
+            std::unique_ptr<ast::Block> block;
         };
 
         /// @brief Declares a Shader.
@@ -177,6 +179,12 @@ namespace omegasl {
             std::vector<Expr *> args;
         };
 
+        struct UnaryOpExpr : public Expr {
+            bool isPrefix;
+            OmegaCommon::String op;
+            Expr *expr;
+        };
+
         struct BinaryExpr : public Expr {
             OmegaCommon::String op;
             Expr *lhs;
@@ -188,7 +196,7 @@ namespace omegasl {
                 AddressOf,
                 Dereference
             } Type;
-            Type type;
+            Type ptType;
             Expr *expr;
         };
 

@@ -22,13 +22,14 @@ typedef int ASTType;
 #define MEMBER_EXPR (0x005 | EXPR)
 #define BINARY_EXPR (0x006 | EXPR)
 #define POINTER_EXPR (0x007 | EXPR)
+#define UNARY_EXPR (0x008 | EXPR)
 
 //Internal Shader Attributes
 #define ATTRIBUTE_VERTEX_ID "VertexID"
-#define ATTRIBUTE_POSITION 0x02 "Position"
-#define ATTRIBUTE_COLOR 0x03 "Color"
-#define ATTRIBUTE_GLOBALTHREAD_ID 0x04 "GlobalThreadID"
-#define ATTRIBUTE_THREADGROUP_ID 0x05 "ThreadGroupID"
-#define ATTRIBUTE_LOCALTHREAD_ID 0x06 "LocalThreadID"
+#define ATTRIBUTE_POSITION "Position"
+#define ATTRIBUTE_COLOR "Color"
+#define ATTRIBUTE_GLOBALTHREAD_ID "GlobalThreadID"
+#define ATTRIBUTE_THREADGROUP_ID "ThreadGroupID"
+#define ATTRIBUTE_LOCALTHREAD_ID "LocalThreadID"
 
 #endif

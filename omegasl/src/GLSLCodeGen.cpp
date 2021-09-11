@@ -12,6 +12,9 @@ namespace omegasl {
         void writeNativeStructDecl(ast::StructDecl *decl, std::ostream &out) override {
 
         }
+        void generateBlock(ast::Block &block) override {
+
+        }
         void generateDecl(ast::Decl *decl) override{
 
         }

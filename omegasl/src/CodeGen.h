@@ -51,6 +51,7 @@ namespace omegasl {
         void setTypeResolver(ast::SemFrontend *_typeResolver){ typeResolver = _typeResolver;}
         virtual void generateDecl(ast::Decl *decl) = 0;
         virtual void generateExpr(ast::Expr *expr) = 0;
+        virtual void generateBlock(ast::Block &block) = 0;
         virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
         virtual void compileShader(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & name,const OmegaCommon::FS::Path & path,const OmegaCommon::FS::Path & outputPath) = 0;
     };

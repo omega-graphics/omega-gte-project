@@ -52,14 +52,69 @@ namespace omegasl {
                 out << " *";
             }
         }
-        void writeExpr(ast::Expr *expr,std::ostream & out){
-
+        inline void writeAttributeName(OmegaCommon::StrRef attributeName,std::ostream & out){
+            if(attributeName == ATTRIBUTE_POSITION){
+                out << "position";
+            }
+            else if(attributeName == ATTRIBUTE_VERTEX_ID){
+                out << "vertex_id";
+            }
         }
         void generateExpr(ast::Expr *expr) override {
-            writeExpr(expr,shaderOut);
+            switch (expr->type) {
+                case ID_EXPR : {
+                    auto _expr = (ast::IdExpr *)expr;
+                    shaderOut << _expr->id;
+                    break;
+                }
+            }
+        }
+    private:
+        unsigned level_count;
+    public:
+        void generateBlock(ast::Block &block) override {
+
+            for(unsigned l = level_count;l != 0;l--){
+                shaderOut << "    ";
+            }
+            shaderOut << "{" << std::endl;
+            ++level_count;
+
+            for(auto stmt : block.body){
+                for(unsigned l = level_count;l != 0;l--){
+                    shaderOut << "    ";
+                }
+                if(stmt->type & DECL){
+                    generateDecl((ast::Decl *)stmt);
+                    shaderOut << ";" << std::endl;
+                }
+                else {
+                    generateExpr((ast::Expr *)stmt);
+                    shaderOut << ";" << std::endl;
+                }
+            }
+
+            --level_count;
+            shaderOut << "}" << std::endl;
         }
         void generateDecl(ast::Decl *decl) override {
             switch (decl->type) {
+                case VAR_DECL : {
+                    auto *_decl = (ast::VarDecl *)decl;
+                    writeTypeExpr(_decl->typeExpr,shaderOut);
+                    shaderOut << " " << _decl->spec.name;
+                    if(_decl->spec.initializer.has_value()){
+                        shaderOut << " = ";
+                        generateExpr(_decl->spec.initializer.value());
+                    }
+                    break;
+                }
+                case RETURN_DECL : {
+                    auto *_decl = (ast::ReturnDecl *)decl;
+                    shaderOut << "return ";
+                    generateExpr(_decl->expr);
+                    break;
+                }
                 case RESOURCE_DECL : {
                     auto *_decl = (ast::ResourceDecl *)decl;
                     resourceStore.add(_decl);
@@ -74,7 +129,9 @@ namespace omegasl {
                         writeTypeExpr(p.typeExpr,out);
                         out << " " << p.name;
                         if(p.attributeName.has_value()){
-                            out << "[[" << p.attributeName.value() << "]]";
+                            out << "[[";
+                            writeAttributeName(p.attributeName.value(),out);
+                            out << "]]";
                         }
                         out << ";" << std::endl;
                     }
@@ -84,6 +141,7 @@ namespace omegasl {
                     break;
                 }
                 case SHADER_DECL : {
+                    level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
                     shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal",std::ios::out);
                     shaderOut << defaultHeaders;
@@ -123,14 +181,13 @@ namespace omegasl {
                         shaderOut << " " << p.name << " ";
                         if(p.attributeName.has_value()){
                             shaderOut << "[[";
-                            if(p.attributeName == ATTRIBUTE_VERTEX_ID){
-                                shaderOut << "vertex_id";
-                            }
+                            writeAttributeName(p.attributeName.value(),shaderOut);
                             shaderOut << "]]";
                         }
                     }
                     shaderOut << ")";
 
+                    generateBlock(*_decl->block);
 
                     shaderOut.close();
                     break;

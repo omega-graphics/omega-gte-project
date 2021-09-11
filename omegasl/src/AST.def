@@ -3,26 +3,27 @@
 
 typedef int ASTType;
 
-#define DECL 0x0
-#define EXPR 0x1
+#define DECL 0x000A
+#define EXPR 0x000F
 
-#define FUNC_DECL (0x001 | DECL)
-#define SHADER_DECL (0x002 | DECL)
-#define RESOURCE_DECL (0x003 | DECL)
-#define VAR_DECL (0x004 | DECL)
-#define IF_DECL (0x005 | DECL)
-#define ELSE_DECL (0x006 | DECL)
-#define ELSEIF_DECL (0x007 | DECL)
-#define STRUCT_DECL (0x008 | DECL)
+#define FUNC_DECL (0x0010 | DECL)
+#define SHADER_DECL (0x0020 | DECL)
+#define RESOURCE_DECL (0x0030 | DECL)
+#define VAR_DECL (0x0040 | DECL)
+#define IF_DECL (0x0050 | DECL)
+#define ELSE_DECL (0x0060 | DECL)
+#define ELSEIF_DECL (0x0070 | DECL)
+#define STRUCT_DECL (0x0080 | DECL)
+#define RETURN_DECL (0x0090 | DECL)
 
-#define ID_EXPR (0x001 | EXPR)
-#define LITERAL_EXPR (0x002 | EXPR)
-#define ARRAY_EXPR (0x003 | EXPR)
-#define CALL_EXPR (0x004 | EXPR)
-#define MEMBER_EXPR (0x005 | EXPR)
-#define BINARY_EXPR (0x006 | EXPR)
-#define POINTER_EXPR (0x007 | EXPR)
-#define UNARY_EXPR (0x008 | EXPR)
+#define ID_EXPR (0x0010 | EXPR)
+#define LITERAL_EXPR (0x0020 | EXPR)
+#define ARRAY_EXPR (0x0030 | EXPR)
+#define CALL_EXPR (0x0040 | EXPR)
+#define MEMBER_EXPR (0x0050 | EXPR)
+#define BINARY_EXPR (0x0060 | EXPR)
+#define POINTER_EXPR (0x0070 | EXPR)
+#define UNARY_EXPR (0x0080 | EXPR)
 
 //Internal Shader Attributes
 #define ATTRIBUTE_VERTEX_ID "VertexID"

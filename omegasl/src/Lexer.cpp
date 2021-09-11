@@ -29,6 +29,8 @@ namespace omegasl {
         return (subject == KW_TY_VOID) ||
         (subject == KW_TY_FLOAT) ||
         (subject == KW_TY_FLOAT2) ||
+        (subject == KW_TY_FLOAT3) ||
+        (subject == KW_TY_FLOAT4) ||
         (subject == KW_TY_INT) ||
         (subject == KW_TY_UINT);
     }
@@ -71,6 +73,9 @@ else return {t,s};
         if(c != EOF){
             switch (c) {
                 case ' ' : {
+                    return nextTok();
+                }
+                case '\t' : {
                     return nextTok();
                 }
                 case '\n' : {

@@ -25,7 +25,7 @@ namespace omegasl {
             OmegaCommon::String name;
             Scope *declaredScope;
             bool builtin = true;
-//           std::vector<std::string> typeArgs;
+            std::vector<std::string> typeArgs;
         };
 
         namespace builtins {
@@ -52,6 +52,7 @@ namespace omegasl {
             bool pointer;
 
             static TypeExpr *Create(OmegaCommon::StrRef name, bool pointer = false);
+            static TypeExpr *Create(Type * type, bool pointer = false);
             bool compare(TypeExpr *other);
         };
 
@@ -98,6 +99,10 @@ namespace omegasl {
                 OmegaCommon::String name;
                 std::optional<ast::Expr *> initializer;
             } spec;
+        };
+
+        struct ReturnDecl : public Decl {
+            Expr *expr;
         };
 
         struct Block {

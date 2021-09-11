@@ -3,9 +3,9 @@ struct VertexRaster internal {
     float4 pos : Position;
 };
 
-
-vertex VertexRaster myFragment(uint v_id : VertexID){
-
+vertex VertexRaster myVertex(float3 pos,float4 color){
+     VertexRaster st;
+     return st;
 }
 
 

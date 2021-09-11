@@ -13,6 +13,9 @@ namespace omegasl {
         void generateExpr(ast::Expr *expr) override {
 
         }
+        void generateBlock(ast::Block &block) override {
+
+        }
         void generateDecl(ast::Decl *decl) override {
             switch (decl->type) {
                 case STRUCT_DECL : {

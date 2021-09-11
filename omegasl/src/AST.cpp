@@ -6,6 +6,7 @@ namespace omegasl::ast {
 
     namespace builtins {
         Scope *global_scope = Scope::Create("global",nullptr);
+
         Type *void_type = new Type{KW_TY_VOID,global_scope};
         Type *int_type = new Type{KW_TY_INT,global_scope};
 
@@ -15,6 +16,11 @@ namespace omegasl::ast {
         Type *float4_type = new Type{KW_TY_FLOAT4,global_scope};
 
         Type *uint_type = new Type{KW_TY_UINT,global_scope};
+
+        auto *buffer_type = new Type{KW_TY_BUFFER,global_scope,true,{"type"}};
+        auto *texture1d_type = new Type{KW_TY_TEXTURE1D,global_scope};
+        auto *texture2d_type = new Type{KW_TY_TEXTURE2D,global_scope};
+        auto *texture3d_type = new Type{KW_TY_TEXTURE3D,global_scope};
     }
 
     Scope *Scope::Create(OmegaCommon::StrRef name, Scope *parent) {
@@ -56,6 +62,10 @@ namespace omegasl::ast {
 
     TypeExpr *TypeExpr::Create(OmegaCommon::StrRef name, bool pointer) {
         return new TypeExpr{name, pointer};
+    }
+
+    TypeExpr *TypeExpr::Create(Type *type, bool pointer) {
+        return new TypeExpr{type->name, pointer};
     }
 
     bool TypeExpr::compare(TypeExpr *other) {

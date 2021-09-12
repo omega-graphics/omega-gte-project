@@ -1,5 +1,5 @@
 #ifndef OMEGASL_TOKS_DEF
-#define  OMEGASL_TOKS_DEF
+#define OMEGASL_TOKS_DEF
 
 namespace omegasl {
     typedef int TokType;
@@ -34,6 +34,21 @@ namespace omegasl {
 
 #define TOK_EOF 0xFF
 
+#define OP_EQUAL OP("=")
+#define OP_ISEQUAL OP("==")
+#define OP_PLUS OP("+")
+#define OP_PLUSPLUS OP("++")
+#define OP_PLUSEQUAL OP("+=")
+#define OP_MINUS OP("-")
+#define OP_MINUSMINUS OP("--")
+#define OP_MINUSEQUAL OP("-=")
+#define OP_GREATER OP(">")
+#define OP_GREATEREQUAL OP(">=")
+#define OP_LESS OP("<")
+#define OP_LESSEQUAL OP("<=")
+#define OP_NOT OP("!")
+#define OP_NOTEQUAL OP("!=")
+
 
 #define KW_VERTEX KW("vertex")
 #define KW_FRAGMENT KW("fragment")
@@ -45,26 +60,26 @@ namespace omegasl {
 #define KW_STRUCT KW("struct")
 #define KW_INTERNAL KW("internal")
 #define KW_RETURN KW("return")
-
 #define KW_IN KW("in")
 #define KW_OUT KW("out")
 #define KW_INOUT KW("inout")
 
+
 #define KW_TY_VOID KW_TY("void")
-
 #define KW_TY_INT KW_TY("int")
-
 #define KW_TY_FLOAT KW_TY("float")
 #define KW_TY_FLOAT2 KW_TY("float2")
 #define KW_TY_FLOAT3 KW_TY("float3")
 #define KW_TY_FLOAT4 KW_TY("float4")
-
 #define KW_TY_DOUBLE KW_TY("double")
 #define KW_TY_DOUBLE2 KW_TY("double2")
 #define KW_TY_DOUBLE3 KW_TY("double3")
 #define KW_TY_DOUBLE4 KW_TY("double4")
-
 #define KW_TY_UINT KW_TY("uint")
+#define KW_TY_BUFFER KW_TY("buffer")
+#define KW_TY_TEXTURE1D KW_TY("texture1d")
+#define KW_TY_TEXTURE2D KW_TY("texture2d")
+#define KW_TY_TEXTURE3D KW_TY("texture3d")
 
 
 #endif // OMEGASL_TOKS_DEF

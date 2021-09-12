@@ -24,7 +24,8 @@ namespace omegasl {
         struct Type {
             OmegaCommon::String name;
             Scope *declaredScope;
-//            std::vector<std::string> typeArgs;
+            bool builtin = true;
+            std::vector<std::string> typeArgs;
         };
 
         namespace builtins {
@@ -35,6 +36,9 @@ namespace omegasl {
             DECLARE_BUILTIN_TYPE(int_type);
             DECLARE_BUILTIN_TYPE(uint_type);
             DECLARE_BUILTIN_TYPE(float_type);
+            DECLARE_BUILTIN_TYPE(float2_type);
+            DECLARE_BUILTIN_TYPE(float3_type);
+            DECLARE_BUILTIN_TYPE(float4_type);
 
             DECLARE_BUILTIN_TYPE(buffer_type);
             DECLARE_BUILTIN_TYPE(texture1d_type);
@@ -48,10 +52,11 @@ namespace omegasl {
             bool pointer;
 
             static TypeExpr *Create(OmegaCommon::StrRef name, bool pointer = false);
+            static TypeExpr *Create(Type * type, bool pointer = false);
             bool compare(TypeExpr *other);
         };
 
-        struct ShaderDecl;
+        struct FuncDecl;
         struct StructDecl;
 
         /// @brief Provides useful semantics info about AST Nodes.
@@ -59,7 +64,7 @@ namespace omegasl {
         /// and retrieving StructDecls used in a ShaderDecl
         class SemFrontend {
         public:
-            virtual void getStructsInShaderDecl(ShaderDecl *shaderDecl,std::vector<StructDecl *> & out) = 0;
+            virtual void getStructsInFuncDecl(FuncDecl *funcDecl,std::vector<std::string> & out) = 0;
             /** @brief Retrieves the underlying Type associated with this TypeExpr
              * @param expr The TypeExpr to evalutate.
              * @returns Type **/
@@ -82,12 +87,22 @@ namespace omegasl {
             size_t registerNumber;
         };
 
+        struct AttributedFieldDecl {
+            TypeExpr *typeExpr;
+            OmegaCommon::String name;
+            std::optional<OmegaCommon::String> attributeName;
+        };
+
         struct VarDecl : public Decl {
             TypeExpr *typeExpr;
             struct Spec {
                 OmegaCommon::String name;
                 std::optional<ast::Expr *> initializer;
             } spec;
+        };
+
+        struct ReturnDecl : public Decl {
+            Expr *expr;
         };
 
         struct Block {
@@ -100,14 +115,15 @@ namespace omegasl {
         struct StructDecl : public Decl {
             OmegaCommon::String name;
             bool internal;
-            std::vector<VarDecl *> fields;
+            std::vector<AttributedFieldDecl> fields;
         };
 
         /// @brief Declares a Function
         struct FuncDecl : public Decl {
             OmegaCommon::String name;
-            OmegaCommon::Map<OmegaCommon::String,TypeExpr *> params;
+            OmegaCommon::Vector<AttributedFieldDecl> params;
             TypeExpr *returnType;
+            std::unique_ptr<ast::Block> block;
         };
 
         /// @brief Declares a Shader.
@@ -168,10 +184,25 @@ namespace omegasl {
             std::vector<Expr *> args;
         };
 
+        struct UnaryOpExpr : public Expr {
+            bool isPrefix;
+            OmegaCommon::String op;
+            Expr *expr;
+        };
+
         struct BinaryExpr : public Expr {
             OmegaCommon::String op;
             Expr *lhs;
             Expr *rhs;
+        };
+
+        struct PointerExpr : public Expr {
+            typedef enum : int {
+                AddressOf,
+                Dereference
+            } Type;
+            Type ptType;
+            Expr *expr;
         };
 
     }

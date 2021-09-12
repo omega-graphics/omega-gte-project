@@ -1,10 +1,30 @@
 #include "Parser.h"
 #include "CodeGen.h"
 
+
 namespace omegasl {
+
+    enum class AttributeContext : int {
+        VertexShaderArgument,
+        FragmentShaderArgument,
+        ComputeShaderArgument,
+        StructField
+    };
+
+    inline bool isValidAttributeInContext(OmegaCommon::StrRef subject,AttributeContext context){
+        return (subject == ATTRIBUTE_VERTEX_ID) || (subject == ATTRIBUTE_COLOR) || (subject == ATTRIBUTE_POSITION);
+    }
 
     struct SemContext {
         OmegaCommon::Vector<ast::Type *> typeMap;
+
+        OmegaCommon::Map<ast::FuncDecl *,OmegaCommon::Vector<OmegaCommon::String>> funcDeclContextTypeMap;
+
+        OmegaCommon::Vector<OmegaCommon::String> shaders;
+
+        OmegaCommon::Vector<OmegaCommon::String> funcs;
+
+        OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> variableMap;
     };
 
     /// @brief Impl of Semantics Provider.
@@ -19,13 +39,21 @@ namespace omegasl {
         explicit Sem():
         builtinsTypeMap({
             ast::builtins::int_type,
+            ast::builtins::uint_type,
+
             ast::builtins::float_type,
-            ast::builtins::uint_type}),currentContext(nullptr){
+            ast::builtins::float2_type,
+            ast::builtins::float3_type,
+            ast::builtins::float4_type}),currentContext(nullptr){
 
         };
 
-        void getStructsInShaderDecl(ast::ShaderDecl *shaderDecl, std::vector<ast::StructDecl *> &out) override {
-
+        void getStructsInFuncDecl(ast::FuncDecl *funcDecl, std::vector<std::string> &out) override {
+            for(auto & t : currentContext->funcDeclContextTypeMap){
+                if(t.first == funcDecl){
+                    out = t.second;
+                }
+            }
         }
 
         void setSemContext(std::shared_ptr<SemContext> & _currentContext){
@@ -33,7 +61,30 @@ namespace omegasl {
         }
 
         void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc){
-            currentContext->typeMap.push_back(new ast::Type {name,loc});
+            currentContext->typeMap.push_back(new ast::Type {name,loc,false});
+        }
+
+        bool hasTypeNameInFuncDeclContext(OmegaCommon::StrRef name,ast::FuncDecl *funcDecl){
+            auto decl_res = currentContext->funcDeclContextTypeMap.find(funcDecl);
+
+            auto name_it = decl_res->second.begin();
+            for(;name_it != decl_res->second.end();name_it++){
+                if(name == *name_it){
+                    break;
+                }
+            }
+            return name_it != decl_res->second.end();
+        }
+
+        void addTypeNameToFuncDeclContext(OmegaCommon::StrRef name,ast::FuncDecl *funcDecl){
+            auto type_map_context = currentContext->funcDeclContextTypeMap.find(funcDecl);
+            if(type_map_context == currentContext->funcDeclContextTypeMap.end()){
+                currentContext->funcDeclContextTypeMap.insert(std::make_pair(funcDecl,OmegaCommon::Vector<OmegaCommon::String>{name}));
+            }
+            else {
+                type_map_context->second.push_back(name);
+            }
+
         }
 
         ast::Type * resolveTypeWithExpr(ast::TypeExpr *expr) override {
@@ -49,13 +100,244 @@ namespace omegasl {
             auto type_it = currentContext->typeMap.begin();
             for(;type_it != currentContext->typeMap.end();type_it++){
                 auto & t = *type_it;
+//                std::cout << "Struct Type:" << t->name << std::endl;
                 if(t->name == expr->name){
                     return t;
                 }
             }
 
+//            std::cout << "Unknown Type:" << expr->name << std::endl;
+
             return nullptr;
         };
+
+        ast::TypeExpr *performSemForDecl(ast::Decl * decl,ast::FuncDecl *funcContext){
+            auto ret = ast::TypeExpr::Create(KW_TY_VOID);
+            switch (decl->type) {
+                case VAR_DECL : {
+                    auto _decl = (ast::VarDecl *)decl;
+                    auto type_res = resolveTypeWithExpr(_decl->typeExpr);
+                    if(type_res == nullptr){
+                        return nullptr;
+                    }
+
+                    OmegaCommon::StrRef t_name = type_res->name;
+
+                    if(!type_res->builtin) {
+                        if(!hasTypeNameInFuncDeclContext(t_name,funcContext)){
+                            addTypeNameToFuncDeclContext(t_name,funcContext);
+                        }
+                    }
+
+                    currentContext->variableMap.insert(std::make_pair(_decl->spec.name,_decl->typeExpr));
+                    break;
+                }
+                case RETURN_DECL : {
+                    auto _decl = (ast::ReturnDecl *)decl;
+                    return performSemForExpr(_decl->expr,funcContext);
+                }
+            }
+            return ret;
+        }
+
+        ast::TypeExpr *performSemForExpr(ast::Expr * expr,ast::FuncDecl *funcContext){
+            auto ret = ast::TypeExpr::Create(KW_TY_VOID);
+            if(expr->type == ID_EXPR){
+                auto _expr = (ast::IdExpr *)expr;
+                auto _id_found = currentContext->variableMap.find(_expr->id);
+                if(_id_found == currentContext->variableMap.end()){
+                    std::cout << "Unknown Identifier: " << _expr->id << std::endl;
+                    return nullptr;
+                }
+                else {
+                    return _id_found->second;
+                }
+            }
+            else if(expr->type == LITERAL_EXPR){
+                auto _expr = (ast::LiteralExpr *)expr;
+                if(_expr->isInt()){
+                    return ast::TypeExpr::Create(ast::builtins::int_type);
+                }
+                else if(_expr->isUint()){
+                    return ast::TypeExpr::Create(ast::builtins::uint_type);
+                }
+            }
+            else if(expr->type == ARRAY_EXPR){
+                auto _expr = (ast::ArrayExpr *)expr;
+
+            }
+            return ret;
+        }
+
+        ast::TypeExpr * performSemForStmt(ast::Stmt *stmt,ast::FuncDecl *funcContext){
+            ast::TypeExpr *returnType = nullptr;
+
+            if(stmt->type & DECL){
+                returnType = performSemForDecl((ast::Decl *)stmt,funcContext);
+            }
+            else {
+                returnType = performSemForExpr((ast::Expr *)stmt,funcContext);
+            }
+
+            return returnType;
+        }
+
+        ast::TypeExpr * performSemForBlock(ast::Block &block,ast::FuncDecl *funcContext){
+
+            std::vector<ast::TypeExpr *> allTypes;
+
+            /// Assume void return if block is empty.
+            if(block.body.empty()){
+                allTypes.push_back(ast::TypeExpr::Create(KW_TY_VOID));
+            }
+            else {
+                for(auto s : block.body){
+                    auto res = performSemForStmt(s,funcContext);
+                    if(!res){
+                        std::cout << "Failed to perform sem on Block stmt" << std::endl;
+                        return nullptr;
+                    }
+
+                    if(s->type == RETURN_DECL){
+                        allTypes.push_back(res);
+                    }
+                }
+            }
+            /// Pick first type to check with all others.
+            auto picked_type = allTypes.front();
+            std::cout << "Picked Type:" << picked_type->name << std::endl;
+            if(allTypes.size() > 1) {
+                for(auto t_it = allTypes.begin() + 1;t_it != allTypes.end();++t_it){
+                    if(!picked_type->compare(*t_it)){
+                        std::cout << "In function return Context" << std::endl;
+                        return nullptr;
+                    }
+                }
+            }
+            return picked_type;
+        }
+
+        bool performSemForGlobalDecl(ast::Decl *decl){
+            switch (decl->type) {
+                case STRUCT_DECL : {
+                    auto *_decl = (ast::StructDecl *)decl;
+                    /// 1. Check TypeMap if type is defined with name already
+                    ast::TypeExpr *test_expr = ast::TypeExpr::Create(_decl->name);
+                    auto res = resolveTypeWithExpr(test_expr);
+                    if(res != nullptr){
+                        std::cout << _decl->name << " already is defined as a type." << std::endl;
+                        delete test_expr;
+                        return false;
+                    }
+                    delete test_expr;
+
+                    bool & isInternal = _decl->internal;
+                    /// 2. Check struct fields.
+                    /// TODO: Add struct field uniqueness check
+
+                    for(auto & f : _decl->fields){
+
+                        auto field_ty = resolveTypeWithExpr(f.typeExpr);
+                        if(field_ty == nullptr){
+                            return false;
+                        }
+
+                        if(f.attributeName.has_value()){
+                            if(!isInternal){
+                                std::cout << "In struct" << f.name << std::endl << "Cannot use attributes on fields in public structs" << std::endl;
+                                return false;
+                            }
+
+                            if(!isValidAttributeInContext(f.attributeName.value(),AttributeContext::StructField)){
+                                std::cout << "In struct" << f.name << std::endl << "Invalid attribute name `" << f.attributeName.value() << "` " << std::endl;
+                                return false;
+                            }
+                        }
+
+                    }
+
+                    /// 3. If all of the above checks succeed, add struct type to TypeMap.
+                    std::cout << "Adding Struct Type:" << _decl->name << std::endl;
+                    addTypeToCurrentContext(_decl->name,_decl->scope);
+                    break;
+                }
+                case SHADER_DECL : {
+                    auto *_decl = (ast::ShaderDecl *)decl;
+                    /// 1. Check if shader has been declared.
+
+                    auto findShader = [&](){
+                        bool f = false;
+                        for(OmegaCommon::StrRef s : currentContext->shaders){
+                            if(s == _decl->name){
+                                f = true;
+                                break;
+                            }
+                        }
+                        return f;
+                    };
+
+                    auto found = findShader();
+                    if(found){
+                        std::cout << "Shader " << _decl->name << " has already been declared." << std::endl;
+                        return false;
+                    }
+
+                    auto & shaderType = _decl->shaderType;
+
+                    /// 2. Check shader params.
+                    /// TODO: Add param uniqueness check
+                    for(auto & p : _decl->params){
+                        auto p_type = resolveTypeWithExpr(p.typeExpr);
+                        if(p_type == nullptr){
+                            return false;
+                        }
+                        if(p.attributeName.has_value()){
+                            if(p.name == ATTRIBUTE_VERTEX_ID){
+                                if(shaderType != ast::ShaderDecl::Vertex){
+                                    std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " in this context." << std::endl;
+                                    return false;
+                                }
+                                else if(_decl->params.size() > 1){
+                                    std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " in this context. (When using this attribute on a parameter, there may be only one parameter for the parent function.)" << std::endl;
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+
+                    /// 3. Check function block.
+                    auto eval_result = performSemForBlock(*_decl->block,_decl);
+
+                    if(eval_result == nullptr){
+                        return false;
+                    }
+
+                    /// 4. Check return types.
+                    if(!_decl->returnType->compare(eval_result)){
+                        std::cout << "In Function Return Type: Failed to match type." << std::endl;
+                        return false;
+                    }
+
+                    /// 5. Check returntype is struct type and add struct to shader context;
+                    auto t = resolveTypeWithExpr(eval_result);
+                    if(!t->builtin){
+                        if(!hasTypeNameInFuncDeclContext(t->name,_decl)){
+                            addTypeNameToFuncDeclContext(t->name,_decl);
+                        }
+                    }
+
+
+                    /// 6. Add shader to context
+                    currentContext->shaders.push_back(_decl->name);
+                    break;
+                }
+                default : {
+                    std::cout << "Cannot declare ast::Stmt of type:" << std::hex << decl->type << std::dec << std::endl;
+                    return false;
+                }
+            }
+            return true;
+        }
     };
 
     Parser::Parser(std::shared_ptr<CodeGen> &gen):
@@ -65,10 +347,10 @@ namespace omegasl {
         gen->setTypeResolver(sem.get());
     }
 
-    ast::TypeExpr *Parser::buildTypeRef(Tok &first_tok) {
+    ast::TypeExpr *Parser::buildTypeRef(Tok &first_tok,bool isPointer) {
 
         if(first_tok.type == TOK_ID || first_tok.type  == TOK_KW_TYPE){
-            return ast::TypeExpr::Create(first_tok.str);
+            return ast::TypeExpr::Create(first_tok.str,isPointer);
         }
         else {
             // ERROR
@@ -82,6 +364,7 @@ namespace omegasl {
 
         auto t = lexer->nextTok();
         if(t.type == TOK_EOF){
+            std::cout << "EOF" << std::endl;
             return nullptr;
         }
 
@@ -93,6 +376,8 @@ namespace omegasl {
             while((t = lexer->nextTok()).type != TOK_RBRACKET){
                 if(t.type != TOK_KW){
                     // error
+                    std::cout << "Expected KW" << std::endl;
+                    return nullptr;
                 }
 
                 ast::ShaderDecl::ResourceMapDesc mapDesc;
@@ -108,11 +393,15 @@ namespace omegasl {
                 }
                 else {
                     /// Error (Unexpected Keyword)
+                    std::cout << "UnExpected KW" << std::endl;
+                    return nullptr;
                 }
 
                 t = lexer->nextTok();
                 if(t.type != TOK_ID){
                     /// Error Expected Keyword
+                    std::cout << "Expected KW" << std::endl;
+                    return nullptr;
                 }
                 mapDesc.name = t.str;
                 _n->resourceMap.push_back(mapDesc);
@@ -126,10 +415,94 @@ namespace omegasl {
         if(t.type == TOK_KW){
             /// Parse Struct
             if(t.str == KW_STRUCT && node == nullptr){
+                auto _decl = new ast::StructDecl();
+                _decl->type = STRUCT_DECL;
+                _decl->internal = false;
+                t = lexer->nextTok();
+                if(t.type != TOK_ID){
+                    // Expected ID.
+                }
+                _decl->name = t.str;
 
+                t = lexer->nextTok();
+
+                if(t.type == TOK_KW){
+                    if(t.str != KW_INTERNAL){
+                        // Expected No Keyword or Internal
+                        std::cout << "Expected Internal Keyword or No Keyword" << std::endl;
+                        return nullptr;
+                    }
+                    _decl->internal = true;
+                    t = lexer->nextTok();
+                }
+
+                if(t.type == TOK_LBRACE){
+                    t = lexer->nextTok();
+                    while(t.type != TOK_RBRACE){
+                        auto _tok = t;
+                        t = lexer->nextTok();
+                        bool type_is_pointer = false;
+                        if(t.type == TOK_ASTERISK){
+                            type_is_pointer = true;
+                            t = lexer->nextTok();
+                        }
+
+                        auto var_ty = buildTypeRef(_tok,type_is_pointer);
+                        if(!var_ty){
+                            return nullptr;
+                        }
+
+                        if(t.type != TOK_ID){
+                            /// ERROR!
+                            std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                            return nullptr;
+                        }
+                        auto var_id = t.str;
+                        t = lexer->nextTok();
+                        if(t.type == TOK_COLON){
+                            t = lexer->nextTok();
+                            if(t.type != TOK_ID){
+                                /// ERROR!
+                                std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                                return nullptr;
+                            }
+                            _decl->fields.push_back({var_ty,var_id,t.str});
+                            t = lexer->nextTok();
+                        }
+                        else {
+                            _decl->fields.push_back({var_ty,var_id,nullptr});
+                        }
+
+                        if(t.type != TOK_SEMICOLON){
+                            /// Error. Expected Semicolon.
+                            std::cout << "Expected SemiColon" << std::endl;
+                            return nullptr;
+                        }
+                        t = lexer->nextTok();
+                    }
+
+                    t = lexer->nextTok();
+
+                    if(t.type != TOK_SEMICOLON){
+                        /// Error. Expected Semicolon.
+                        std::cout << "Expected Semicolon" << std::endl;
+                        return nullptr;
+                    }
+                    else {
+                        _decl->scope = ast::builtins::global_scope;
+                        return _decl;
+                    }
+                }
+                else {
+                    /// Error Unexpected Token
+                    std::cout << "Unexpected Token" << std::endl;
+                    return nullptr;
+                }
             }
             else if(t.str == KW_STRUCT) {
-                // Error . Struct cannot have resource properties.
+                // Error . Struct cannot have a resource map.
+                std::cout << "Struct cannot have a resource map!" << std::endl;
+                return nullptr;
             }
 
             if(node == nullptr){
@@ -151,16 +524,25 @@ namespace omegasl {
             }
             else {
                 /// TODO: Error! Unexpected Keyword!
+                std::cout << "Unexpected Keyword" << std::endl;
+                return nullptr;
             }
-
+            t = lexer->nextTok();
         }
 
-
-        auto ty_for_decl = buildTypeRef(t);
-
+        auto _tok = t;
         t = lexer->nextTok();
+        bool type_is_pointer = false;
+        if(t.type == TOK_ASTERISK){
+            type_is_pointer = true;
+            t = lexer->nextTok();
+        }
+
+        auto ty_for_decl = buildTypeRef(_tok,type_is_pointer);
+
         if(t.type != TOK_ID){
             /// ERROR!
+            std::cout << "Expected ID. Instead got:" << t.str << std::endl;
             return nullptr;
         }
 
@@ -181,6 +563,68 @@ namespace omegasl {
 
             funcDecl->name = id_for_decl;
             funcDecl->returnType = ty_for_decl;
+            t = lexer->nextTok();
+
+            while(t.type != TOK_RPAREN){
+                auto _tok = t;
+                t = lexer->nextTok();
+                bool type_is_pointer = false;
+
+                if(t.type == TOK_ASTERISK){
+                    type_is_pointer = true;
+                    t = lexer->nextTok();
+                }
+
+                auto var_ty = buildTypeRef(_tok,type_is_pointer);
+
+                if(t.type != TOK_ID){
+                    /// ERROR!
+                    std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                    return nullptr;
+                }
+
+                auto var_id = t.str;
+
+                t = lexer->nextTok();
+                if(t.type == TOK_COLON){
+                    t = lexer->nextTok();
+                    if(t.type != TOK_ID){
+                        // Error!
+                        std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                        return nullptr;
+                    }
+
+                    funcDecl->params.push_back({var_ty,var_id,t.str});
+                    t = lexer->nextTok();
+                }
+                else {
+                    funcDecl->params.push_back({var_ty,var_id,nullptr});
+                }
+
+                if(t.type == TOK_COMMA){
+                    t = lexer->nextTok();
+                    if(t.type == TOK_RPAREN){
+                        /// Error; Unexpected TOken.
+                        std::cout << "Expected RParen" << std::endl;
+                        return nullptr;
+                    }
+                }
+            }
+
+            t = lexer->nextTok();
+            if(t.type != TOK_LBRACE){
+                std::cout << "Expected Tok. Expected LBrace.";
+                /// Error. Unexpected Token.
+                return nullptr;
+            }
+
+            BlockParseContext blockParseContext {ast::builtins::global_scope,true};
+
+            funcDecl->block.reset(parseBlock(t,blockParseContext));
+
+            if(!funcDecl->block){
+                return nullptr;
+            }
 
         }
         else if(t.type == TOK_COLON){
@@ -195,49 +639,113 @@ namespace omegasl {
     }
 
     Tok &Parser::getTok() {
-        return tokenBuffer[tokIdx++];
+        return tokenBuffer[++tokIdx];
     }
     Tok & Parser::aheadTok() {
         return tokenBuffer[tokIdx + 1];
     }
 
-    ast::Stmt *Parser::parseStmt(Tok &first_tok) {
+    ast::Stmt *Parser::parseStmt(Tok &first_tok,BlockParseContext & ctxt) {
 
         ast::Stmt *stmt;
         tokIdx = 0;
 
-        /// Get Token Line
+        /// Get Entire Line of Tokens
         while(first_tok.type != TOK_SEMICOLON){
             tokenBuffer.push_back(first_tok);
             first_tok = lexer->nextTok();
         }
 
+        for(auto & t : tokenBuffer){
+            std::cout << "TOK: {t:" << std::hex << t.type << std::dec << ",str:" << t.str << "}" << std::endl;
+        }
 
-        first_tok = getTok();
 
-        if(first_tok.type == TOK_KW){
-            stmt = parseGenericDecl(first_tok);
+        first_tok = tokenBuffer.front();
+
+        bool isDecl = false;
+
+        /// @note Checks for TypeRef!
+        if(first_tok.type == TOK_KW_TYPE || first_tok.type == TOK_ID){
+            auto & ahead_tok = aheadTok();
+
+            if(ahead_tok.type == TOK_ASTERISK || ahead_tok.type == TOK_ID){
+                isDecl = true;
+            }
+        }
+        else if(first_tok.type == TOK_KW){
+            isDecl = true;
+        }
+
+        if(isDecl){
+            std::cout << "Parse Generic Decl" << std::endl;
+            stmt = parseGenericDecl(first_tok,ctxt);
         }
         else {
-
+            std::cout << "Parse Expr" << std::endl;
+            stmt = parseExpr(first_tok,ctxt.parentScope);
         }
 
         tokenBuffer.clear();
         return stmt;
     }
 
-    ast::Decl *Parser::parseGenericDecl(Tok &first_tok) {
-        ast::Decl *node;
-        if(first_tok.str == KW_IF){
-
+    ast::Decl *Parser::parseGenericDecl(Tok &first_tok,BlockParseContext & ctxt) {
+        ast::Decl *node = nullptr;
+        if(first_tok.type == TOK_KW){
+            if(first_tok.str == KW_RETURN){
+                first_tok = getTok();
+                auto _decl = new ast::ReturnDecl();
+                _decl->type = RETURN_DECL;
+                auto _e = parseExpr(first_tok,ctxt.parentScope);
+                if(_e == nullptr){
+                    delete _decl;
+                    return nullptr;
+                }
+                _decl->expr = _e;
+                node = _decl;
+            }
         }
-        else if(first_tok.str == KW_ELSE){
-
+        else {
+            /// @note Build TypeRef for VarDecl.
+            auto _tok = first_tok;
+            first_tok = aheadTok();
+            bool type_is_pointer = false;
+            if(first_tok.type == TOK_ASTERISK){
+                type_is_pointer = true;
+                ++tokIdx;
+            }
+            auto type_for_var_decl = buildTypeRef(_tok,type_is_pointer);
+            first_tok = getTok();
+            if(first_tok.type != TOK_ID){
+                std::cout << "Expected ID!" << std::endl;
+                return nullptr;
+            }
+            auto _decl = new ast::VarDecl();
+            _decl->type = VAR_DECL;
+            _decl->typeExpr = type_for_var_decl;
+            _decl->spec.name = first_tok.str;
+            first_tok = aheadTok();
+            if(first_tok.type == TOK_OP && first_tok.str == OP_EQUAL){
+                ++tokIdx;
+                first_tok = getTok();
+                auto _e = parseExpr(first_tok,ctxt.parentScope);
+                if(_e == nullptr){
+                    return nullptr;
+                }
+                _decl->spec.initializer = _e;
+            }
+            else if(first_tok.type == TOK_OP){
+                std::cout << "Unknown Operator" << first_tok.str << std::endl;
+                return nullptr;
+            }
+            node = _decl;
         }
+        node->scope = ctxt.parentScope;
         return node;
     }
 
-    bool Parser::parseObjectExpr(Tok &first_tok, ast::Expr **expr) {
+    bool Parser::parseObjectExpr(Tok &first_tok, ast::Expr **expr,ast::Scope *parentScope) {
         bool defaultR = true;
         if(first_tok.type == TOK_ID){
             auto _e = new ast::IdExpr();
@@ -251,37 +759,223 @@ namespace omegasl {
             _e->str = first_tok.str;
             *expr = _e;
         }
-
-        return defaultR;
-    }
-
-    bool Parser::parseArgsExpr(Tok &first_tok, Tok &second_tok, ast::Expr **expr) {
-        bool defaultR = true;
-        return defaultR;
-    }
-
-    bool Parser::parseOpExpr(Tok &first_tok, Tok &second_tok, ast::Expr **expr) {
-        bool defaultR = true;
-        return defaultR;
-    }
-
-    ast::Expr *Parser::parseExpr(Tok &first_tok,Tok &second_tok) {
-
-        if(first_tok.type == TOK_LPAREN){
-            auto t = lexer->nextTok();
-            parseExpr(second_tok,t);
-            if(t.type != TOK_RPAREN){
-                // Throw Error.
+        else if(first_tok.type == TOK_NUM_LITERAL){
+            auto _e = new ast::LiteralExpr();
+            _e->type = LITERAL_EXPR;
+            *expr = _e;
+        }
+        else if(first_tok.type == TOK_LBRACE){
+            auto _e = new ast::ArrayExpr();
+            _e->type = ARRAY_EXPR;
+            while((first_tok = getTok()).type != TOK_RBRACE){
+                auto _child_e = parseExpr(first_tok,parentScope);
+                first_tok = aheadTok();
+                if(first_tok.type == TOK_COMMA){
+                    ++tokIdx;
+                }
+                _e->elm.push_back(_child_e);
             }
+            *expr = _e;
         }
         else {
-            ast::Expr *expr;
-            auto b = parseOpExpr(first_tok,second_tok,&expr);
-            if(!b){
-                return nullptr;
-            }
-            return expr;
+            std::cout << "Unexpected Token:" << first_tok.str << std::endl;
+            return false;
         }
+        (*expr)->scope = parentScope;
+
+        return defaultR;
+    }
+
+    bool Parser::parseArgsExpr(Tok &first_tok, ast::Expr **expr,ast::Scope *parentScope) {
+        bool defaultR = true;
+        ast::Expr *_expr = nullptr;
+        defaultR = parseObjectExpr(first_tok,&_expr,parentScope);
+        first_tok = aheadTok();
+        while(true){
+            if(first_tok.type == TOK_LPAREN){
+                ++tokIdx;
+
+                auto * _call_expr = new ast::CallExpr();
+                _call_expr->type = CALL_EXPR;
+                _call_expr->callee = _expr;
+
+                first_tok = getTok();
+                while(first_tok.type != TOK_RPAREN){
+
+                   auto _child_expr = parseExpr(first_tok,parentScope);
+                   if(_child_expr == nullptr){
+                       return false;
+//                       break;
+                   }
+
+                   _call_expr->args.push_back(_child_expr);
+
+                   first_tok = getTok();
+                   if(first_tok.type == TOK_COMMA){
+                       first_tok = getTok();
+                   }
+                }
+
+                _expr = _call_expr;
+            }
+            else {
+                *expr = _expr;
+                break;
+            }
+            first_tok = aheadTok();
+            *expr = _expr;
+        }
+
+
+        return defaultR;
+    }
+
+    bool Parser::parseOpExpr(Tok &first_tok, ast::Expr **expr,ast::Scope *parentScope) {
+        bool defaultR = true;
+        bool hasPrefixOp = false;
+
+        ast::Expr *_expr = nullptr;
+
+        /// @note Unary Pre-Expr Operator Tokens!
+
+        switch (first_tok.type) {
+            case TOK_LPAREN : {
+                first_tok = getTok();
+                _expr = parseExpr(first_tok,parentScope);
+                first_tok = getTok();
+                if(first_tok.type != TOK_RPAREN){
+                    std::cout << "Expected RParen!" << std::endl;
+                    return false;
+                }
+                break;
+            }
+            case TOK_ASTERISK : {
+                hasPrefixOp = true;
+                auto _pointer_expr = new ast::PointerExpr();
+                _pointer_expr->type = POINTER_EXPR;
+                _pointer_expr->ptType = ast::PointerExpr::Dereference;
+
+                first_tok = getTok();
+                _expr = parseExpr(first_tok,parentScope);
+                if(_expr == nullptr){
+                    delete _pointer_expr;
+                    return false;
+                }
+
+                _pointer_expr->expr = _expr;
+                _expr = _pointer_expr;
+                break;
+            }
+            case TOK_AMPERSAND : {
+                hasPrefixOp = true;
+                auto _pointer_expr = new ast::PointerExpr();
+                _pointer_expr->type = POINTER_EXPR;
+                _pointer_expr->ptType = ast::PointerExpr::AddressOf;
+
+                first_tok = getTok();
+                _expr = parseExpr(first_tok,parentScope);
+                if(_expr == nullptr){
+                    delete _pointer_expr;
+                    return false;
+                }
+
+                _pointer_expr->expr = _expr;
+                _expr = _pointer_expr;
+                break;
+            }
+            /// Pre-Expr Operators
+            case TOK_OP : {
+                hasPrefixOp = true;
+                OmegaCommon::StrRef op_type = first_tok.str;
+                if(op_type != OP_NOT || op_type != OP_PLUSPLUS || op_type != OP_MINUSMINUS){
+                    std::cout << "Invalid operator" << op_type << "in this context." << std::endl;
+                    return false;
+                }
+                auto _unary_op_expr = new ast::UnaryOpExpr();
+                _unary_op_expr->type = UNARY_EXPR;
+                _unary_op_expr->isPrefix = true;
+                _unary_op_expr->op = op_type;
+                _unary_op_expr->scope = parentScope;
+
+                first_tok = getTok();
+                _expr = parseExpr(first_tok,parentScope);
+
+                if(_expr == nullptr){
+                    return false;
+                }
+                _unary_op_expr->expr = _expr;
+
+                _expr = _unary_op_expr;
+                break;
+            }
+            default : {
+                defaultR = parseArgsExpr(first_tok,&_expr,parentScope);
+                break;
+            }
+        }
+
+        /// @note Post-Expr Operators (Unary or Binary)
+
+        if(!hasPrefixOp) {
+
+            first_tok = aheadTok();
+
+            if(first_tok.type == TOK_OP){
+                ++tokIdx;
+                if(first_tok.str == OP_MINUSMINUS || first_tok.str == OP_PLUSPLUS){
+                    auto unaryExpr = new ast::UnaryOpExpr();
+                    unaryExpr->type = UNARY_EXPR;
+                    unaryExpr->op = first_tok.str;
+                    unaryExpr->isPrefix = false;
+                    unaryExpr->expr = _expr;
+                    _expr = unaryExpr;
+                }
+                else {
+                    auto binaryExpr = new ast::BinaryExpr();
+                    binaryExpr->type = BINARY_EXPR;
+                    binaryExpr->op = first_tok.str;
+                    binaryExpr->lhs = _expr;
+                    first_tok = getTok();
+                    _expr = parseExpr(first_tok,parentScope);
+                    if(_expr == nullptr){
+                        return false;
+                    }
+                    binaryExpr->rhs = _expr;
+                    binaryExpr->scope = parentScope;
+                    _expr = binaryExpr;
+                }
+            }
+
+        }
+
+        *expr = _expr;
+        return defaultR;
+    }
+
+    ast::Expr *Parser::parseExpr(Tok &first_tok,ast::Scope *parentScope) {
+        ast::Expr *expr = nullptr;
+        auto b = parseOpExpr(first_tok,&expr,parentScope);
+        if(!b){
+            return nullptr;
+        }
+        return expr;
+    }
+
+    ast::Block *Parser::parseBlock(Tok & first_tok,BlockParseContext & ctxt) {
+        /// First_Tok is equal to LBracket;
+        auto *block = new ast::Block();
+        while((first_tok = lexer->nextTok()).type != TOK_RBRACE){
+            if(first_tok.type != TOK_SEMICOLON){
+                auto stmt = parseStmt(first_tok,ctxt);
+                if(!stmt){
+                    std::cout << "Failed to parse block stmt" << std::endl;
+                    delete block;
+                    return nullptr;
+                }
+                block->body.push_back(stmt);
+            }
+        }
+        return block;
     }
 
     void Parser::parseContext(const ParseContext &ctxt) {
@@ -293,28 +987,20 @@ namespace omegasl {
         lexer->setInputStream(&ctxt.in);
         ast::Decl *decl;
         while((decl = parseGlobalDecl()) != nullptr){
-            gen->generateDecl(decl);
+            std::cout << std::hex << "NODE TYPE:" << decl->type << std::dec << std::endl;
+            if(sem->performSemForGlobalDecl(decl)){
+                gen->generateDecl(decl);
+            }
+            else {
+                std::cout << "Failed to evaluate stmt" << std::endl;
+                break;
+            }
         }
         lexer->finishTokenizeFromStream();
 
 
     }
 
-    ast::Block *Parser::parseBlock(Tok & first_tok) {
-        /// First_Tok is equal to LBracket;
-        auto *block = new ast::Block();
-        while((first_tok = lexer->nextTok()).type != TOK_RBRACKET){
-            auto stmt = parseStmt(first_tok);
-            if(!stmt){
-                return nullptr;
-            }
-            block->body.push_back(stmt);
-        }
-        return block;
-    }
-
     Parser::~Parser() = default;
-
-
 
 }

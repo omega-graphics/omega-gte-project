@@ -26,19 +26,23 @@ namespace omegasl {
         Tok & getTok();
         Tok & aheadTok();
 
+        struct BlockParseContext {
+            ast::Scope *parentScope;
+            bool inShaderContext;
+        };
 
-        ast::Block *parseBlock(Tok & first_tok);
+        ast::Block *parseBlock(Tok & first_tok,BlockParseContext & ctxt);
 
-        bool parseObjectExpr(Tok &first_tok,ast::Expr **expr);
-        bool parseArgsExpr(Tok &first_tok,Tok & second_tok,ast::Expr **expr);
-        bool parseOpExpr(Tok &first_tok,Tok & second_tok,ast::Expr **expr);
+        bool parseObjectExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
+        bool parseArgsExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
+        bool parseOpExpr(Tok &first_tok,ast::Expr **expr,ast::Scope *parentScope);
 
-        ast::Expr *parseExpr(Tok &first_tok,Tok &second_tok);
-        ast::Decl *parseGenericDecl(Tok &first_tok);
-        ast::Stmt *parseStmt(Tok &first_tok);
+        ast::Expr *parseExpr(Tok &first_tok,ast::Scope *parentScope);
+        ast::Decl *parseGenericDecl(Tok &first_tok,BlockParseContext & ctxt);
+        ast::Stmt *parseStmt(Tok &first_tok,BlockParseContext & ctxt);
         ast::Decl *parseGlobalDecl();
 
-        ast::TypeExpr *buildTypeRef(Tok &first_tok);
+        ast::TypeExpr *buildTypeRef(Tok &first_tok,bool isPointer);
     public:
         explicit Parser(std::shared_ptr<CodeGen> &gen);
         void parseContext(const ParseContext &ctxt);

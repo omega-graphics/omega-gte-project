@@ -10,11 +10,11 @@ inline void help(){
     R"(Usage: omegaslc [options] [required] input-file
 
 Required:
-    --temp-dir, -t  --> Set the temp file output dir (For byproducts of compiling the lib)
-    --output,   -o  --> Set the output file (*.omegasllib)
+    --temp-dir, -t       --> Set the temp file output dir (For byproducts of compiling the lib)
+    --output-dir,-o      --> Set the output dir of main compilation products (*.omegasllib and interface)
 Options:
 
-    --help ,    -h  --> Show this message.
+    --help ,    -h       --> Show this message.
     --tokens-only        --> Show tokens of all input files.
     --interface-only     --> Emit interface of all input files.
 
@@ -48,8 +48,7 @@ int main(int argc,char *argv[]){
     bool interfaceOnly = false;
 
     GenMode genMode = GenMode::unknown;
-    const char * outputDir = nullptr;
-    const char * tempDir = nullptr;
+    const char * outputDir = nullptr,*tempDir = nullptr;
     OmegaCommon::StrRef inputFile = argv[argc - 1];
 
     for(unsigned i = 1;i < argc;i++){
@@ -88,7 +87,11 @@ int main(int argc,char *argv[]){
         else if(arg == "--interface-only"){
             interfaceOnly = true;
         }
+<<<<<<< HEAD
         else if(arg == "--output" || arg == "-o"){
+=======
+        else if(arg == "--output-dir" || arg == "-o"){
+>>>>>>> d41b530df036b20d2760a11a976ff4c60f090453
             outputDir = argv[++i];
         }
         else if(arg == "--temp-dir" || arg == "-t"){
@@ -96,6 +99,7 @@ int main(int argc,char *argv[]){
         }
     }
 
+<<<<<<< HEAD
     if(outputDir == nullptr){
         std::cout << "OutputDir must be set!" << std::endl;
     }
@@ -107,7 +111,32 @@ int main(int argc,char *argv[]){
 
     if(outputDir == nullptr){
         exit(1);
+=======
+    if(tempDir == nullptr){
+        std::cout << "Temp Directory is not set" << std::endl;
+>>>>>>> d41b530df036b20d2760a11a976ff4c60f090453
     }
+
+    if(outputDir == nullptr){
+        std::cout << "Output Directory is not set" << std::endl;
+        exit(1);
+    }
+
+    if(tempDir == nullptr){
+        exit(1);
+    }
+
+    OmegaCommon::FS::Path outputPath(outputDir);
+
+    if(!OmegaCommon::FS::exists(outputPath)){
+        OmegaCommon::FS::createDirectory(outputPath);
+    };
+
+    OmegaCommon::FS::Path tempPath(tempDir);
+
+    if(!OmegaCommon::FS::exists(tempPath)){
+        OmegaCommon::FS::createDirectory(tempPath);
+    };
 
     if(!OmegaCommon::FS::exists(inputFile)){
         std::cout << "File `" << inputFile << "` does not exist." << std::endl;

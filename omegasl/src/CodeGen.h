@@ -16,6 +16,35 @@ namespace omegasl {
     class InterfaceGen;
 
     struct CodeGen {
+        struct ResourceStore {
+        private:
+            typedef std::vector<ast::ResourceDecl *> data ;
+            data resources;
+        public:
+            inline void add(ast::ResourceDecl * res){
+                resources.push_back(res);
+            }
+            inline data::iterator begin(){
+                return resources.begin();
+            }
+            inline data::iterator find(const OmegaCommon::StrRef & name){
+                using namespace OmegaCommon;
+                auto it = resources.begin();
+                for(;it != resources.end();it++){
+                    auto & item = *it;
+                    if(item->name == name){
+                        break;
+                    }
+                }
+                return it;
+            };
+            inline data::iterator end(){
+                return resources.end();
+            }
+        };
+
+        ResourceStore resourceStore;
+
         ast::SemFrontend *typeResolver;
         std::shared_ptr<InterfaceGen> interfaceGen;
 
@@ -26,6 +55,7 @@ namespace omegasl {
         void setTypeResolver(ast::SemFrontend *_typeResolver){ typeResolver = _typeResolver;}
         virtual void generateDecl(ast::Decl *decl) = 0;
         virtual void generateExpr(ast::Expr *expr) = 0;
+        virtual void generateBlock(ast::Block &block) = 0;
         virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
         virtual void compileShader(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & name,const OmegaCommon::FS::Path & path,const OmegaCommon::FS::Path & outputPath) = 0;
         void linkShaderObjects(const OmegaCommon::StrRef & libname){
@@ -90,8 +120,8 @@ namespace omegasl {
             out << "struct " << decl->name << " {" << std::endl;
             for(auto p : decl->fields){
                 out << "    ";
-                writeCrossType(p->typeExpr);
-                out << " " << p->spec.name;
+                writeCrossType(p.typeExpr);
+                out << " " << p.name;
                 out << ";" << std::endl;
             }
             out << "};" << std::endl;

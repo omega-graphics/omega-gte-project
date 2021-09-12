@@ -29,6 +29,8 @@ namespace omegasl {
         return (subject == KW_TY_VOID) ||
         (subject == KW_TY_FLOAT) ||
         (subject == KW_TY_FLOAT2) ||
+        (subject == KW_TY_FLOAT3) ||
+        (subject == KW_TY_FLOAT4) ||
         (subject == KW_TY_INT) ||
         (subject == KW_TY_UINT);
     }
@@ -73,6 +75,9 @@ else return {t,s};
                 case ' ' : {
                     return nextTok();
                 }
+                case '\t' : {
+                    return nextTok();
+                }
                 case '\n' : {
                     return nextTok();
                 }
@@ -112,6 +117,67 @@ else return {t,s};
                     }
                     PUSH_TOK(TOK_STR_LITERAL);
                 }
+
+                case '=' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '+' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '-' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '>' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '<' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
+                case '!' : {
+                    PUSH_CHAR(c);
+                    c = AHEAD_CHAR();
+                    if(c == '='){
+                        PUSH_CHAR(c);
+                        SEEK_TO_NEXT_CHAR();
+                    }
+                    PUSH_TOK(TOK_OP);
+                }
+
                 case '*' : {
                     PUSH_CHAR(c);
                     PUSH_TOK(TOK_ASTERISK);

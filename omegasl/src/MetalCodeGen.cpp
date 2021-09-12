@@ -11,8 +11,9 @@ namespace omegasl {
     class MetalCodeGen : public CodeGen {
         std::ofstream shaderOut;
 
-        std::map<std::string,std::string> generatedResources;
         std::map<std::string,std::string> generatedFuncs;
+        std::map<std::string,std::string> generatedStructs;
+
     public:
         MetalCodeGen(CodeGenOpts &opts): CodeGen(opts){
 
@@ -27,8 +28,23 @@ namespace omegasl {
             else if(_t == builtins::int_type){
                 out << "int";
             }
+            else if(_t == builtins::uint_type){
+                out << "uint";
+            }
             else if(_t == builtins::float_type){
-                out << "float";
+                out << "simd_float";
+            }
+            else if(_t == builtins::float2_type){
+                out << "simd_float2";
+            }
+            else if(_t == builtins::float3_type){
+                out << "simd_float3";
+            }
+            else if(_t == builtins::float4_type){
+                out << "simd_float4";
+            }
+            else {
+                out << t->name;
             }
 
 
@@ -36,26 +52,108 @@ namespace omegasl {
                 out << " *";
             }
         }
-        void writeExpr(ast::Expr *expr,std::ostream & out){
-
+        inline void writeAttributeName(OmegaCommon::StrRef attributeName,std::ostream & out){
+            if(attributeName == ATTRIBUTE_POSITION){
+                out << "position";
+            }
+            else if(attributeName == ATTRIBUTE_VERTEX_ID){
+                out << "vertex_id";
+            }
         }
         void generateExpr(ast::Expr *expr) override {
-            writeExpr(expr,shaderOut);
+            switch (expr->type) {
+                case ID_EXPR : {
+                    auto _expr = (ast::IdExpr *)expr;
+                    shaderOut << _expr->id;
+                    break;
+                }
+            }
+        }
+    private:
+        unsigned level_count;
+    public:
+        void generateBlock(ast::Block &block) override {
+
+            for(unsigned l = level_count;l != 0;l--){
+                shaderOut << "    ";
+            }
+            shaderOut << "{" << std::endl;
+            ++level_count;
+
+            for(auto stmt : block.body){
+                for(unsigned l = level_count;l != 0;l--){
+                    shaderOut << "    ";
+                }
+                if(stmt->type & DECL){
+                    generateDecl((ast::Decl *)stmt);
+                    shaderOut << ";" << std::endl;
+                }
+                else {
+                    generateExpr((ast::Expr *)stmt);
+                    shaderOut << ";" << std::endl;
+                }
+            }
+
+            --level_count;
+            shaderOut << "}" << std::endl;
         }
         void generateDecl(ast::Decl *decl) override {
             switch (decl->type) {
+                case VAR_DECL : {
+                    auto *_decl = (ast::VarDecl *)decl;
+                    writeTypeExpr(_decl->typeExpr,shaderOut);
+                    shaderOut << " " << _decl->spec.name;
+                    if(_decl->spec.initializer.has_value()){
+                        shaderOut << " = ";
+                        generateExpr(_decl->spec.initializer.value());
+                    }
+                    break;
+                }
+                case RETURN_DECL : {
+                    auto *_decl = (ast::ReturnDecl *)decl;
+                    shaderOut << "return ";
+                    generateExpr(_decl->expr);
+                    break;
+                }
                 case RESOURCE_DECL : {
                     auto *_decl = (ast::ResourceDecl *)decl;
+                    resourceStore.add(_decl);
+                    break;
+                }
+                case STRUCT_DECL : {
+                    auto *_decl = (ast::StructDecl *)decl;
                     std::ostringstream out;
-                    writeTypeExpr(_decl->typeExpr,out);
-                    out << _decl->name;
-                    generatedResources.insert(std::make_pair(_decl->name,out.str()));
+                    out << "struct " << _decl->name << " {" << std::endl;
+                    for(auto p : _decl->fields){
+                        out << "    ";
+                        writeTypeExpr(p.typeExpr,out);
+                        out << " " << p.name;
+                        if(p.attributeName.has_value()){
+                            out << "[[";
+                            writeAttributeName(p.attributeName.value(),out);
+                            out << "]]";
+                        }
+                        out << ";" << std::endl;
+                    }
+                    out << "};" << std::endl;
+
+                    generatedStructs.insert(std::make_pair(_decl->name,out.str()));
                     break;
                 }
                 case SHADER_DECL : {
+                    level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal");
+                    shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal",std::ios::out);
                     shaderOut << defaultHeaders;
+
+                    std::vector<std::string> used_type_list;
+                    typeResolver->getStructsInFuncDecl(_decl,used_type_list);
+
+                    if(!used_type_list.empty()){
+                        for(auto & t : used_type_list){
+                            shaderOut << generatedStructs[t] << std::endl << std::endl;
+                        }
+                    }
 
                     if(_decl->shaderType == ast::ShaderDecl::Vertex){
                         shaderOut << "vertex";
@@ -71,10 +169,25 @@ namespace omegasl {
                     writeTypeExpr(_decl->returnType,shaderOut);
                     shaderOut << " " << _decl->name << " ";
                     shaderOut << "(";
+                    for(auto p_it =  _decl->params.begin();p_it != _decl->params.end();p_it++){
 
+                        if(p_it != _decl->params.begin()) {
+                            shaderOut << ",";
+                        }
 
+                        auto & p = *p_it;
 
+                        writeTypeExpr(p.typeExpr,shaderOut);
+                        shaderOut << " " << p.name << " ";
+                        if(p.attributeName.has_value()){
+                            shaderOut << "[[";
+                            writeAttributeName(p.attributeName.value(),shaderOut);
+                            shaderOut << "]]";
+                        }
+                    }
+                    shaderOut << ")";
 
+                    generateBlock(*_decl->block);
 
                     shaderOut.close();
                     break;
@@ -88,12 +201,9 @@ namespace omegasl {
             out << "struct " << decl->name << "_ {" << std::endl;
             for(auto p : decl->fields){
                 out << "    " << std::flush;
-                writeTypeExpr(p->typeExpr,out);
-                out << " " << p->spec.name << " " << std::flush;
-                if(p->spec.initializer.has_value()){
-                    out << "= " << std::flush;
-                    writeExpr(p->spec.initializer.value(),out);
-                }
+                writeTypeExpr(p.typeExpr,out);
+                out << " " << p.name << " " << std::flush;
+//
                 out << ";" << std::endl;
             }
             out << "};" << std::endl;

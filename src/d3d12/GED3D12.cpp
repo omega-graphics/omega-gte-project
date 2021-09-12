@@ -5,6 +5,7 @@
 #include "GED3D12Pipeline.h"
 
 #include <atlstr.h>
+#include <cassert>
 
 
 _NAMESPACE_BEGIN_
@@ -31,6 +32,7 @@ SharedHandle<GEBuffer> GED3D12Heap::makeBuffer(const BufferDescriptor &desc){
 
     D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
     res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
     res_view_desc.Buffer.StructureByteStride = desc.objectStride;
     res_view_desc.Buffer.FirstElement = 0;
@@ -237,54 +239,72 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     };
 
     SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(RenderPipelineDescriptor &desc){
-        // D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
-        // std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
-        // for(auto & attr : desc.vertexInputAttributes){
-        //     D3D12_INPUT_ELEMENT_DESC inputEl;
-        //     switch (attr.type) {
-        //         case InputAttributeDesc::FLOAT : {
-        //             inputEl.Format = DXGI_FORMAT_R32_FLOAT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::FLOAT2 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32_FLOAT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::FLOAT3 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::FLOAT4 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::INT : {
-        //             inputEl.Format = DXGI_FORMAT_R32_SINT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::INT2 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32_SINT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::INT3 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32B32_SINT;
-        //             break;
-        //         }
-        //         case InputAttributeDesc::INT4 : {
-        //             inputEl.Format = DXGI_FORMAT_R32G32B32A32_SINT;
-        //             break;
-        //         }
-        //     };
-            
-        //     inputEl.InputSlot = 0;
-        //     inputEl.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-        //     inputEl.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-        //     inputs.push_back(inputEl);
-            
-        // };
+        auto & vertexFunc = desc.vertexFunc->internal;
+        auto & fragmentFunc = desc.fragmentFunc->internal;
 
-        // inputLayoutDesc.pInputElementDescs = inputs.data();
-        // inputLayoutDesc.NumElements = inputs.size();
+        std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
+
+        assert(vertexFunc.type == OMEGASL_SHADER_VERTEX && "Function is not a vertex function");
+        assert(fragmentFunc.type == OMEGASL_SHADER_FRAGMENT && "Function is not a fragment function");
+
+        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
+        if(vertexFunc.vertexShaderInputDesc.useVertexID){
+            auto el = new D3D12_INPUT_ELEMENT_DESC {"SV_VertexID",0,DXGI_FORMAT_R32_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0};
+            inputLayoutDesc.NumElements = 1;
+            inputLayoutDesc.pInputElementDescs = el;
+        }
+        else {
+            ArrayRef<omegasl_vertex_shader_param_desc> inputDesc{vertexFunc.vertexShaderInputDesc.pParams,
+                                                                 vertexFunc.vertexShaderInputDesc.pParams +
+                                                                 vertexFunc.vertexShaderInputDesc.nParam};
+            for (auto &attr: inputDesc) {
+                D3D12_INPUT_ELEMENT_DESC inputEl;
+                switch (attr.type) {
+                    case OMEGASL_FLOAT : {
+                        inputEl.Format = DXGI_FORMAT_R32_FLOAT;
+                        break;
+                    }
+                    case OMEGASL_FLOAT2 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32_FLOAT;
+                        break;
+                    }
+                    case OMEGASL_FLOAT3 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+                        break;
+                    }
+                    case OMEGASL_FLOAT4 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+                        break;
+                    }
+                    case OMEGASL_INT : {
+                        inputEl.Format = DXGI_FORMAT_R32_SINT;
+                        break;
+                    }
+                    case OMEGASL_INT2 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32_SINT;
+                        break;
+                    }
+                    case OMEGASL_INT3 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32B32_SINT;
+                        break;
+                    }
+                    case OMEGASL_INT4 : {
+                        inputEl.Format = DXGI_FORMAT_R32G32B32A32_SINT;
+                        break;
+                    }
+                };
+
+                inputEl.InputSlot = 0;
+                inputEl.AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+                inputEl.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                inputs.push_back(inputEl);
+
+            }
+            inputLayoutDesc.pInputElementDescs = inputs.data();
+            inputLayoutDesc.NumElements = inputs.size();
+        };
+
+
         MessageBoxA(GetForegroundWindow(),"Creating Pipeline State","NOTE",MB_OK);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d;
@@ -292,15 +312,25 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d.NodeMask = d3d12_device->GetNodeCount();
         
         HRESULT hr;
-        auto vertexFunc = (GED3D12Shader *)desc.vertexFunc.get();
-        auto fragmentFunc = (GED3D12Shader *)desc.fragmentFunc.get();
-        MessageBoxA(GetForegroundWindow(),"Getting Functions","NOTE",MB_OK);
-        if(vertexFunc == nullptr)
-            MessageBoxA(GetForegroundWindow(),"VS has been released too early!","NOTE",MB_OK);
-        if(fragmentFunc  == nullptr)
-            MessageBoxA(GetForegroundWindow(),"PS has been released too early!","NOTE",MB_OK);
-        d.VS = CD3DX12_SHADER_BYTECODE(vertexFunc->funcData.Get());
-        d.PS = CD3DX12_SHADER_BYTECODE(fragmentFunc->funcData.Get());
+
+        omegasl_shader shaders[] = {desc.vertexFunc->internal,desc.fragmentFunc->internal};
+
+        ID3D12RootSignature *signature;
+        createRootSignatureFromOmegaSLShaders(2,shaders,&signature);
+
+        d.VS = CD3DX12_SHADER_BYTECODE(desc.vertexFunc->internal.data,desc.vertexFunc->internal.dataSize);
+        d.PS = CD3DX12_SHADER_BYTECODE(desc.fragmentFunc->internal.data,desc.fragmentFunc->internal.dataSize);
+        d.pRootSignature = signature;
+        d.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        d.NumRenderTargets = 1;
+        d.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+        d.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        d.DepthStencilState.StencilEnable = desc.depthAndStencilDesc.enableStencil;
+        d.DepthStencilState.DepthEnable = desc.depthAndStencilDesc.enableDepth;
+        d.SampleMask = UINT_MAX;
+        d.SampleDesc.Quality = 0;
+        d.SampleDesc.Count = desc.rasterSampleCount;
+
         MessageBoxA(GetForegroundWindow(),"Create Bytecode Funcs","NOTE",MB_OK);
         ID3D12PipelineState *state;
         hr = d3d12_device->CreateGraphicsPipelineState(&d,IID_PPV_ARGS(&state));
@@ -308,17 +338,24 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             MessageBoxA(GetForegroundWindow(),"Failed to Create Pipeline State","NOTE",MB_OK);
             exit(1);
         };
-        return std::make_shared<GED3D12RenderPipelineState>(state);
+        return std::make_shared<GED3D12RenderPipelineState>(state,signature);
     };
     SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(ComputePipelineDescriptor &desc){
         D3D12_COMPUTE_PIPELINE_STATE_DESC d;
         HRESULT hr;
         ID3D12PipelineState *state;
         d.NodeMask = d3d12_device->GetNodeCount();
-        auto *computeFunc = (GED3D12Shader *)desc.computeFunc.get();
-        d.CS = CD3DX12_SHADER_BYTECODE(computeFunc->funcData.Get());
+        d.CS = CD3DX12_SHADER_BYTECODE(desc.computeFunc->internal.data,desc.computeFunc->internal.dataSize);
+        omegasl_shader shaders[] = {desc.computeFunc->internal};
+
+        ID3D12RootSignature *signature;
+
+        createRootSignatureFromOmegaSLShaders(1,shaders,&signature);
+
+        d.pRootSignature = signature;
+
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
-        return std::make_shared<GED3D12ComputePipelineState>(state);
+        return std::make_shared<GED3D12ComputePipelineState>(state,signature);
     };
 
     SharedHandle<GENativeRenderTarget> GED3D12Engine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
@@ -486,6 +523,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
         res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
         res_view_desc.Buffer.StructureByteStride = desc.objectStride;
         res_view_desc.Buffer.FirstElement = 0;
@@ -495,33 +533,69 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
 
         return std::make_shared<GED3D12Buffer>(buffer,descHeap);
-    };
+    }
 
-    SharedHandle<GTEShader> GED3D12Engine::compileShaderSource(TStrRef src,Shader::Type ty){
-        TStrRef target;
+    bool GED3D12Engine::createRootSignatureFromOmegaSLShaders(unsigned int shaderN, omegasl_shader *shader,
+                                                              ID3D12RootSignature **pRootSignature) {
+        HRESULT hr;
+        ArrayRef<omegasl_shader> shaders {shader,shader + shaderN};
 
-        switch (ty) {
-            case Shader::Vertex : {
-                target = "vs_5_0";
-                break;
-            }
-            case Shader::Fragment : {
-                target = "ps_5_0";
-                break;
-            }
-            case Shader::Compute : {
-                target = "cs_5_0";
-                break;
+        std::vector<D3D12_ROOT_PARAMETER1> params;
+        for(auto & s : shaders){
+            ArrayRef<omegasl_shader_layout_desc> sLayout {s.pLayout,s.pLayout + s.nLayout};
+            for(auto & l : sLayout){
+                CD3DX12_ROOT_PARAMETER1 parameter1;
+                parameter1.InitAsShaderResourceView(l.location);
+                params.push_back(parameter1);
             }
         }
 
-        ID3DBlob *blob;
-        D3DCompile(src.data(),src.size(),"INLINE_SOURCE",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main",target.data(),0,0,&blob,nullptr);
-        
-        return std::make_shared<GED3D12Shader>(blob);
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc;
+        desc.Init_1_1(params.size(),params.data());
+        ComPtr<ID3DBlob> sigBlob;
+        hr = D3DX12SerializeVersionedRootSignature(&desc,D3D_ROOT_SIGNATURE_VERSION_1_1,&sigBlob,nullptr);
+
+        if(FAILED(hr)){
+            return false;
+        }
+
+        hr = d3d12_device->CreateRootSignature(d3d12_device->GetNodeCount(),sigBlob->GetBufferPointer(),sigBlob->GetBufferSize(),IID_PPV_ARGS(pRootSignature));
+        if(FAILED(hr)){
+            return false;
+        }
+        return true;
     };
 
-    // SharedHandle<GEShaderLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
+//    SharedHandle<GTEShader> GED3D12Engine::compileShaderSource(TStrRef src,Shader::Type ty){
+//        TStrRef target;
+//
+//        switch (ty) {
+//            case Shader::Vertex : {
+//                target = "vs_5_0";
+//                break;
+//            }
+//            case Shader::Fragment : {
+//                target = "ps_5_0";
+//                break;
+//            }
+//            case Shader::Compute : {
+//                target = "cs_5_0";
+//                break;
+//            }
+//        }
+//
+//        ID3DBlob *blob;
+//        D3DCompile(src.data(),src.size(),"INLINE_SOURCE",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main",target.data(),0,0,&blob,nullptr);
+//
+//        return std::make_shared<GED3D12Shader>(blob);
+//    };
+
+    void loadLibrary(){
+//        auto shader = std::make_shared<GTEShader>();
+//        shader->internal.
+    }
+
+//     SharedHandle<GEShaderLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
         // MessageBoxA(GetForegroundWindow(),("PathStr:" + path.str()).c_str(),"NOTE",MB_OK);
         // MessageBoxA(GetForegroundWindow(),("AbsPath:" + path.absPath()).c_str(),"NOTE",MB_OK);
         //  MessageBoxA(GetForegroundWindow(),("Dir:" + path.dir()).c_str(),"NOTE",MB_OK);
@@ -570,7 +644,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         //     return nullptr;
         // };
     //     return nullptr;
-    // };
+//     };
 
     // SharedHandle<GEShaderLibrary> GED3D12Engine::loadStdShaderLibrary(){
     //     // return loadShaderLibrary("./stdshaderlib/std.shadermap");

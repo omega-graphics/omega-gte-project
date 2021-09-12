@@ -45,13 +45,13 @@ _NAMESPACE_BEGIN_
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 
         if(desc.nRenderTarget) {
-            GED3D12NativeRenderTarget *nativeRenderTarget = (GED3D12NativeRenderTarget *)desc.nRenderTarget;
+            auto *nativeRenderTarget = (GED3D12NativeRenderTarget *)desc.nRenderTarget;
             cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(nativeRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex],D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
             commandList->ResourceBarrier(1,&barrier);
         }
         else if(desc.tRenderTarget){
-            GED3D12TextureRenderTarget *textureRenderTarget = (GED3D12TextureRenderTarget *)desc.tRenderTarget;
+            auto *textureRenderTarget = (GED3D12TextureRenderTarget *)desc.tRenderTarget;
             cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(textureRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textureRenderTarget->renderTargetView.Get(),D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
             commandList->ResourceBarrier(1,&barrier);
@@ -90,6 +90,7 @@ _NAMESPACE_BEGIN_
          assert(!inComputePass && "Cannot set Render Pipeline State while in Compute Pass");
         GED3D12RenderPipelineState *d3d12_pipeline_state = (GED3D12RenderPipelineState *)pipelineState.get();
         commandList->SetPipelineState(d3d12_pipeline_state->pipelineState.Get());
+        commandList->SetGraphicsRootSignature(d3d12_pipeline_state->rootSignature.Get());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
@@ -178,6 +179,7 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState){
         GED3D12ComputePipelineState *d3d12_pipeline_state = (GED3D12ComputePipelineState *)pipelineState.get();
         commandList->SetPipelineState(d3d12_pipeline_state->pipelineState.Get());
+        commandList->SetComputeRootSignature(d3d12_pipeline_state->rootSignature.Get());
     };
 
     void GED3D12CommandBuffer::finishComputePass(){

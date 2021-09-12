@@ -8,7 +8,7 @@ _NAMESPACE_BEGIN_
 
 class GED3D12Texture : public GETexture {
 public:
-    void copyBytes(void *bytes, size_t len);
+    void copyBytes(void *bytes, size_t len) override;
     ComPtr<ID3D12Resource> resource;
     ComPtr<ID3D12DescriptorHeap> descHeap;
     ComPtr<ID3D12DescriptorHeap> rtvDescHeap;

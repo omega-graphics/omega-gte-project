@@ -48,7 +48,8 @@ int main(int argc,char *argv[]){
     bool interfaceOnly = false;
 
     GenMode genMode = GenMode::unknown;
-    const char * outputFile;
+    const char * outputDir = nullptr;
+    const char * tempDir = nullptr;
     OmegaCommon::StrRef inputFile = argv[argc - 1];
 
     for(unsigned i = 1;i < argc;i++){
@@ -88,8 +89,24 @@ int main(int argc,char *argv[]){
             interfaceOnly = true;
         }
         else if(arg == "--output" || arg == "-o"){
-            outputFile = argv[++i];
+            outputDir = argv[++i];
         }
+        else if(arg == "--temp-dir" || arg == "-t"){
+            tempDir = argv[++i];
+        }
+    }
+
+    if(outputDir == nullptr){
+        std::cout << "OutputDir must be set!" << std::endl;
+    }
+
+    if(tempDir == nullptr){
+        std::cout << "OutputDir must be set!" << std::endl;
+        exit(1);
+    }
+
+    if(outputDir == nullptr){
+        exit(1);
     }
 
     if(!OmegaCommon::FS::exists(inputFile)){
@@ -117,7 +134,7 @@ int main(int argc,char *argv[]){
 
     std::shared_ptr<omegasl::CodeGen> codeGen;
 
-    omegasl::CodeGenOpts codeGenOpts {interfaceOnly};
+    omegasl::CodeGenOpts codeGenOpts {interfaceOnly,outputDir,tempDir};
 
     if(genMode == GenMode::hlsl){
         codeGen = omegasl::HLSLCodeGenMake(codeGenOpts);

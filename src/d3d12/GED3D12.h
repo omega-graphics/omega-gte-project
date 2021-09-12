@@ -27,16 +27,16 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12Resource> buffer;
         ComPtr<ID3D12DescriptorHeap> bufferDescHeap;
 
-        size_t size(){
+        size_t size() override{
             return buffer->GetDesc().Width;
         };
-        void * data(){
+        void * data() override{
             void *ptr;
             CD3DX12_RANGE readRange(0,0);
             buffer->Map(0,&readRange,&ptr);
             return ptr;
         };
-        void removePtrRef(){
+        void removePtrRef() {
              buffer->Unmap(0,nullptr);
         };
         GED3D12Buffer(ID3D12Resource *buffer,ID3D12DescriptorHeap *bufferDescHeap):buffer(buffer),bufferDescHeap(bufferDescHeap){
@@ -47,7 +47,7 @@ _NAMESPACE_BEGIN_
     class GED3D12Fence : public GEFence {
     public:
         ComPtr<ID3D12Fence> fence;
-        GED3D12Fence(ID3D12Fence *fence):fence(fence){};
+        explicit GED3D12Fence(ID3D12Fence *fence):fence(fence){};
     };
 
     class GED3D12Engine;
@@ -58,11 +58,11 @@ _NAMESPACE_BEGIN_
         size_t currentOffset;
     public:
         GED3D12Heap(GED3D12Engine *engine,ID3D12Heap * heap):engine(engine),heap(heap),currentOffset(0){};
-        size_t currentSize(){
+        size_t currentSize() override{
             return heap->GetDesc().SizeInBytes;
         };
-        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
-        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override;
     };
 
     class GED3D12Engine : public OmegaGraphicsEngine {
@@ -73,18 +73,18 @@ _NAMESPACE_BEGIN_
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create();
         void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
-        SharedHandle<GTEShader> compileShaderSource(TStrRef src,Shader::Type ty);
         // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);
         // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
-        SharedHandle<GEFence> makeFence();
-        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
-        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);
-        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount);
-        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
-        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc);
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc);
-        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc);
-        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc);
+        bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,ID3D12RootSignature **pRootSignature);
+        SharedHandle<GEFence> makeFence() override;
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc)  override;
+        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc)  override;
+        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount)  override;
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc)  override;
+        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc)  override;
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc)  override;
+        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc)  override;
+        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc)  override;
         IDXGISwapChain3 *createSwapChainForComposition(DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue);
         IDXGISwapChain3 *createSwapChainFromHWND(HWND hwnd,DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue);
     };

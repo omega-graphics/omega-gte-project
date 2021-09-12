@@ -13,56 +13,17 @@
 _NAMESPACE_BEGIN_
 
 
-    // #define STD_COLOREDVERTEX_FUNC "coloredVertexShader"
-    // #define STD_FRAGMENTVERTEX_FUNC "coloredFragmentShader"
-
-    struct OMEGAGTE_EXPORT PipelineResourceDescriptor {
-        typedef enum : int {
-            BUFFER,
-            CONSTBUFFER,
-            TEXTURE2D,
-            TEXTURE3D,
-            SAMPLER2D,
-            SAMPLER3D
-        } ResourceType;
-        ResourceType type;
-        unsigned int location;
-    };
-
-    struct OMEGAGTE_EXPORT VertexInputAttributeDesc {
-        typedef enum : int {
-            FLOAT,
-            FLOAT4,
-            FLOAT3,
-            FLOAT2,
-            INT,
-            INT2,
-            INT3,
-            INT4,
-        } InputType;
-        typedef enum : int {
-            Position,
-            VertexID,
-            Color,
-            TextureCoordinate
-        } InputAttr;
-        InputAttr attr;
-        InputType type;
-    };
-
-    // OMEGAGTE_EXPORT OmegaCommon::vector<InputAttributeDesc> ColoredVertexAttributes();
-    // OMEGAGTE_EXPORT OmegaCommon::vector<InputAttributeDesc> TexturedVertexAttributes();
-
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
-        OmegaCommon::Vector<VertexInputAttributeDesc> vertexInputAttributes;
-        OmegaCommon::Vector<PipelineResourceDescriptor> pipelineResources;
         SharedHandle<GTEShader> vertexFunc;
         SharedHandle<GTEShader> fragmentFunc;
+        unsigned rasterSampleCount = 1;
+        struct {
+            bool enableDepth = false;
+            bool enableStencil = false;
+        } depthAndStencilDesc;
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
-        std::vector<VertexInputAttributeDesc> inputAttributes;
-        OmegaCommon::Vector<PipelineResourceDescriptor> pipelineResources;
         SharedHandle<GTEShader> computeFunc;
 
     };

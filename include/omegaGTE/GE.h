@@ -1,4 +1,4 @@
-
+#include "omegasl.h"
 
 #include <initializer_list>
 #if defined(TARGET_DIRECTX)
@@ -28,9 +28,8 @@
 _NAMESPACE_BEGIN_
     struct GTE;
     typedef enum : uint8_t {
-        Private,
-        Managed,
-        Shared
+        Shared,
+        GPUOnly
     } StorageOpts;
 
     struct GTEShader;

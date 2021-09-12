@@ -8,8 +8,9 @@
 typedef const char * CString;
 
 struct omegasl_lib_header {
+    unsigned name_length;
     CString name;
-    unsigned entryCount;
+    unsigned entry_count;
 };
 
 typedef enum : int {
@@ -41,12 +42,60 @@ typedef enum : int {
     OMEGASL_SHADER_COMPUTE
 } omegasl_shader_type;
 
+typedef enum : int {
+    //Int Types
+    OMEGASL_INT,
+    OMEGASL_INT2,
+    OMEGASL_INT3,
+    OMEGASL_INT4,
+
+    //Uint Types
+    OMEGASL_UINT,
+    OMEGASL_UINT2,
+    OMEGASL_UINT3,
+    OMEGASL_UINT4,
+
+    //Float Types
+    OMEGASL_FLOAT,
+    OMEGASL_FLOAT2,
+    OMEGASL_FLOAT3,
+    OMEGASL_FLOAT4,
+    OMEGASL_FLOAT2x1,
+    OMEGASL_FLOAT2x2,
+    OMEGASL_FLOAT2x3,
+    OMEGASL_FLOAT2x4,
+    OMEGASL_FLOAT3x1,
+    OMEGASL_FLOAT3x2,
+    OMEGASL_FLOAT3x3,
+    OMEGASL_FLOAT3x4,
+    OMEGASL_FLOAT4x1,
+    OMEGASL_FLOAT4x2,
+    OMEGASL_FLOAT4x3,
+    OMEGASL_FLOAT4x4
+
+} omegasl_data_type;
+
+struct omegasl_vertex_shader_param_desc {
+    CString name;
+    omegasl_data_type type;
+    size_t offset;
+};
+
+struct omegasl_vertex_shader_input_desc {
+    bool useVertexID;
+    omegasl_vertex_shader_param_desc *pParams;
+    unsigned nParam;
+};
+
 struct omegasl_compute_shader_threadgroup_desc {
     unsigned x,y,z;
 };
 
+
 struct omegasl_shader {
     omegasl_shader_type type;
+    CString name;
+    omegasl_vertex_shader_input_desc vertexShaderInputDesc;
     omegasl_compute_shader_threadgroup_desc threadgroupDesc;
     omegasl_shader_layout_desc *pLayout;
     unsigned nLayout;

@@ -54,7 +54,7 @@ namespace omegasl {
                 }
                 case SHADER_DECL : {
                     auto *_decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::String(opts.outputDir) + "/" + _decl->name + ".metal");
+                    shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal");
                     shaderOut << defaultHeaders;
 
                     if(_decl->shaderType == ast::ShaderDecl::Vertex){

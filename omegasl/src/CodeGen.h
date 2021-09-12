@@ -1,4 +1,5 @@
 #include "AST.h"
+#include <omegasl.h>
 #include <memory>
 
 #ifndef OMEGASL_CODEGEN_H
@@ -9,6 +10,7 @@ namespace omegasl {
     struct CodeGenOpts {
         bool emitHeaderOnly;
         OmegaCommon::StrRef outputDir;
+        OmegaCommon::StrRef tempDir;
     };
 
     class InterfaceGen;
@@ -16,6 +18,9 @@ namespace omegasl {
     struct CodeGen {
         ast::SemFrontend *typeResolver;
         std::shared_ptr<InterfaceGen> interfaceGen;
+
+        OmegaCommon::Map<OmegaCommon::String,omegasl_shader> shaderMap;
+
         CodeGenOpts & opts;
         explicit CodeGen(CodeGenOpts & opts):opts(opts),typeResolver(nullptr),interfaceGen(std::make_shared<InterfaceGen>(opts.outputDir + "/structs.h",this)){ }
         void setTypeResolver(ast::SemFrontend *_typeResolver){ typeResolver = _typeResolver;}
@@ -23,6 +28,41 @@ namespace omegasl {
         virtual void generateExpr(ast::Expr *expr) = 0;
         virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
         virtual void compileShader(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & name,const OmegaCommon::FS::Path & path,const OmegaCommon::FS::Path & outputPath) = 0;
+        void linkShaderObjects(const OmegaCommon::StrRef & libname){
+            std::ofstream out(OmegaCommon::FS::Path(opts.outputDir).append(libname).absPath() + ".omegasllib",std::ios::out | std::ios::binary);
+            out.write((char *)&libname.size(),sizeof(OmegaCommon::StrRef::size_type));
+            out.write(libname.data(),libname.size());
+            unsigned int s = shaderMap.size();
+            out.write((char *)&s,sizeof(s));
+
+            for(auto & p : shaderMap){
+                auto & shader_data = p.second;
+                //1.  Write Shader Type
+                out.write((char *)&shader_data.type,sizeof(shader_data.type));
+
+                //2.  Write Shader Name Size and Name
+                size_t shader_name_size = strlen(shader_data.name);
+                out.write((char *)&shader_name_size,sizeof(shader_name_size));
+                out.write( shader_data.name,std::make_signed_t<decltype(shader_name_size)>(shader_name_size));
+                //3.  Write Shader Data Size and Data
+                std::ifstream in(p.first,std::ios::in | std::ios::binary);
+                in.seekg(0,std::ios::end);
+                size_t dataSize = in.tellg();
+                in.seekg(0,std::ios::beg);
+                out.write((char *)&dataSize,sizeof(dataSize));
+                while(!in.eof()){
+                    out << in.get();
+                }
+                //4. Write Shader Layout Length and Data
+                OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layoutDescArr {shader_data.pLayout,shader_data.pLayout + shader_data.nLayout};
+                out.write((char *)&shader_data.nLayout,sizeof(shader_data.nLayout));
+                for(auto & layout : layoutDescArr){
+                    out.write((char *)&layout,sizeof(layout));
+                }
+
+            }
+            out.close();
+        };
     };
 
     class InterfaceGen final {

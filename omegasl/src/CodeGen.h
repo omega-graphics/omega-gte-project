@@ -9,6 +9,7 @@ namespace omegasl {
 
     struct CodeGenOpts {
         bool emitHeaderOnly;
+        bool runtimeCompile;
         OmegaCommon::StrRef outputDir;
         OmegaCommon::StrRef tempDir;
     };
@@ -57,7 +58,20 @@ namespace omegasl {
         virtual void generateExpr(ast::Expr *expr) = 0;
         virtual void generateBlock(ast::Block &block) = 0;
         virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
+        /** @brief Compiles the shader with the provided name and outputs the compiled version to the output path provided.
+         * @param type The Shader Type
+         * @param name The Shader Name
+         * @param path The source file location.
+         * @param outputPath The output file location.
+         * */
         virtual void compileShader(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & name,const OmegaCommon::FS::Path & path,const OmegaCommon::FS::Path & outputPath) = 0;
+        /** @brief Compiles the Shader with the provided name and outputs the compiled version to the shadermap.
+         * @param type The Shader Type
+         * @param name The Shader Name
+         * @note
+         * This function is only called when compiling omegasl on runtime.
+         * */
+        virtual void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef & name) = 0;
         void linkShaderObjects(const OmegaCommon::StrRef & libname){
             std::ofstream out(OmegaCommon::FS::Path(opts.outputDir).append(libname).absPath() + ".omegasllib",std::ios::out | std::ios::binary);
             out.write((char *)&libname.size(),sizeof(OmegaCommon::StrRef::size_type));
@@ -93,6 +107,22 @@ namespace omegasl {
             }
             out.close();
         };
+#ifdef RUNTIME_SHADER_COMP_SUPPORT
+        std::shared_ptr<omegasl_shader_lib> getLibrary(OmegaCommon::StrRef name){
+            auto res = std::make_shared<omegasl_shader_lib>();
+            res->header.name = name.data();
+            res->header.name_length = name.size();
+            res->header.entry_count = shaderMap.size();
+            res->shaders = new omegasl_shader [shaderMap.size()];
+            unsigned idx = 0;
+            for(auto & s_pair : shaderMap){
+                memcpy(res->shaders + idx,&s_pair.second,sizeof(omegasl_shader));
+            }
+        }
+        void resetShaderMap(){
+            shaderMap.clear();
+        }
+#endif
     };
 
     class InterfaceGen final {
@@ -140,13 +170,15 @@ namespace omegasl {
     };
 
     struct MetalCodeOpts {
-
+        OmegaCommon::String metal_cmd;
+        OmegaCommon::String metallib_cmd;
+        void *mtl_device = nullptr;
     };
 
 
     std::shared_ptr<CodeGen> GLSLCodeGenMake(CodeGenOpts &opts);
     std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts);
-    std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts);
+    std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts);
 
 
 }

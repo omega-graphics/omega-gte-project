@@ -87,11 +87,7 @@ int main(int argc,char *argv[]){
         else if(arg == "--interface-only"){
             interfaceOnly = true;
         }
-<<<<<<< HEAD
-        else if(arg == "--output" || arg == "-o"){
-=======
         else if(arg == "--output-dir" || arg == "-o"){
->>>>>>> d41b530df036b20d2760a11a976ff4c60f090453
             outputDir = argv[++i];
         }
         else if(arg == "--temp-dir" || arg == "-t"){
@@ -99,22 +95,9 @@ int main(int argc,char *argv[]){
         }
     }
 
-<<<<<<< HEAD
-    if(outputDir == nullptr){
-        std::cout << "OutputDir must be set!" << std::endl;
-    }
 
-    if(tempDir == nullptr){
-        std::cout << "OutputDir must be set!" << std::endl;
-        exit(1);
-    }
-
-    if(outputDir == nullptr){
-        exit(1);
-=======
     if(tempDir == nullptr){
         std::cout << "Temp Directory is not set" << std::endl;
->>>>>>> d41b530df036b20d2760a11a976ff4c60f090453
     }
 
     if(outputDir == nullptr){
@@ -163,13 +146,14 @@ int main(int argc,char *argv[]){
 
     std::shared_ptr<omegasl::CodeGen> codeGen;
 
-    omegasl::CodeGenOpts codeGenOpts {interfaceOnly,outputDir,tempDir};
+    omegasl::CodeGenOpts codeGenOpts {interfaceOnly,false,outputDir,tempDir};
+    omegasl::MetalCodeOpts metalCodeOpts {};
 
     if(genMode == GenMode::hlsl){
         codeGen = omegasl::HLSLCodeGenMake(codeGenOpts);
     }
     else if(genMode == GenMode::metal){
-        codeGen = omegasl::MetalCodeGenMake(codeGenOpts);
+        codeGen = omegasl::MetalCodeGenMake(codeGenOpts,metalCodeOpts);
     }
     else {
         codeGen = omegasl::GLSLCodeGenMake(codeGenOpts);

@@ -1,5 +1,11 @@
 #include "CodeGen.h"
 
+#ifdef TARGET_DIRECTX
+#include <d3dcompiler.h>
+
+#pragma comment(lib,"d3dcompiler.lib")
+
+#endif
 
 namespace omegasl {
 
@@ -46,6 +52,12 @@ namespace omegasl {
             }
             out << "-Fo " << OmegaCommon::FS::Path(outputPath).append(name).absPath();
             out << " " << OmegaCommon::FS::Path(path).str();
+        }
+
+        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &source, const OmegaCommon::StrRef &name) override {
+#ifdef TARGET_DIRECTX
+
+#endif
         }
     };
 

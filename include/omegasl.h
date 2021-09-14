@@ -104,5 +104,39 @@ struct omegasl_shader {
 };
 
 /// @}
-     
+
+
+/// Build Library
+#ifdef RUNTIME_SHADER_COMP_SUPPORT
+
+#include <omega-common/common.h>
+
+
+struct omegasl_shader_lib {
+    omegasl_lib_header header;
+    omegasl_shader *shaders;
+};
+
+/**
+ *  @brief OmegaSL Compiler Frontend. (For Runtime Compilation Use Only)
+ *  @paragraph
+ *  The biggest difference between this and the `omegaslc` executable
+ *  is that it invokes the target platform's runtime shader compiler
+ *  (D3DCompileFromFile on Windows,
+    \c \# id<MTLLibrary> [(id<MTLDevice>) newlibraryFromSource: withCompletionProvider:]
+    on Apple Devices,
+ *  and shaderc::CompilerGlslToSpv() on Android and Linux.)
+ * */
+class OmegaSLCompiler {
+public:
+    struct Source {
+        static std::shared_ptr<Source> fromFile(OmegaCommon::FS::Path path);
+        static std::shared_ptr<Source> fromString(OmegaCommon::String & buffer);
+    };
+    static std::shared_ptr<OmegaSLCompiler> Create();
+    virtual std::shared_ptr<omegasl_shader_lib> compile(std::initializer_list<std::shared_ptr<Source>> sources) = 0;
+};
+
+#endif
+
 #endif

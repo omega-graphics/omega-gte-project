@@ -1,6 +1,8 @@
 #include "CodeGen.h"
 
-
+#ifdef TARGET_VULKAN
+#include <shaderc/shaderc.h>
+#endif
 
 
 namespace omegasl {
@@ -22,6 +24,9 @@ namespace omegasl {
 
         }
         void compileShader(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name, const OmegaCommon::FS::Path &path, const OmegaCommon::FS::Path &outputPath) override {
+
+        }
+        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &source, const OmegaCommon::StrRef &name) override {
 
         }
     };

@@ -30,6 +30,10 @@
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {
 #define _NAMESPACE_END_ }
 
+#ifdef TARGET_VULKAN
+#include <glm/glm.hpp>
+#endif
+
 _NAMESPACE_BEGIN_
     using namespace OmegaCommon;
     typedef enum : int {
@@ -803,9 +807,11 @@ simd_double3 double3(const DVec<3> &mat);
 simd_double4 double4(const DVec<4> &mat);
 
 #elif defined(TARGET_VULKAN)
-#include <glm/glm.hpp>
 
-toGLM
+    glm::vec2 float2(const FVec<2> & mat);
+    glm::vec3 float3(const FVec<3> & mat);
+    glm::vec4 float4(const FVec<4> & mat);
+    
 #endif
 
 

@@ -148,6 +148,7 @@ int main(int argc,char *argv[]){
 
     omegasl::CodeGenOpts codeGenOpts {interfaceOnly,false,outputDir,tempDir};
     omegasl::MetalCodeOpts metalCodeOpts {};
+    omegasl::GLSLCodeOpts glslCodeOpts {};
 
     if(genMode == GenMode::hlsl){
         codeGen = omegasl::HLSLCodeGenMake(codeGenOpts);
@@ -156,7 +157,7 @@ int main(int argc,char *argv[]){
         codeGen = omegasl::MetalCodeGenMake(codeGenOpts,metalCodeOpts);
     }
     else {
-        codeGen = omegasl::GLSLCodeGenMake(codeGenOpts);
+        codeGen = omegasl::GLSLCodeGenMake(codeGenOpts,glslCodeOpts);
     }
 
 

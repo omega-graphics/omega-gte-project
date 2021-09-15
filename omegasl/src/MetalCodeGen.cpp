@@ -25,7 +25,7 @@ namespace omegasl {
         MetalCodeOpts & metalCodeOpts;
 
     public:
-        MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts): CodeGen(opts),metalCodeOpts(metalCodeOpts){
+        MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts & metalCodeOpts): CodeGen(opts),metalCodeOpts(metalCodeOpts){
 
         }
         inline void writeTypeExpr(ast::TypeExpr *t,std::ostream & out){
@@ -227,10 +227,12 @@ namespace omegasl {
             std::system(out.str().c_str());
         }
         void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef &name) override {
-            if(mtl_device != nullptr){
-                auto & _m = shaderMap[name.data()];
-                compileMTLShader(mtl_device,source.size(),source.data(), &_m.data);
-            }
+            #ifdef TARGET_METAL
+                if(mtl_device != nullptr){
+                    auto & _m = shaderMap[name.data()];
+                    compileMTLShader(mtl_device,source.size(),source.data(), &_m.data);
+                }
+            #endif
         }
     };
 

@@ -1,5 +1,7 @@
 #include "AST.def"
 
+#include <optional>
+
 #include <omega-common/common.h>
 
 #ifndef OMEGASL_AST_H

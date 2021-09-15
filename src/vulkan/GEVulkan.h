@@ -1,5 +1,6 @@
 #define VK_USE_PLATFORM_XLIB_KHR
 
+
 #include <vulkan/vulkan.hpp>
 #include <vk_mem_alloc.h>
 #include "omegaGTE/GE.h"

@@ -656,6 +656,8 @@ namespace omegasl {
             first_tok = lexer->nextTok();
         }
 
+        tokenBuffer.push_back(first_tok);
+
         for(auto & t : tokenBuffer){
             std::cout << "TOK: {t:" << std::hex << t.type << std::dec << ",str:" << t.str << "}" << std::endl;
         }

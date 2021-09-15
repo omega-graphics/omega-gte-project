@@ -1,11 +1,10 @@
 
 struct VertexRaster internal {
-    float4 pos : Position;
+    float4 color;
 };
 
-vertex VertexRaster myVertex(float3 pos,float4 color){
-     VertexRaster st;
-     return st;
+fragment float4 myFrag(VertexRaster raster){
+     return raster.color;
 }
 
 

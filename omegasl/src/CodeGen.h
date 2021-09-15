@@ -118,6 +118,7 @@ namespace omegasl {
             for(auto & s_pair : shaderMap){
                 memcpy(res->shaders + idx,&s_pair.second,sizeof(omegasl_shader));
             }
+            return res;
         }
         void resetShaderMap(){
             shaderMap.clear();
@@ -159,6 +160,8 @@ namespace omegasl {
             out << "#ifdef TARGET_DIRECTX";
 #elif defined(TARGET_METAL)
             out << "#ifdef TARGET_METAL";
+#elif defined(TARGET_VULKAN)
+            out << "#ifdef TARGET_VULKAN";
 #endif
             gen->writeNativeStructDecl(decl,out);
             out << "#endif";
@@ -169,6 +172,14 @@ namespace omegasl {
         }
     };
 
+    struct GLSLCodeOpts {
+        OmegaCommon::String glslc_cmd;
+    };
+
+    struct HLSLCodeOpts {
+        OmegaCommon::String dxc_cmd;
+    };
+
     struct MetalCodeOpts {
         OmegaCommon::String metal_cmd;
         OmegaCommon::String metallib_cmd;
@@ -176,7 +187,7 @@ namespace omegasl {
     };
 
 
-    std::shared_ptr<CodeGen> GLSLCodeGenMake(CodeGenOpts &opts);
+    std::shared_ptr<CodeGen> GLSLCodeGenMake(CodeGenOpts &opts,GLSLCodeOpts &glslCodeOpts);
     std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts);
     std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts);
 

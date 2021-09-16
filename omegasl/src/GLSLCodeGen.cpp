@@ -256,7 +256,9 @@ namespace omegasl {
             #endif
         }
         ~GLSLCodeGen(){
+#ifdef TARGET_VULKAN
             shaderc_compiler_release(compiler);
+#endif
         }
     };
 

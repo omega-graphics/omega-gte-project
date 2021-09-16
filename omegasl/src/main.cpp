@@ -10,18 +10,21 @@ inline void help(){
     R"(Usage: omegaslc [options] [required] input-file
 
 Required:
-    --temp-dir, -t       --> Set the temp file output dir (For byproducts of compiling the lib)
-    --output-dir,-o      --> Set the output dir of main compilation products (*.omegasllib and interface)
+    --temp-dir, -t                  --> Set the temp file output dir (For byproducts of compiling the lib)
+    --output-dir,-o                 --> Set the output dir of main compilation products (*.omegasllib and interface)
 Options:
 
-    --help ,    -h       --> Show this message.
-    --tokens-only        --> Show tokens of all input files.
-    --interface-only     --> Emit interface of all input files.
+    --help ,    -h                  --> Show this message.
+    --tokens-only                   --> Show tokens of all input files.
+    --interface-only                --> Emit interface of all input files.
 
 
-    --hlsl          --> Generate HLSL code.
-    --metal         --> Generate Metal Shading Language code.
-    --glsl          --> Generate GLSL code.
+    --hlsl                          --> Generate HLSL code.
+    --metal                         --> Generate Metal Shading Language code.
+    --glsl                          --> Generate GLSL code.
+
+Metal Options:
+    --target-arch=[x86_64,aarch64]  --> Select the target architecture to compile the MSL to.
     )" << std::endl;
 }
 
@@ -126,16 +129,18 @@ int main(int argc,char *argv[]){
         return 1;
     }
 
+    auto input_file_path = OmegaCommon::FS::Path(inputFile);
+
     std::ifstream in(inputFile.data(),std::ios::in);
 
     if(tokenize){
-        omegasl::Lexer lexer;
-        lexer.setInputStream(&in);
+        auto lexer = OmegaCommon::makeARCAny<omegasl::Lexer>();
+        lexer->setInputStream(&in);
         omegasl::Tok t;
-        while((t = lexer.nextTok()).type != TOK_EOF){
+        while((t = lexer->nextTok()).type != TOK_EOF){
             std::cout << "Tok {type:" << std::hex << t.type << std::dec << ", str:`" << t.str << "`}" << std::endl;
         }
-        lexer.finishTokenizeFromStream();
+        lexer->finishTokenizeFromStream();
         in.close();
         return 0;
     }
@@ -149,11 +154,20 @@ int main(int argc,char *argv[]){
     omegasl::CodeGenOpts codeGenOpts {interfaceOnly,false,outputDir,tempDir};
     omegasl::MetalCodeOpts metalCodeOpts {};
     omegasl::GLSLCodeOpts glslCodeOpts {};
+    omegasl::HLSLCodeOpts hlslCodeOpts {};
 
     if(genMode == GenMode::hlsl){
+#ifdef TARGET_DIRECTX
+        hlslCodeOpts.dxc_cmd = "dxc";
+#endif
         codeGen = omegasl::HLSLCodeGenMake(codeGenOpts);
     }
     else if(genMode == GenMode::metal){
+#ifdef TARGET_METAL
+        metalCodeOpts.mtl_device = nullptr;
+        metalCodeOpts.metal_cmd = "xcrun metal";
+        metalCodeOpts.metallib_cmd = "xcrun metallib";
+#endif
         codeGen = omegasl::MetalCodeGenMake(codeGenOpts,metalCodeOpts);
     }
     else {
@@ -163,6 +177,8 @@ int main(int argc,char *argv[]){
 
     omegasl::Parser parser(codeGen);
     parser.parseContext({in});
+
+    codeGen->linkShaderObjects(input_file_path.filename());
 
     return 0;
 };

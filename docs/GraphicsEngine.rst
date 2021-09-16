@@ -2,7 +2,6 @@
 Omega Graphics Engine
 =====================
 
-
 .. cpp:class:: OmegaGTE::OmegaGraphicsEngine
 
 The main graphics engine class.

@@ -1,6 +1,14 @@
 #include "Parser.h"
 #include "CodeGen.h"
 
+namespace std {
+    template<>
+    struct equal_to<omegasl::ast::ResourceDecl *> {
+        auto operator()(omegasl::ast::ResourceDecl *lhs,omegasl::ast::ResourceDecl *rhs){
+            return rhs->name == lhs->name;
+        }
+    };
+}
 
 namespace omegasl {
 
@@ -17,6 +25,8 @@ namespace omegasl {
 
     struct SemContext {
         OmegaCommon::Vector<ast::Type *> typeMap;
+
+        OmegaCommon::SetVector<ast::ResourceDecl *> resourceSet;
 
         OmegaCommon::Map<ast::FuncDecl *,OmegaCommon::Vector<OmegaCommon::String>> funcDeclContextTypeMap;
 
@@ -44,7 +54,11 @@ namespace omegasl {
             ast::builtins::float_type,
             ast::builtins::float2_type,
             ast::builtins::float3_type,
-            ast::builtins::float4_type}),currentContext(nullptr){
+            ast::builtins::float4_type,
+
+            ast::builtins::buffer_type,
+            ast::builtins::texture1d_type
+            }),currentContext(nullptr){
 
         };
 
@@ -92,6 +106,7 @@ namespace omegasl {
             auto b_type_it = builtinsTypeMap.begin();
             for(;b_type_it != builtinsTypeMap.end();b_type_it++){
                 auto & t = *b_type_it;
+//                std::cout << "BUILTIN:" << t->name << " COMPARE TO:" << expr->name << std::endl;
                 if(t->name == expr->name){
                     return t;
                 }
@@ -261,6 +276,28 @@ namespace omegasl {
                     addTypeToCurrentContext(_decl->name,_decl->scope);
                     break;
                 }
+                case RESOURCE_DECL : {
+
+                    /// 1. Check is resource name is taken
+                    auto *_decl = (ast::ResourceDecl *)decl;
+                    if(currentContext->resourceSet.find(_decl) == currentContext->resourceSet.end()){
+                        currentContext->resourceSet.push(_decl);
+                    }
+                    else {
+                        std::cout << "Resource " << _decl->name << " has already been declared!" << std::endl;
+                        return false;
+                    }
+
+                    /// 2. Check resource type.
+                    auto ty = resolveTypeWithExpr(_decl->typeExpr);
+                    if(ty != ast::builtins::buffer_type && ty != ast::builtins::texture1d_type){
+                        std::cout << "Resource `" << _decl->name << "` is not a valid type. (" << _decl->typeExpr->name << ")" << std::endl;
+                        return false;
+                    }
+
+
+                    break;
+                }
                 case SHADER_DECL : {
                     auto *_decl = (ast::ShaderDecl *)decl;
                     /// 1. Check if shader has been declared.
@@ -284,8 +321,17 @@ namespace omegasl {
 
                     auto & shaderType = _decl->shaderType;
 
-                    /// 2. Check shader params.
+                    /// 2. Check shader params and pipeline layout.
                     /// TODO: Add param uniqueness check
+
+                    for(auto & r : _decl->resourceMap){
+                        for(auto res : currentContext->resourceSet){
+                            if(res->name == r.name){
+                                currentContext->variableMap.insert(std::make_pair(r.name,res->typeExpr));
+                            }
+                        }
+                    }
+
                     for(auto & p : _decl->params){
                         auto p_type = resolveTypeWithExpr(p.typeExpr);
                         if(p_type == nullptr){
@@ -329,6 +375,8 @@ namespace omegasl {
 
                     /// 6. Add shader to context
                     currentContext->shaders.push_back(_decl->name);
+                    /// 7. Clear Variable map.
+                    currentContext->variableMap.clear();
                     break;
                 }
                 default : {
@@ -347,10 +395,10 @@ namespace omegasl {
         gen->setTypeResolver(sem.get());
     }
 
-    ast::TypeExpr *Parser::buildTypeRef(Tok &first_tok,bool isPointer) {
+    ast::TypeExpr *Parser::buildTypeRef(Tok &first_tok,bool isPointer,bool hasTypeArgs,OmegaCommon::Vector<ast::TypeExpr *> * args) {
 
         if(first_tok.type == TOK_ID || first_tok.type  == TOK_KW_TYPE){
-            return ast::TypeExpr::Create(first_tok.str,isPointer);
+            return ast::TypeExpr::Create(first_tok.str,isPointer,hasTypeArgs,args);
         }
         else {
             // ERROR
@@ -393,7 +441,7 @@ namespace omegasl {
                 }
                 else {
                     /// Error (Unexpected Keyword)
-                    std::cout << "UnExpected KW" << std::endl;
+                    std::cout << "Unexpected KW" << std::endl;
                     return nullptr;
                 }
 
@@ -470,7 +518,7 @@ namespace omegasl {
                             t = lexer->nextTok();
                         }
                         else {
-                            _decl->fields.push_back({var_ty,var_id,nullptr});
+                            _decl->fields.push_back({var_ty,var_id,{}});
                         }
 
                         if(t.type != TOK_SEMICOLON){
@@ -524,6 +572,7 @@ namespace omegasl {
             }
             else {
                 /// TODO: Error! Unexpected Keyword!
+                delete node;
                 std::cout << "Unexpected Keyword" << std::endl;
                 return nullptr;
             }
@@ -532,16 +581,31 @@ namespace omegasl {
 
         auto _tok = t;
         t = lexer->nextTok();
-        bool type_is_pointer = false;
+        OmegaCommon::Vector<ast::TypeExpr *> type_args;
+        bool type_is_pointer = false,has_type_args = false;
+
+        if(t.type == TOK_OP && t.str == OP_LESS){
+            has_type_args = true;
+            t = lexer->nextTok();
+            while(t.type != TOK_OP && t.str != OP_GREATER){
+                if(t.type == TOK_ID){
+                    type_args.push_back(ast::TypeExpr::Create(t.str));
+                }
+                t = lexer->nextTok();
+            }
+            t = lexer->nextTok();
+        }
+
         if(t.type == TOK_ASTERISK){
             type_is_pointer = true;
             t = lexer->nextTok();
         }
 
-        auto ty_for_decl = buildTypeRef(_tok,type_is_pointer);
+        auto ty_for_decl = buildTypeRef(_tok,type_is_pointer,has_type_args,&type_args);
 
         if(t.type != TOK_ID){
             /// ERROR!
+            delete node;
             std::cout << "Expected ID. Instead got:" << t.str << std::endl;
             return nullptr;
         }
@@ -579,6 +643,7 @@ namespace omegasl {
 
                 if(t.type != TOK_ID){
                     /// ERROR!
+                    delete node;
                     std::cout << "Expected ID. Instead got:" << t.str << std::endl;
                     return nullptr;
                 }
@@ -590,6 +655,7 @@ namespace omegasl {
                     t = lexer->nextTok();
                     if(t.type != TOK_ID){
                         // Error!
+                        delete node;
                         std::cout << "Expected ID. Instead got:" << t.str << std::endl;
                         return nullptr;
                     }
@@ -598,7 +664,7 @@ namespace omegasl {
                     t = lexer->nextTok();
                 }
                 else {
-                    funcDecl->params.push_back({var_ty,var_id,nullptr});
+                    funcDecl->params.push_back({var_ty,var_id,{}});
                 }
 
                 if(t.type == TOK_COMMA){
@@ -632,6 +698,18 @@ namespace omegasl {
             resourceDecl->type = RESOURCE_DECL;
             resourceDecl->name = id_for_decl;
             resourceDecl->typeExpr = ty_for_decl;
+            t = lexer->nextTok();
+            if(t.type != TOK_NUM_LITERAL){
+                delete resourceDecl;
+                std::cout << "Expected NUM Literal" << std::endl;
+                return nullptr;
+            }
+            resourceDecl->registerNumber = std::stoul(t.str);
+            t = lexer->nextTok();
+            if(t.type != TOK_SEMICOLON){
+                delete resourceDecl;
+                std::cout << "Expected Semicolon" << std::endl;
+            }
             node = resourceDecl;
         }
         node->scope = ast::builtins::global_scope;
@@ -992,6 +1070,7 @@ namespace omegasl {
             std::cout << std::hex << "NODE TYPE:" << decl->type << std::dec << std::endl;
             if(sem->performSemForGlobalDecl(decl)){
                 gen->generateDecl(decl);
+                gen->generateInterfaceAndCompileShader(decl);
             }
             else {
                 std::cout << "Failed to evaluate stmt" << std::endl;
@@ -999,7 +1078,6 @@ namespace omegasl {
             }
         }
         lexer->finishTokenizeFromStream();
-
 
     }
 

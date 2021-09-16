@@ -17,10 +17,10 @@ namespace omegasl::ast {
 
         Type *uint_type = new Type{KW_TY_UINT,global_scope};
 
-        auto *buffer_type = new Type{KW_TY_BUFFER,global_scope,true,{"type"}};
-        auto *texture1d_type = new Type{KW_TY_TEXTURE1D,global_scope};
-        auto *texture2d_type = new Type{KW_TY_TEXTURE2D,global_scope};
-        auto *texture3d_type = new Type{KW_TY_TEXTURE3D,global_scope};
+        Type *buffer_type = new Type{KW_TY_BUFFER,global_scope,true,{"type"}};
+        Type *texture1d_type = new Type{KW_TY_TEXTURE1D,global_scope};
+        Type *texture2d_type = new Type{KW_TY_TEXTURE2D,global_scope};
+        Type *texture3d_type = new Type{KW_TY_TEXTURE3D,global_scope};
     }
 
     Scope *Scope::Create(OmegaCommon::StrRef name, Scope *parent) {
@@ -60,8 +60,14 @@ namespace omegasl::ast {
         return success;
     }
 
-    TypeExpr *TypeExpr::Create(OmegaCommon::StrRef name, bool pointer) {
-        return new TypeExpr{name, pointer};
+    TypeExpr *TypeExpr::Create(OmegaCommon::StrRef name, bool pointer,bool hasTypeArgs,OmegaCommon::Vector<TypeExpr *> * args) {
+        if(hasTypeArgs){
+            return new TypeExpr {name, pointer,hasTypeArgs,*args};
+        }
+        else {
+            return new TypeExpr {name,pointer,hasTypeArgs};
+        }
+
     }
 
     TypeExpr *TypeExpr::Create(Type *type, bool pointer) {
@@ -70,5 +76,12 @@ namespace omegasl::ast {
 
     bool TypeExpr::compare(TypeExpr *other) {
        return (pointer == other->pointer) && (name == other->name);
+    }
+
+    TypeExpr::~TypeExpr() {
+        if(hasTypeArgs)
+            for(auto el : args){
+                delete el;
+            }
     }
 }

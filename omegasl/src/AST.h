@@ -52,10 +52,13 @@ namespace omegasl {
         struct TypeExpr {
             OmegaCommon::String name;
             bool pointer;
+            bool hasTypeArgs;
+            OmegaCommon::Vector<TypeExpr *> args;
 
-            static TypeExpr *Create(OmegaCommon::StrRef name, bool pointer = false);
+            static TypeExpr *Create(OmegaCommon::StrRef name, bool pointer = false,bool hasTypeArgs = false,OmegaCommon::Vector<TypeExpr *> * args = nullptr);
             static TypeExpr *Create(Type * type, bool pointer = false);
             bool compare(TypeExpr *other);
+            ~TypeExpr();
         };
 
         struct FuncDecl;

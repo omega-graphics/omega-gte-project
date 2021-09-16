@@ -42,7 +42,7 @@ namespace omegasl {
         ast::Stmt *parseStmt(Tok &first_tok,BlockParseContext & ctxt);
         ast::Decl *parseGlobalDecl();
 
-        ast::TypeExpr *buildTypeRef(Tok &first_tok,bool isPointer);
+        ast::TypeExpr *buildTypeRef(Tok &first_tok,bool isPointer,bool hasTypeArgs = false,OmegaCommon::Vector<ast::TypeExpr *> * args = nullptr);
     public:
         explicit Parser(std::shared_ptr<CodeGen> &gen);
         void parseContext(const ParseContext &ctxt);

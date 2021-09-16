@@ -165,6 +165,7 @@ namespace omegasl {
                         }
                     }
 
+
                     if(_decl->shaderType == ast::ShaderDecl::Vertex){
                         shaderOut << "vertex";
                     }
@@ -179,6 +180,65 @@ namespace omegasl {
                     writeTypeExpr(_decl->returnType,shaderOut);
                     shaderOut << " " << _decl->name << " ";
                     shaderOut << "(";
+
+                    unsigned i = 0,bufferCount = 0,textureCount = 0;
+                    for(auto & res : _decl->resourceMap){
+                        if(i != 0){
+                            shaderOut << ",";
+                        }
+                        auto & res_desc = *(resourceStore.find(res.name));
+                        auto type_ = typeResolver->resolveTypeWithExpr(res_desc->typeExpr);
+
+                        if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
+                            shaderOut << "constant ";
+                        }
+                        else {
+                            shaderOut << "device ";
+                        }
+
+                        bool isTexture = false,isBuffer = false;
+
+                        if(type_ == ast::builtins::buffer_type){
+                            isBuffer = true;
+                            writeTypeExpr(res_desc->typeExpr->args[0],shaderOut);
+                            shaderOut << " *";
+                        }
+                        else if(type_ == ast::builtins::texture1d_type){
+                            isTexture = true;
+                            shaderOut << "texture1d<half,";
+                        }
+
+                        if(isTexture){
+                            if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
+                                shaderOut << "access::read>";
+                            }
+                            else if(res.access == ast::ShaderDecl::ResourceMapDesc::Inout){
+                                shaderOut << "access::readwrite>";
+                            }
+                            else {
+                                shaderOut << "access::write>";
+                            }
+                        }
+
+                        shaderOut << " " << res_desc->name;
+
+                        if(isTexture){
+                            shaderOut << "[[texture(" << textureCount;
+                            ++textureCount;
+                            shaderOut << ")]]";
+                        }
+                        else if(isBuffer){
+                            shaderOut << "[[buffer(" << bufferCount;
+                            ++bufferCount;
+                            shaderOut << ")]]";
+                        }
+                        i++;
+                    }
+
+                    if(!(_decl->params.empty() && _decl->resourceMap.empty())){
+                        shaderOut << ",";
+                    }
+
                     for(auto p_it =  _decl->params.begin();p_it != _decl->params.end();p_it++){
 
                         if(p_it != _decl->params.begin()) {
@@ -219,11 +279,20 @@ namespace omegasl {
             out << "};" << std::endl;
         }
         void compileShader(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name, const OmegaCommon::FS::Path &path,const OmegaCommon::FS::Path & outputPath) override {
-            std::ostringstream out("xcrun metal ");
-            out << "-o " << OmegaCommon::FS::Path(outputPath).append(name).str() << ".air " << "-c " << OmegaCommon::FS::Path(path).str();
+            std::ostringstream out;
+
+            out << metalCodeOpts.metal_cmd;
+            auto object_file = OmegaCommon::FS::Path(outputPath).append(name).concat(".air").str();
+            out << " -o " << object_file << " -c " << OmegaCommon::FS::Path(path).append(name).concat(".metal").str();
+
+            std::cout << "Exec:" << out.str() << std::endl;
+
             std::system(out.str().c_str());
-            out.str("xcrun metallib");
-            out << "-o " << OmegaCommon::FS::Path(outputPath).append(name).str() << ".metallib " << OmegaCommon::FS::Path(path).str();
+            out.str("");
+            out << metalCodeOpts.metallib_cmd;
+            out << " -o " << OmegaCommon::FS::Path(outputPath).append(name).concat(".metallib").str() << " " << object_file;
+
+            std::cout << "Exec:" << out.str() << std::endl;
             std::system(out.str().c_str());
         }
         void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef &name) override {

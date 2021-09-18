@@ -23,8 +23,14 @@ Options:
     --metal                         --> Generate Metal Shading Language code.
     --glsl                          --> Generate GLSL code.
 
+HLSL Options:
+    --dxc                           --> Path to dxc compiler
+    
 Metal Options:
     --target-arch=[x86_64,aarch64]  --> Select the target architecture to compile the MSL to.
+
+GLSL Options:
+    --glslc                         --> Path to glslc compiler
     )" << std::endl;
 }
 
@@ -50,8 +56,11 @@ int main(int argc,char *argv[]){
     bool tokenize = false;
     bool interfaceOnly = false;
 
-    GenMode genMode = GenMode::unknown;
+    GenMode genMode = defaultGenModeForHost();
     const char * outputLibn = nullptr,*tempDir = nullptr;
+
+    const char *glslc_cmd = nullptr,*dxc_cmd = nullptr;
+
     OmegaCommon::StrRef inputFile = argv[argc - 1];
 
     for(unsigned i = 1;i < argc;i++){
@@ -95,6 +104,15 @@ int main(int argc,char *argv[]){
         }
         else if(arg == "--temp-dir" || arg == "-t"){
             tempDir = argv[++i];
+        }
+
+        if(genMode == GenMode::metal){
+
+        }
+        else if(genMode == GenMode::glsl){
+            if(arg == "--glslc"){
+                glslc_cmd = argv[++i];
+            }
         }
     }
 
@@ -146,9 +164,6 @@ int main(int argc,char *argv[]){
         return 0;
     }
 
-    if(genMode == GenMode::unknown){
-        genMode = defaultGenModeForHost();
-    }
 
     std::shared_ptr<omegasl::CodeGen> codeGen;
 
@@ -171,6 +186,12 @@ int main(int argc,char *argv[]){
         codeGen = omegasl::MetalCodeGenMake(codeGenOpts,metalCodeOpts);
     }
     else {
+        #ifdef TARGET_VULKAN
+        glslCodeOpts.glslc_cmd = "glslc";
+        if(glslc_cmd != nullptr){
+            glslCodeOpts.glslc_cmd = glslc_cmd;
+        }
+        #endif
         codeGen = omegasl::GLSLCodeGenMake(codeGenOpts,glslCodeOpts);
     }
 

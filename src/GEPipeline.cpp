@@ -8,12 +8,21 @@ struct GTEShader {
 };
 
 
-class __GERenderPipelineState {
+struct __GERenderPipelineState {
+    SharedHandle<GTEShader> vertexShader;
+    SharedHandle<GTEShader> fragmentShader;
+    __GERenderPipelineState(SharedHandle<GTEShader> & _vertexShader,SharedHandle<GTEShader> & _fragmentShader):
+    vertexShader(_vertexShader),
+    fragmentShader(_fragmentShader){
 
+    };
 };
 
-class __GEComputePipelineState {
-    
+struct __GEComputePipelineState {
+    SharedHandle<GTEShader> computeShader;
+    explicit __GEComputePipelineState(SharedHandle<GTEShader> & _computeShader):computeShader(_computeShader){
+
+    }
 };
 
 _NAMESPACE_END_

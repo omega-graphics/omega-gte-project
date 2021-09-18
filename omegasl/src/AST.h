@@ -22,12 +22,14 @@ namespace omegasl {
             static Scope *Create(OmegaCommon::StrRef name, Scope *parent);
         };
 
+        struct TypeExpr;
 
         struct Type {
             OmegaCommon::String name;
             Scope *declaredScope;
             bool builtin = true;
-            std::vector<std::string> typeArgs;
+            OmegaCommon::Vector<OmegaCommon::String> typeArgs;
+            OmegaCommon::Map<OmegaCommon::String,TypeExpr *> fields = {};
         };
 
         namespace builtins {
@@ -111,7 +113,7 @@ namespace omegasl {
         };
 
         struct Block {
-            std::vector<ast::Stmt *> body;
+            OmegaCommon::Vector<ast::Stmt *> body;
         };
 
         /// @brief Declares a Struct.
@@ -120,7 +122,7 @@ namespace omegasl {
         struct StructDecl : public Decl {
             OmegaCommon::String name;
             bool internal;
-            std::vector<AttributedFieldDecl> fields;
+            OmegaCommon::Vector<AttributedFieldDecl> fields;
         };
 
         /// @brief Declares a Function
@@ -181,12 +183,12 @@ namespace omegasl {
         };
 
         struct ArrayExpr : public Expr {
-            std::vector<Expr *> elm;
+            OmegaCommon::Vector<Expr *> elm;
         };
 
         struct CallExpr : public Expr {
             Expr *callee;
-            std::vector<Expr *> args;
+            OmegaCommon::Vector<Expr *> args;
         };
 
         struct UnaryOpExpr : public Expr {

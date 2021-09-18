@@ -8,21 +8,25 @@
 
 _NAMESPACE_BEGIN_
 
-struct GEMetalFunction : public __GEFunctionInternal {
+struct GEMetalShader : public GTEShader {
+    NSSmartPtr library;
     NSSmartPtr function;
-    GEMetalFunction(NSSmartPtr & func);
+    GEMetalShader(NSSmartPtr & lib,NSSmartPtr & func);
 };
 
 class GEMetalRenderPipelineState : public __GERenderPipelineState {
 public:
     NSSmartPtr renderPipelineState;
-    GEMetalRenderPipelineState(NSSmartPtr & renderPipelineState);
+    GEMetalRenderPipelineState(SharedHandle<GTEShader> & _vertexShader,
+                               SharedHandle<GTEShader> & _fragmentShader,
+                               NSSmartPtr & renderPipelineState);
 };
 
 class GEMetalComputePipelineState : public __GEComputePipelineState {
 public:
     NSSmartPtr computePipelineState;
-    GEMetalComputePipelineState(NSSmartPtr & computePipelineState);
+    GEMetalComputePipelineState(SharedHandle<GTEShader> & _computeShader,
+                                NSSmartPtr & computePipelineState);
 };
 
 _NAMESPACE_END_

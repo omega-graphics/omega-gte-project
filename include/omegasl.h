@@ -31,6 +31,7 @@ typedef enum : int {
 
 struct omegasl_shader_layout_desc {
     omegasl_shader_layout_desc_type type;
+    unsigned gpu_relative_loc;
     omegasl_shader_layout_desc_io_mode io_mode;
     size_t location;
     size_t offset;

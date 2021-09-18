@@ -2,10 +2,10 @@
 
 namespace omegasl {
     void CodeGen::generateInterfaceAndCompileShader(ast::Decl *decl) {
-        if(decl->type == STRUCT_DECL){
-            interfaceGen->generateStruct((ast::StructDecl *)decl);
-        }
-        else if(decl->type == SHADER_DECL){
+//        if(decl->type == STRUCT_DECL){
+//            interfaceGen->generateStruct((ast::StructDecl *)decl);
+//        }
+        if(decl->type == SHADER_DECL){
             auto _decl = (ast::ShaderDecl *)decl;
             if(opts.runtimeCompile){
                 compileShaderOnRuntime(_decl->shaderType,shaderOutRuntime.str(),_decl->name);

@@ -20,6 +20,10 @@ _NAMESPACE_BEGIN_
         [bp endEncoding];
     };
 
+    void GEMetalCommandBuffer::setVertexBuffer(SharedHandle<GEBuffer> &buffer) {
+
+    }
+
     void GEMetalCommandBuffer::startRenderPass(const GERenderPassDescriptor & desc){
         buffer.assertExists();
         MTLRenderPassDescriptor *renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -169,14 +173,14 @@ _NAMESPACE_BEGIN_
         [cp endEncoding];
     };
 
-    void GEMetalCommandBuffer::__present_drawable(NSSmartPtr & drawable){
+    void GEMetalCommandBuffer::_present_drawable(NSSmartPtr & drawable){
          buffer.assertExists();
          drawable.assertExists();
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) presentDrawable:
         NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,drawable.handle())];
     };
     
-    void GEMetalCommandBuffer::__commit(){
+    void GEMetalCommandBuffer::_commit(){
          buffer.assertExists();
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) commit];
     };
@@ -189,7 +193,15 @@ _NAMESPACE_BEGIN_
         NSLog(@"Metal Command Buffer Destroy");
         buffer.assertExists();
         // [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) autorelease];
-    };
+    }
+
+//    void GEMetalCommandBuffer::setResourceConstAtComputeFunc(SharedHandle<GEBuffer> &buffer, unsigned int index) {
+//
+//    }
+//
+//    void GEMetalCommandBuffer::setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned int index) {
+//
+//    };
 
     GEMetalCommandQueue::GEMetalCommandQueue(NSSmartPtr & queue,unsigned size):
     GECommandQueue(size),
@@ -204,17 +216,17 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandQueue::commitToGPU(){
         for(auto & commandBuffer : commandBuffers){
             auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
-            mtlCommandBuffer->__commit();
+            mtlCommandBuffer->_commit();
         };
         commandBuffers.clear();
     };
 
     void GEMetalCommandQueue::commitToGPUAndPresent(NSSmartPtr & drawable){
         auto & b = commandBuffers.back();
-        ((GEMetalCommandBuffer *)b.get())->__present_drawable(drawable);
+        ((GEMetalCommandBuffer *)b.get())->_present_drawable(drawable);
         for(auto & commandBuffer : commandBuffers){
             auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
-            mtlCommandBuffer->__commit();
+            mtlCommandBuffer->_commit();
         };
         commandBuffers.clear();
     };

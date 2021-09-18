@@ -11,7 +11,7 @@ inline void help(){
 
 Required:
     --temp-dir, -t                  --> Set the temp file output dir (For byproducts of compiling the lib)
-    --output-dir,-o                 --> Set the output dir of main compilation products (*.omegasllib and interface)
+    --output,-o                     --> Set the output *.omegasllib.
 Options:
 
     --help ,    -h                  --> Show this message.
@@ -51,7 +51,7 @@ int main(int argc,char *argv[]){
     bool interfaceOnly = false;
 
     GenMode genMode = GenMode::unknown;
-    const char * outputDir = nullptr,*tempDir = nullptr;
+    const char * outputLibn = nullptr,*tempDir = nullptr;
     OmegaCommon::StrRef inputFile = argv[argc - 1];
 
     for(unsigned i = 1;i < argc;i++){
@@ -90,8 +90,8 @@ int main(int argc,char *argv[]){
         else if(arg == "--interface-only"){
             interfaceOnly = true;
         }
-        else if(arg == "--output-dir" || arg == "-o"){
-            outputDir = argv[++i];
+        else if(arg == "--output" || arg == "-o"){
+            outputLibn = argv[++i];
         }
         else if(arg == "--temp-dir" || arg == "-t"){
             tempDir = argv[++i];
@@ -103,8 +103,8 @@ int main(int argc,char *argv[]){
         std::cout << "Temp Directory is not set" << std::endl;
     }
 
-    if(outputDir == nullptr){
-        std::cout << "Output Directory is not set" << std::endl;
+    if(outputLibn == nullptr){
+        std::cout << "Output Lib is not set" << std::endl;
         exit(1);
     }
 
@@ -112,7 +112,8 @@ int main(int argc,char *argv[]){
         exit(1);
     }
 
-    OmegaCommon::FS::Path outputPath(outputDir);
+    OmegaCommon::FS::Path outputLib(outputLibn);
+    auto outputPath = OmegaCommon::FS::Path(OmegaCommon::FS::Path(outputLib).dir());
 
     if(!OmegaCommon::FS::exists(outputPath)){
         OmegaCommon::FS::createDirectory(outputPath);
@@ -151,7 +152,7 @@ int main(int argc,char *argv[]){
 
     std::shared_ptr<omegasl::CodeGen> codeGen;
 
-    omegasl::CodeGenOpts codeGenOpts {interfaceOnly,false,outputDir,tempDir};
+    omegasl::CodeGenOpts codeGenOpts {interfaceOnly,false,outputLibn,tempDir};
     omegasl::MetalCodeOpts metalCodeOpts {};
     omegasl::GLSLCodeOpts glslCodeOpts {};
     omegasl::HLSLCodeOpts hlslCodeOpts {};
@@ -165,8 +166,7 @@ int main(int argc,char *argv[]){
     else if(genMode == GenMode::metal){
 #ifdef TARGET_METAL
         metalCodeOpts.mtl_device = nullptr;
-        metalCodeOpts.metal_cmd = "xcrun metal";
-        metalCodeOpts.metallib_cmd = "xcrun metallib";
+        metalCodeOpts.metal_cmd = "xcrun -sdk macosx metal";
 #endif
         codeGen = omegasl::MetalCodeGenMake(codeGenOpts,metalCodeOpts);
     }
@@ -178,7 +178,7 @@ int main(int argc,char *argv[]){
     omegasl::Parser parser(codeGen);
     parser.parseContext({in});
 
-    codeGen->linkShaderObjects(input_file_path.filename());
+    codeGen->linkShaderObjects();
 
     return 0;
 };

@@ -13,9 +13,6 @@ namespace omegasl {
         std::ofstream shaderOut;
     public:
         HLSLCodeGen(CodeGenOpts &opts): CodeGen(opts){}
-        void writeNativeStructDecl(ast::StructDecl *decl, std::ostream &out) override {
-
-        }
         void generateExpr(ast::Expr *expr) override {
 
         }
@@ -25,12 +22,12 @@ namespace omegasl {
         void generateDecl(ast::Decl *decl) override {
             switch (decl->type) {
                 case STRUCT_DECL : {
-                    writeNativeStructDecl((ast::StructDecl *)decl,shaderOut);
+
                     break;
                 }
                 case SHADER_DECL : {
                     auto _decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::FS::Path(opts.outputDir).append(_decl->name).str() + ".hlsl");
+                    shaderOut.open(OmegaCommon::FS::Path(opts.outputLib).append(_decl->name).str() + ".hlsl");
 
 
 

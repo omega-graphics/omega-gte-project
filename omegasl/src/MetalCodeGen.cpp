@@ -77,6 +77,19 @@ namespace omegasl {
                     shaderOut << _expr->id;
                     break;
                 }
+                case MEMBER_EXPR : {
+                    auto _expr = (ast::MemberExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << "." << _expr->rhs_id;
+                    break;
+                }
+                case BINARY_EXPR : {
+                    auto _expr = (ast::BinaryExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << " " << _expr->op << " ";
+                    generateExpr(_expr->rhs);
+                    break;
+                }
             }
         }
     private:
@@ -153,6 +166,7 @@ namespace omegasl {
                 case SHADER_DECL : {
                     level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
+                    auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
                     shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal",std::ios::out);
                     shaderOut << defaultHeaders;
 
@@ -165,15 +179,21 @@ namespace omegasl {
                         }
                     }
 
+                    omegasl_shader shadermap_entry {};
+                    shadermap_entry.name = _decl->name.c_str();
+
 
                     if(_decl->shaderType == ast::ShaderDecl::Vertex){
                         shaderOut << "vertex";
+                        shadermap_entry.type = OMEGASL_SHADER_VERTEX;
                     }
                     else if(_decl->shaderType == ast::ShaderDecl::Fragment){
                         shaderOut << "fragment";
+                        shadermap_entry.type = OMEGASL_SHADER_FRAGMENT;
                     }
                     else if(_decl->shaderType == ast::ShaderDecl::Compute){
                         shaderOut << "kernel";
+                        shadermap_entry.type = OMEGASL_SHADER_COMPUTE;
                     }
 
                     shaderOut << " ";
@@ -181,8 +201,14 @@ namespace omegasl {
                     shaderOut << " " << _decl->name << " ";
                     shaderOut << "(";
 
+                    OmegaCommon::Vector<omegasl_shader_layout_desc> shaderLayout;
+
                     unsigned i = 0,bufferCount = 0,textureCount = 0;
                     for(auto & res : _decl->resourceMap){
+
+                        omegasl_shader_layout_desc_type layoutDescType;
+                        omegasl_shader_layout_desc_io_mode  ioMode;
+
                         if(i != 0){
                             shaderOut << ",";
                         }
@@ -191,9 +217,15 @@ namespace omegasl {
 
                         if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
                             shaderOut << "constant ";
+                            ioMode = OMEGASL_SHADER_DESC_IO_IN;
                         }
-                        else {
+                        else if(res.access == ast::ShaderDecl::ResourceMapDesc::Inout) {
                             shaderOut << "device ";
+                            ioMode = OMEGASL_SHADER_DESC_IO_INOUT;
+                        }
+                        else if(res.access == ast::ShaderDecl::ResourceMapDesc::Out){
+                            shaderOut << "device ";
+                            ioMode = OMEGASL_SHADER_DESC_IO_OUT;
                         }
 
                         bool isTexture = false,isBuffer = false;
@@ -202,10 +234,12 @@ namespace omegasl {
                             isBuffer = true;
                             writeTypeExpr(res_desc->typeExpr->args[0],shaderOut);
                             shaderOut << " *";
+                            layoutDescType = OMEGASL_SHADER_BUFFER_DESC;
                         }
                         else if(type_ == ast::builtins::texture1d_type){
                             isTexture = true;
                             shaderOut << "texture1d<half,";
+                            layoutDescType = OMEGASL_SHADER_TEXTURE1D_DESC;
                         }
 
                         if(isTexture){
@@ -222,6 +256,18 @@ namespace omegasl {
 
                         shaderOut << " " << res_desc->name;
 
+                        unsigned *binding;
+
+                        if(isTexture){
+                            binding = &textureCount;
+                        }
+                        else if(isBuffer){
+                            binding = &bufferCount;
+                        }
+
+                        shaderLayout.push_back({layoutDescType,*binding,ioMode,res_desc->registerNumber});
+
+
                         if(isTexture){
                             shaderOut << "[[texture(" << textureCount;
                             ++textureCount;
@@ -235,7 +281,15 @@ namespace omegasl {
                         i++;
                     }
 
-                    if(!(_decl->params.empty() && _decl->resourceMap.empty())){
+                    shadermap_entry.nLayout = shaderLayout.size();
+                    if(!shaderLayout.empty()){
+                        shadermap_entry.pLayout = new omegasl_shader_layout_desc[shaderLayout.size()];
+                        std::copy(shaderLayout.begin(),shaderLayout.end(),shadermap_entry.pLayout);
+                    }
+
+                    shaderLayout.clear();
+
+                    if(!(_decl->params.empty()) && !(_decl->resourceMap.empty())){
                         shaderOut << ",";
                     }
 
@@ -249,6 +303,11 @@ namespace omegasl {
 
                         writeTypeExpr(p.typeExpr,shaderOut);
                         shaderOut << " " << p.name << " ";
+
+                        if(_decl->shaderType == ast::ShaderDecl::Fragment){
+                            shaderOut << "[[stage_in]]";
+                        }
+
                         if(p.attributeName.has_value()){
                             shaderOut << "[[";
                             writeAttributeName(p.attributeName.value(),shaderOut);
@@ -256,6 +315,8 @@ namespace omegasl {
                         }
                     }
                     shaderOut << ")";
+
+                    shaderMap.insert(std::make_pair(object_file,shadermap_entry));
 
                     generateBlock(*_decl->block);
 
@@ -267,33 +328,17 @@ namespace omegasl {
                 }
             }
         }
-        void writeNativeStructDecl(ast::StructDecl *decl, std::ostream &out) override {
-            out << "struct " << decl->name << "_ {" << std::endl;
-            for(auto p : decl->fields){
-                out << "    " << std::flush;
-                writeTypeExpr(p.typeExpr,out);
-                out << " " << p.name << " " << std::flush;
-//
-                out << ";" << std::endl;
-            }
-            out << "};" << std::endl;
-        }
         void compileShader(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name, const OmegaCommon::FS::Path &path,const OmegaCommon::FS::Path & outputPath) override {
+
+            auto object_file =OmegaCommon::FS::Path(outputPath).append(name).concat(".metallib").str() ;
+
             std::ostringstream out;
+            out << "  -o " << object_file.c_str() << " " << OmegaCommon::FS::Path(path).append(name).concat(".metal").absPath();
 
-            out << metalCodeOpts.metal_cmd;
-            auto object_file = OmegaCommon::FS::Path(outputPath).append(name).concat(".air").str();
-            out << " -o " << object_file << " -c " << OmegaCommon::FS::Path(path).append(name).concat(".metal").str();
+            auto metal_process = OmegaCommon::ChildProcess::OpenWithStdoutPipe(metalCodeOpts.metal_cmd,out.str().c_str());
+            auto res = metal_process.wait();
 
-            std::cout << "Exec:" << out.str() << std::endl;
 
-            std::system(out.str().c_str());
-            out.str("");
-            out << metalCodeOpts.metallib_cmd;
-            out << " -o " << OmegaCommon::FS::Path(outputPath).append(name).concat(".metallib").str() << " " << object_file;
-
-            std::cout << "Exec:" << out.str() << std::endl;
-            std::system(out.str().c_str());
         }
         void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef &name) override {
             #ifdef TARGET_METAL

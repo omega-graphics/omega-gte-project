@@ -1,1 +1,0 @@
-from .omegaslc import main

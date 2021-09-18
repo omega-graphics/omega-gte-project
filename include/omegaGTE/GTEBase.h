@@ -34,6 +34,10 @@
 #include <glm/glm.hpp>
 #endif
 
+#ifdef TARGET_METAL
+#include <simd/simd.h>
+#endif
+
 _NAMESPACE_BEGIN_
     using namespace OmegaCommon;
     typedef enum : int {
@@ -796,7 +800,6 @@ _NAMESPACE_BEGIN_
 toXMType
 
 #elif defined(TARGET_METAL)
-#include <simd/simd.h>
 
 simd_float2 float2(const FVec<2> &mat);
 simd_float3 float3(const FVec<3> &mat);

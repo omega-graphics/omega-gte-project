@@ -12,6 +12,10 @@
 
 namespace omegasl {
 
+    const char vertex_shader_stage[] = "vert";
+    const char fragment_shader_stage[] = "frag";
+    const char compute_shader_stage[] = "comp";
+
     const char vertex_shader_ext[] = ".vert";
     const char fragment_shader_ext[] = ".frag";
     const char compute_shader_ext[] = ".comp";
@@ -34,9 +38,6 @@ namespace omegasl {
             #ifdef TARGET_VULKAN
             compiler = shaderc_compiler_initialize();
             #endif
-        }
-        void writeNativeStructDecl(ast::StructDecl *decl, std::ostream &out) override {
-
         }
         inline void writeTypeExpr(ast::TypeExpr *typeExpr,std::ostream & out) {
             auto t = typeResolver->resolveTypeWithExpr(typeExpr);
@@ -223,7 +224,32 @@ namespace omegasl {
             }
         }
         void compileShader(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name, const OmegaCommon::FS::Path &path, const OmegaCommon::FS::Path &outputPath) override {
-            
+
+            const char *shader_stage;
+            const char * file_ext;
+            if(type == ast::ShaderDecl::Vertex){
+                shader_stage = vertex_shader_stage;
+                file_ext = vertex_shader_ext;
+            }
+            else if(type == ast::ShaderDecl::Fragment){
+                shader_stage = fragment_shader_stage;
+                file_ext = fragment_shader_ext;
+            }
+            else  {
+                shader_stage = compute_shader_stage;
+                file_ext = compute_shader_ext;
+            }
+
+            OmegaCommon::Vector<const char *> args_list = {
+                    (OmegaCommon::String ("-fshader-stage=") + shader_stage).c_str(),
+                    "-o",
+                    OmegaCommon::FS::Path(outputPath).append(name).concat("spv").absPath().c_str(),
+                    "-c",
+                    OmegaCommon::FS::Path(path).append(name).concat(file_ext).absPath().c_str()};
+
+            auto glslc_process = OmegaCommon::ChildProcess::Open(glslCodeOpts.glslc_cmd,args_list);
+            auto rc = glslc_process.wait();
+
         }
         void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &source, const OmegaCommon::StrRef &name) override {
             #ifdef TARGET_VULKAN

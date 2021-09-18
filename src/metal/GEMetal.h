@@ -32,7 +32,6 @@ class GEMetalBuffer : public GEBuffer {
 public:
     NSSmartPtr metalBuffer;
     size_t size();
-    void * data();
     GEMetalBuffer(NSSmartPtr & buffer);
     ~GEMetalBuffer();
 };

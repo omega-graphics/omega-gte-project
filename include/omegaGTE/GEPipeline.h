@@ -27,8 +27,8 @@ _NAMESPACE_BEGIN_
         SharedHandle<GTEShader> computeFunc;
 
     };
-    typedef class __GERenderPipelineState  GERenderPipelineState;
-    typedef class __GEComputePipelineState GEComputePipelineState;
+    typedef struct __GERenderPipelineState  GERenderPipelineState;
+    typedef struct __GEComputePipelineState GEComputePipelineState;
 
 
 _NAMESPACE_END_

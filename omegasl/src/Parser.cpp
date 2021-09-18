@@ -74,8 +74,8 @@ namespace omegasl {
             currentContext = _currentContext;
         }
 
-        void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc){
-            currentContext->typeMap.push_back(new ast::Type {name,loc,false});
+        void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc,OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> & fields){
+            currentContext->typeMap.push_back(new ast::Type {name,loc,false,{},fields});
         }
 
         bool hasTypeNameInFuncDeclContext(OmegaCommon::StrRef name,ast::FuncDecl *funcDecl){
@@ -176,10 +176,51 @@ namespace omegasl {
                 else if(_expr->isUint()){
                     return ast::TypeExpr::Create(ast::builtins::uint_type);
                 }
+                else if(_expr->isFloat()){
+                    return ast::TypeExpr::Create(ast::builtins::float_type);
+                }
             }
             else if(expr->type == ARRAY_EXPR){
                 auto _expr = (ast::ArrayExpr *)expr;
+            }
+            else if(expr->type == MEMBER_EXPR){
+                auto _expr = (ast::MemberExpr *)expr;
+                auto t = performSemForExpr(_expr->lhs,funcContext);
 
+                std::cout << "MEMBER EXPR " << t->name << " MEMBER:" << _expr->rhs_id << std::endl;
+
+                if(t == nullptr){
+                    return nullptr;
+                }
+
+                auto type_res = resolveTypeWithExpr(t);
+                if(!type_res->builtin){
+                    auto member_found = type_res->fields.find(_expr->rhs_id);
+                    if(member_found == type_res->fields.end()){
+                        std::cout << "Member `" << _expr->rhs_id << "` does not exist on struct " << type_res->name << std::endl;
+                        return nullptr;
+                    }
+                    else {
+                        return member_found->second;
+                    }
+                }
+            }
+            else if(expr->type == BINARY_EXPR){
+                auto _expr = (ast::BinaryExpr *)expr;
+                auto rhs_res = performSemForExpr(_expr->rhs,funcContext);
+                if(!rhs_res){
+                    return nullptr;
+                }
+
+                auto lhs_res = performSemForExpr(_expr->lhs,funcContext);
+                if(!lhs_res){
+                    return nullptr;
+                }
+
+                if(!rhs_res->compare(lhs_res)){
+                    std::cout << "Failed to match type in binary expr." << std::endl;
+                    return nullptr;
+                }
             }
             return ret;
         }
@@ -250,6 +291,8 @@ namespace omegasl {
                     /// 2. Check struct fields.
                     /// TODO: Add struct field uniqueness check
 
+                    OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> field_types;
+
                     for(auto & f : _decl->fields){
 
                         auto field_ty = resolveTypeWithExpr(f.typeExpr);
@@ -269,11 +312,13 @@ namespace omegasl {
                             }
                         }
 
+                        field_types.insert(std::make_pair(f.name,f.typeExpr));
+
                     }
 
                     /// 3. If all of the above checks succeed, add struct type to TypeMap.
                     std::cout << "Adding Struct Type:" << _decl->name << std::endl;
-                    addTypeToCurrentContext(_decl->name,_decl->scope);
+                    addTypeToCurrentContext(_decl->name,_decl->scope,field_types);
                     break;
                 }
                 case RESOURCE_DECL : {
@@ -337,8 +382,15 @@ namespace omegasl {
                         if(p_type == nullptr){
                             return false;
                         }
+                        /// Add struct type if param is an internal struct.
+                        if(!p_type->builtin){
+                            if(!hasTypeNameInFuncDeclContext(p_type->name,_decl)){
+                                addTypeNameToFuncDeclContext(p_type->name,_decl);
+                            }
+                        }
+
                         if(p.attributeName.has_value()){
-                            if(p.name == ATTRIBUTE_VERTEX_ID){
+                            if(p.attributeName == ATTRIBUTE_VERTEX_ID){
                                 if(shaderType != ast::ShaderDecl::Vertex){
                                     std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " in this context." << std::endl;
                                     return false;
@@ -349,6 +401,7 @@ namespace omegasl {
                                 }
                             }
                         }
+                        currentContext->variableMap.insert(std::make_pair(p.name,p.typeExpr));
                     }
 
                     /// 3. Check function block.
@@ -360,7 +413,7 @@ namespace omegasl {
 
                     /// 4. Check return types.
                     if(!_decl->returnType->compare(eval_result)){
-                        std::cout << "In Function Return Type: Failed to match type." << std::endl;
+                        std::cout << "In Function Return Type: Failed to match type." << "(" << _decl->returnType->name << " vs. " << eval_result->name << ")" << std::endl;
                         return false;
                     }
 
@@ -897,6 +950,24 @@ namespace omegasl {
                 }
 
                 _expr = _call_expr;
+            }
+            else if(first_tok.type == TOK_DOT){
+                ++tokIdx;
+
+                auto _member_expr = new ast::MemberExpr();
+                _member_expr->type = MEMBER_EXPR;
+                _member_expr->lhs = _expr;
+
+                first_tok = getTok();
+                if(first_tok.type != TOK_ID){
+                    std::cout <<"Expected ID" << std::endl;
+                    *expr = nullptr;
+                    delete _member_expr;
+                    return false;
+                }
+
+                _member_expr->rhs_id = first_tok.str;
+                _expr = _member_expr;
             }
             else {
                 *expr = _expr;

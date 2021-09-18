@@ -2,15 +2,22 @@
 
 _NAMESPACE_BEGIN_
 
-GEMetalFunction::GEMetalFunction(NSSmartPtr & func):function(func){
+GEMetalShader::GEMetalShader(NSSmartPtr & lib,NSSmartPtr & func):library(lib), function(func){
 
 };
 
-GEMetalRenderPipelineState::GEMetalRenderPipelineState(NSSmartPtr & renderPipelineState):renderPipelineState(renderPipelineState){
+GEMetalRenderPipelineState::GEMetalRenderPipelineState(SharedHandle<GTEShader> & _vertexShader,
+                                                       SharedHandle<GTEShader> & _fragmentShader,
+                                                       NSSmartPtr & renderPipelineState):
+        __GERenderPipelineState(_vertexShader,_fragmentShader),
+        renderPipelineState(renderPipelineState){
     
 };
 
-GEMetalComputePipelineState::GEMetalComputePipelineState(NSSmartPtr & computePipelineState):computePipelineState(computePipelineState){
+GEMetalComputePipelineState::GEMetalComputePipelineState(SharedHandle<GTEShader> & _computeShader,
+                                                         NSSmartPtr & computePipelineState):
+        __GEComputePipelineState(_computeShader),
+        computePipelineState(computePipelineState){
     
 };
 

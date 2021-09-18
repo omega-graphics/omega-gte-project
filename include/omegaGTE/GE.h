@@ -20,7 +20,6 @@
 #define DEBUG_STREAM(message) std::cout << "[" << DEBUG_ENGINE_PREFIX << "] - " << message << std::endl
 
 #include "GTEBase.h"
-#include "GTEShader.h"
 
 #ifndef OMEGAGTE_GE_H
 #define OMEGAGTE_GE_H
@@ -71,7 +70,6 @@ _NAMESPACE_BEGIN_
     class  OMEGAGTE_EXPORT GEBuffer {
     public:
         virtual size_t size() = 0;
-        virtual void *data() = 0;
         virtual ~GEBuffer() = default;
     };
 
@@ -134,7 +132,9 @@ _NAMESPACE_BEGIN_
      @brief The Omega Graphics Engine
     */
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
-        friend class GTEShaderBuilder;
+        SharedHandle<GTEShaderLibrary> loadShaderLibraryFromInputStream(std::istream & in);
+    protected:
+        virtual SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) = 0;
     public:
         /** 
         @brief Creates an Instance of the Omega Graphics Engine  
@@ -142,17 +142,12 @@ _NAMESPACE_BEGIN_
         @returns SharedHandle<OmegaGraphicsEngine>
         */
         static SharedHandle<OmegaGraphicsEngine> Create();
-        // /**
-   //      @brief Loads the Omega GTE Shader Library
-   //      @returns SharedHandle<GEShaderLibrary>
-   //      */
-   //      virtual SharedHandle<GEShaderLibrary> loadStdShaderLibrary() = 0;
-   //      /**
-   //       @brief Loads an OmegaSL Shader Library,
-   //       @param path Path to a `.omegasllib` file.
-   //       @returns SharedHandle<GEShaderLibrary>
-   //      */
-   //      virtual SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path) = 0;
+         /**
+          @brief Loads an OmegaSL Shader Library,
+          @param path Path to an `omegasllib` file.
+          @returns SharedHandle<GEShaderLibrary>
+         */
+         SharedHandle<GTEShaderLibrary> loadShaderLibrary(FS::Path path);
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

@@ -10,6 +10,10 @@
 
 #import <Metal/Metal.h>
 
+#if !__has_attribute(ext_vector_type)
+#pragma error("Requires vector types")
+#endif
+
 _NAMESPACE_BEGIN_
 
     simd_float2 float2(const FVec<2> &mat){
@@ -47,19 +51,133 @@ _NAMESPACE_BEGIN_
         return NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer.handle()).length;
     };
 
-    void * GEMetalBuffer::data(){
-        metalBuffer.assertExists();
-        return [NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer.handle()) contents];
-    };
-
     GEMetalBuffer::~GEMetalBuffer(){
 
     };
+
+    /// @brief Metal Buffer Reader/Writer.
+
+    typedef unsigned char MTLByte;
+
+    class GEMetalBufferWriter : public GEBufferWriter {
+        GEMetalBuffer *buffer_ = nil;
+        MTLByte *_data_ptr = nullptr;
+        size_t currentOffset = 0;
+    public:
+        GEMetalBufferWriter() = default;
+        void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
+            buffer_= (GEMetalBuffer *)buffer.get();
+            currentOffset = 0;
+            _data_ptr = (MTLByte *)[NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer_->metalBuffer.handle()) contents];;
+        }
+        void structBegin() override {
+
+        }
+        void writeFloat(float &v) override {
+            memcpy(_data_ptr + currentOffset,&v,sizeof(v));
+            currentOffset += sizeof(v);
+        }
+        void writeFloat2(FVec<2> &v) override {
+            auto _v = float2(v);
+            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void writeFloat3(FVec<3> &v) override {
+            auto _v = float3(v);
+            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void writeFloat4(FVec<4> &v) override {
+            auto _v = float4(v);
+            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void structEnd() override {
+
+        }
+        void finish() override {
+            buffer_ = nil;
+            _data_ptr = nullptr;
+        }
+    };
+
+    SharedHandle<GEBufferWriter> GEBufferWriter::Create() {
+        return std::shared_ptr<GEBufferWriter>(new GEMetalBufferWriter());
+    }
+
+    class GEMetalBufferReader : public GEBufferReader {
+        GEMetalBuffer *buffer_ = nullptr;
+        MTLByte *_data_ptr = nullptr;
+        size_t currentOffset = 0;
+    public:
+        GEMetalBufferReader() = default;
+        void setInputBuffer(SharedHandle<GEBuffer> &buffer) override {
+            currentOffset = 0;
+            buffer_= (GEMetalBuffer *)buffer.get();
+            _data_ptr = (MTLByte *)[NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer_->metalBuffer.handle()) contents];
+        }
+        void structBegin() override {
+
+        }
+        void getFloat(float &v) override {
+            memcpy(&v,_data_ptr + currentOffset,sizeof(v));
+            currentOffset += sizeof(v);
+        }
+        void getFloat2(FVec<2> &v) override {
+            simd_float2 _v;
+            memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
+            
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+        }
+        void getFloat3(FVec<3> &v) override {
+            simd_float3 _v;
+            memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
+
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+            v[2][0] = _v.z;
+        }
+        void getFloat4(FVec<4> &v) override {
+            simd_float4 _v;
+            memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
+
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+            v[2][0] = _v.z;
+            v[3][0] = _v.w;
+        }
+        void structEnd() override {
+
+        }
+        void finish() override {
+            _data_ptr = nullptr;
+            buffer_ = nullptr;
+        }
+    };
+
+    SharedHandle<GEBufferReader> GEBufferReader::Create() {
+        return std::shared_ptr<GEBufferReader>(new GEMetalBufferReader());
+    }
+
+
 
     GEMetalFence::GEMetalFence(NSSmartPtr & fence):metalFence(fence){};
 
     class GEMetalEngine : public OmegaGraphicsEngine {
         NSSmartPtr metalDevice;
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override {
+            auto data = dispatch_data_create(shaderDesc->data,shaderDesc->dataSize,nullptr,DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+            NSError *error;
+            NSSmartPtr library = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithData:data error:&error]};
+            NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:[[NSString alloc] initWithUTF8String:shaderDesc->name]] };
+            auto _shader = new GEMetalShader(library,func);
+            _shader->internal = *shaderDesc;
+            return SharedHandle<GTEShader>(_shader);
+        }
     public:
         GEMetalEngine():metalDevice({NSOBJECT_CPP_BRIDGE MTLCreateSystemDefaultDevice()}){
             DEBUG_STREAM("GEMetalEngine Successfully Created");
@@ -75,14 +193,25 @@ _NAMESPACE_BEGIN_
             return std::shared_ptr<GEBuffer>(new GEMetalBuffer(buffer));
         };
         SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override{
-            // GEMetalFunction *computeFunc = (GEMetalFunction *)desc.computeFunc.get();
-            // NSError *error;
-            // id<MTLComputePipelineState> pipelineState = [metalDevice newComputePipelineStateWithFunction:computeFunc->function error:&error];
-            // if(error.code < 0){
-            //     DEBUG_STREAM("Failed to Create Compute Pipeline State");
-            // };
-            // return std::make_shared<GEMetalComputePipelineState>(pipelineState);
-            return nullptr;
+            metalDevice.assertExists();
+            /// TODO: Make MTLComputeFunctionReflection from omegasl_shader desc.
+
+            MTLComputePipelineDescriptor *pipelineDescriptor = [[MTLComputePipelineDescriptor alloc] init];
+
+            GEMetalShader *computeShader = (GEMetalShader *)desc.computeFunc.get();
+            computeShader->function.assertExists();
+
+            pipelineDescriptor.computeFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,computeShader->function.handle());
+
+            NSError *error;
+            NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newComputePipelineStateWithDescriptor:pipelineDescriptor options:MTLPipelineOptionNone reflection:nil error:&error]};
+
+            if(pipelineState.handle() == nil){
+                DEBUG_STREAM("Failed to Create Compute Pipeline State");
+                exit(1);
+            };
+
+            return std::shared_ptr<GEComputePipelineState>(new GEMetalComputePipelineState(desc.computeFunc,pipelineState));
         };
         SharedHandle<GEFence> makeFence() override{
             // auto fence = [metalDevice newFence];
@@ -103,8 +232,8 @@ _NAMESPACE_BEGIN_
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
             
-            GEMetalFunction *vertexFunc = (GEMetalFunction *)desc.vertexFunc.get();
-            GEMetalFunction *fragmentFunc = (GEMetalFunction *)desc.fragmentFunc.get();
+            GEMetalShader *vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
+            GEMetalShader *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
             pipelineDesc.vertexFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,vertexFunc->function.handle());
@@ -119,73 +248,8 @@ _NAMESPACE_BEGIN_
                 exit(1);
             };
             
-            return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(pipelineState));
+            return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(desc.vertexFunc,desc.fragmentFunc,pipelineState));
         };
-        // SharedHandle<GEFunctionLibrary> loadStdShaderLibrary() override{
- //            /// NOTE: This a temporary fix.. Please optimize!
- //            NSString *shaderMapURL = [[NSBundle bundleWithIdentifier:@"org.omegagraphics.OmegaGTE"] pathForResource:@"std" ofType:@"shadermap" inDirectory:@"stdshaderlib"];
- //            NSLog(@"Resource Path: %@",shaderMapURL);
- //            return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
- //            // return loadShaderLibrary(std::string(shaderMapURL.UTF8String));
- //        };
-        // SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path) override{
-//             /// Load OmegaSL Shadermap
-//             std::ifstream in(path.str(),std::ios::binary | std::ios::in);
-//
-//             if(in.is_open()){
-//                 SharedHandle<GEFunctionLibrary> funcLibrary = std::make_shared<GEFunctionLibrary>();
-//                 unsigned b;
-//                 in.read((char *)&b,sizeof(b));
-//                 DEBUG_STREAM("LENGTH:" << b);
-//                 while(b > 0){
-//                     unsigned entNameLen;
-//                     in.read((char *)&entNameLen,sizeof(entNameLen));
-//                     char *name = new char[entNameLen];
-//                     in.read(name,sizeof(char) * entNameLen);
-//                     std::string_view str(name,entNameLen);
-//                     NSString *file = [[NSString alloc] initWithUTF8String:path.str().c_str()];
-//                     NSLog(@"FILE LOC:%@",file);
-//                     NSError *error;
-//                     NSSmartPtr mtlLibrary = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithFile:file error:&error] };
-//
-//                     if(mtlLibrary.handle() == nil){
-//                         DEBUG_STREAM("Failed to Load Metal Library From:" << path.str());
-//                     };
-//
-//                     unsigned shaderCount;
-//                     in.read((char *)&shaderCount,sizeof(shaderCount));
-//                     DEBUG_STREAM("Metal Lib ShaderCount:" << shaderCount);
-//                     while(shaderCount > 0){
-//                         unsigned funcNameLen;
-//                         in.read((char *)&funcNameLen,sizeof(funcNameLen));
-//                         char *name = new char[funcNameLen + 1];
-//                         in.read(name,sizeof(char) * funcNameLen);
-//                         name[funcNameLen] = '\0';
-//                         std::string_view func_name(name,funcNameLen);
-//
-//                         std::cout << "FUNC:" << func_name << std::endl;
-//
-//                         NSString *str = [[NSString alloc] initWithUTF8String:func_name.data()];
-//
-//                         NSSmartPtr mtlFunc = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,mtlLibrary.handle()) newFunctionWithName:str] };
-//
-//                         if(mtlFunc.handle() == nil){
-//                             DEBUG_STREAM("Failed to Load Metal Shader \"" << func_name << "\" from path:" << path.str());
-//                         };
-//                         funcLibrary->functions.insert(std::make_pair(func_name,std::make_shared<GEMetalFunction>(mtlFunc)));
-//
-//                         --shaderCount;
-//                     };
-//
-//                     --b;
-//                 };
-//                 in.close();
-//                 return funcLibrary;
-//             }
-//             else {
-//                 return nullptr;
-//             };
-//         };
 
         SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override{
             return nullptr;

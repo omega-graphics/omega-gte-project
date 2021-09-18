@@ -4,7 +4,7 @@ _NAMESPACE_BEGIN_
 
 GTE Init(){
     auto ge = OmegaGraphicsEngine::Create();
-    return {ge,OmegaTessalationEngine::Create(),std::make_shared<GTEShaderBuilder>(ge.get())};
+    return {ge,OmegaTessalationEngine::Create()};
 };
 
 

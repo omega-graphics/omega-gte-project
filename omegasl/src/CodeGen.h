@@ -5,12 +5,14 @@
 #ifndef OMEGASL_CODEGEN_H
 #define OMEGASL_CODEGEN_H
 
+#define INTERFACE_FILENAME "interface.h"
+
 namespace omegasl {
 
     struct CodeGenOpts {
         bool emitHeaderOnly;
         bool runtimeCompile;
-        OmegaCommon::StrRef outputDir;
+        OmegaCommon::StrRef outputLib;
         OmegaCommon::StrRef tempDir;
     };
 
@@ -57,8 +59,8 @@ namespace omegasl {
         CodeGenOpts & opts;
         explicit CodeGen(CodeGenOpts & opts):
         opts(opts),
-        typeResolver(nullptr),
-        interfaceGen(std::make_shared<InterfaceGen>(OmegaCommon::FS::Path(opts.outputDir).append("structs.h").absPath(),this))
+        typeResolver(nullptr)
+//        interfaceGen(std::make_shared<InterfaceGen>(OmegaCommon::FS::Path(opts.outputLib).append(INTERFACE_FILENAME).absPath(), this))
         {
 
         }
@@ -66,7 +68,7 @@ namespace omegasl {
         virtual void generateDecl(ast::Decl *decl) = 0;
         virtual void generateExpr(ast::Expr *expr) = 0;
         virtual void generateBlock(ast::Block &block) = 0;
-        virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
+//        virtual void writeNativeStructDecl(ast::StructDecl *decl,std::ostream & out) = 0;
         void generateInterfaceAndCompileShader(ast::Decl *decl);
 
         /** @brief Compiles the shader with the provided name and outputs the compiled version to the output path provided.
@@ -83,39 +85,63 @@ namespace omegasl {
          * This function is only called when compiling omegasl on runtime.
          * */
         virtual void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef & name) = 0;
-        void linkShaderObjects(const OmegaCommon::StrRef & libname){
-            std::ofstream out(OmegaCommon::FS::Path(opts.outputDir).append(libname).concat(".omegasllib").absPath(),std::ios::out | std::ios::binary);
+        void linkShaderObjects(){
+            OmegaCommon::StrRef libname = OmegaCommon::FS::Path(opts.outputLib).dir();
+            std::ofstream out(OmegaCommon::FS::Path(opts.outputLib).str(), std::ios::out | std::ios::binary);
             out.write((char *)&libname.size(),sizeof(OmegaCommon::StrRef::size_type));
             out.write(libname.data(),libname.size());
             unsigned int s = shaderMap.size();
             out.write((char *)&s,sizeof(s));
 
+//            std::cout << "Write Shader Lib :" << libname.data() << std::endl;
+
             for(auto & p : shaderMap){
                 auto & shader_data = p.second;
                 //1.  Write Shader Type
                 out.write((char *)&shader_data.type,sizeof(shader_data.type));
+//                std::cout << "Write Shader :" << p.first << std::endl;
 
                 //2.  Write Shader Name Size and Name
                 size_t shader_name_size = strlen(shader_data.name);
+
                 out.write((char *)&shader_name_size,sizeof(shader_name_size));
                 out.write( shader_data.name,std::make_signed_t<decltype(shader_name_size)>(shader_name_size));
+//                std::cout << "Write Shader Name:" << shader_data.name << std::endl;
                 //3.  Write Shader Data Size and Data
-                std::ifstream in(p.first,std::ios::in | std::ios::binary);
-                in.seekg(0,std::ios::end);
-                size_t dataSize = in.tellg();
-                in.seekg(0,std::ios::beg);
-                out.write((char *)&dataSize,sizeof(dataSize));
-                while(!in.eof()){
-                    out << in.get();
+                {
+                    std::ifstream in(p.first,std::ios::in | std::ios::binary);
+                    if(in.is_open()){
+                        in.seekg(0,std::ios::end);
+                        size_t dataSize = in.tellg();
+//                        std::cout <<  "Shader Len:" << dataSize << std::endl;
+                        in.seekg(0,std::ios::beg);
+                        out.write((char *)&dataSize,sizeof(dataSize));
+                        for(size_t i = 0;i < dataSize;i++){
+                            out << (char)in.get();
+                        }
+                        in.close();
+                    }
+                    else {
+//                        std::cout << "Cannot find file:" << p.first << std::endl;
+                        return;
+                    }
                 }
+
                 //4. Write Shader Layout Length and Data
-                OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layoutDescArr {shader_data.pLayout,shader_data.pLayout + shader_data.nLayout};
-                out.write((char *)&shader_data.nLayout,sizeof(shader_data.nLayout));
-                for(auto & layout : layoutDescArr){
-                    out.write((char *)&layout,sizeof(layout));
+                if(shader_data.nLayout > 0){
+                    OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layoutDescArr {shader_data.pLayout,shader_data.pLayout + shader_data.nLayout};
+                    out.write((char *)&shader_data.nLayout,sizeof(shader_data.nLayout));
+                    for(auto & layout : layoutDescArr){
+                        out.write((char *)&layout,sizeof(layout));
+                    }
+                }
+                else {
+                    unsigned int len = 0;
+                    out.write((char *)&len,sizeof(len));
                 }
 
             }
+
             out.close();
         };
 #ifdef RUNTIME_SHADER_COMP_SUPPORT
@@ -137,63 +163,63 @@ namespace omegasl {
 #endif
     };
 
-    class InterfaceGen final {
-        std::ofstream out;
-        CodeGen *gen;
-    public:
-        InterfaceGen(OmegaCommon::String filename,CodeGen *gen):gen(gen){
-            out.open(filename);
-            out << "// Warning! This file was generated by omegaslc. DO NOT EDIT!" << std::endl <<
-            "#include \"omegaGTE/GTEBase.h\"" << std::endl;
-        }
-        inline void writeCrossType(ast::TypeExpr *t){
-            using namespace ast;
-            auto *_t = gen->typeResolver->resolveTypeWithExpr(t);
-            if(_t == builtins::void_type){
-                out << "void";
-            }
-            else if(_t == builtins::float_type){
-                out << "float";
-            }
-            else if(_t == builtins::float2_type){
-                out << "FVec<2>";
-            }
-            else if(_t == builtins::float3_type){
-                out << "FVec<3>";
-            }
-            else if(_t == builtins::float4_type){
-                out << "FVec<4>";
-            }
-            if(t->pointer){
-                out << " *";
-            }
-        }
-        void generateStruct(ast::StructDecl *decl){
-            if(!decl->internal){
-                out << "struct " << decl->name << " {" << std::endl;
-                for(auto p : decl->fields){
-                    out << "    ";
-                    writeCrossType(p.typeExpr);
-                    out << " " << p.name;
-                    out << ";" << std::endl;
-                }
-                out << "};" << std::endl;
-                #if defined(TARGET_DIRECTX)
-                    out << "#ifdef TARGET_DIRECTX";
-                #elif defined(TARGET_METAL)
-                    out << "#ifdef TARGET_METAL";
-                #elif defined(TARGET_VULKAN)
-                    out << "#ifdef TARGET_VULKAN";
-                #endif
-                out << std::endl;
-                gen->writeNativeStructDecl(decl,out);
-                out << "#endif" << std::endl << std::endl;
-            }
-        }
-        ~InterfaceGen(){
-            out.close();
-        }
-    };
+//    class InterfaceGen final {
+//        std::ofstream out;
+//        CodeGen *gen;
+//    public:
+//        InterfaceGen(OmegaCommon::String filename,CodeGen *gen):gen(gen){
+//            out.open(filename);
+//            out << "// Warning! This file was generated by omegaslc. DO NOT EDIT!" << std::endl <<
+//            "#include \"omegaGTE/GTEBase.h\"" << std::endl;
+//        }
+//        inline void writeCrossType(ast::TypeExpr *t){
+//            using namespace ast;
+//            auto *_t = gen->typeResolver->resolveTypeWithExpr(t);
+//            if(_t == builtins::void_type){
+//                out << "void";
+//            }
+//            else if(_t == builtins::float_type){
+//                out << "float";
+//            }
+//            else if(_t == builtins::float2_type){
+//                out << "FVec<2>";
+//            }
+//            else if(_t == builtins::float3_type){
+//                out << "FVec<3>";
+//            }
+//            else if(_t == builtins::float4_type){
+//                out << "FVec<4>";
+//            }
+//            if(t->pointer){
+//                out << " *";
+//            }
+//        }
+//        void generateStruct(ast::StructDecl *decl){
+//            if(!decl->internal){
+//                out << "struct " << decl->name << " {" << std::endl;
+//                for(auto p : decl->fields){
+//                    out << "    ";
+//                    writeCrossType(p.typeExpr);
+//                    out << " " << p.name;
+//                    out << ";" << std::endl;
+//                }
+//                out << "};" << std::endl;
+//                #if defined(TARGET_DIRECTX)
+//                    out << "#ifdef TARGET_DIRECTX";
+//                #elif defined(TARGET_METAL)
+//                    out << "#ifdef TARGET_METAL";
+//                #elif defined(TARGET_VULKAN)
+//                    out << "#ifdef TARGET_VULKAN";
+//                #endif
+//                out << std::endl;
+//                gen->writeNativeStructDecl(decl,out);
+//                out << "#endif" << std::endl << std::endl;
+//            }
+//        }
+//        ~InterfaceGen(){
+//            out.close();
+//        }
+//    };
 
     struct GLSLCodeOpts {
         OmegaCommon::String glslc_cmd;
@@ -205,7 +231,6 @@ namespace omegasl {
 
     struct MetalCodeOpts {
         OmegaCommon::String metal_cmd;
-        OmegaCommon::String metallib_cmd;
         void *mtl_device = nullptr;
     };
 

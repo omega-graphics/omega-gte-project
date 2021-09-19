@@ -192,10 +192,124 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
     };
 
+    SharedHandle<GTEShader> GED3D12Engine::_loadShaderFromDesc(omegasl_shader *shaderDesc) {
+        auto shader = new GED3D12Shader();
+        shader->internal = *shaderDesc;
+        shader->shaderBytecode.pShaderBytecode = shaderDesc->data;
+        shader->shaderBytecode.BytecodeLength = shaderDesc->dataSize;
+        return SharedHandle<GTEShader>(shader);
+    }
+
+    typedef unsigned char D3DByte;
+
+    class GED3D12BufferWriter : public GEBufferWriter {
+        GED3D12Buffer * _buffer = nullptr;
+        D3DByte *_data_buffer = nullptr;
+        size_t currentOffset = 0;
+    public:
+        void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
+            currentOffset = 0;
+            _buffer = (GED3D12Buffer *)buffer.get();
+            CD3DX12_RANGE range(0,0);
+
+            _buffer->buffer->Map(0,&range,(void **)&_data_buffer);
+        }
+        void structBegin() override {
+
+        }
+        void writeFloat(float &v) override {
+            memcpy(_data_buffer + currentOffset,&v,sizeof(v));
+            currentOffset += sizeof(v);
+        }
+        void writeFloat2(FVec<2> &v) override {
+           DirectX::XMFLOAT2 _v {v[0][0],v[1][0]};
+            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void writeFloat3(FVec<3> &v) override {
+            DirectX::XMFLOAT3 _v {v[0][0],v[1][0],v[2][0]};
+            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void writeFloat4(FVec<4> &v) override {
+            DirectX::XMFLOAT4 _v {v[0][0],v[1][0],v[2][0],v[3][0]};
+            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
+            currentOffset += sizeof(_v);
+        }
+        void structEnd() override {
+
+        }
+        void finish() override {
+            _buffer = nullptr;
+            _data_buffer = nullptr;
+            currentOffset = 0;
+            _buffer->buffer->Unmap(0,nullptr);
+        }
+    };
+
+    SharedHandle<GEBufferWriter> GEBufferWriter::Create() {
+        return SharedHandle<GEBufferWriter>(new GED3D12BufferWriter());
+    }
+
+    class GED3D12BufferReader : public GEBufferReader {
+        GED3D12Buffer * _buffer = nullptr;
+        D3DByte *_data_buffer = nullptr;
+        size_t currentOffset = 0;
+    public:
+        void setInputBuffer(SharedHandle<GEBuffer> &buffer) override {
+            currentOffset = 0;
+            _buffer = (GED3D12Buffer *)buffer.get();
+            CD3DX12_RANGE range(0,0);
+
+            _buffer->buffer->Map(0,&range,(void **)&_data_buffer);
+        }
+        void structBegin() override {
+
+        }
+        void getFloat(float &v) override {
+            memcpy(&v,_data_buffer + currentOffset,sizeof(v));
+        }
+        void getFloat2(FVec<2> &v) override {
+            DirectX::XMFLOAT2 _v {};
+            memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+        }
+        void getFloat3(FVec<3> &v) override {
+            DirectX::XMFLOAT3 _v {};
+            memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+            v[2][0] = _v.z;
+        }
+        void getFloat4(FVec<4> &v) override {
+            DirectX::XMFLOAT4 _v {};
+            memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            v[0][0] = _v.x;
+            v[1][0] = _v.y;
+            v[2][0] = _v.z;
+            v[3][0] = _v.w;
+        }
+        void structEnd() override {
+
+        }
+        void finish() override {
+            _buffer = nullptr;
+            _data_buffer = nullptr;
+            currentOffset = 0;
+            _buffer->buffer->Unmap(0,nullptr);
+        }
+    };
+
+    SharedHandle<GEBufferReader> GEBufferReader::Create() {
+        return SharedHandle<GEBufferReader>(new GED3D12BufferReader());
+    }
+
+
     IDXGISwapChain3 *GED3D12Engine::createSwapChainForComposition(DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue){
-        GED3D12CommandQueue *d3d12_queue = (GED3D12CommandQueue *)commandQueue.get();
+        auto *d3d12_queue = (GED3D12CommandQueue *)commandQueue.get();
         IDXGISwapChain1 *swapChain;
-        HRESULT hr = dxgi_factory->CreateSwapChainForComposition(d3d12_queue->commandQueue.Get(),desc,NULL,&swapChain);
+        HRESULT hr = dxgi_factory->CreateSwapChainForComposition(d3d12_queue->commandQueue.Get(),desc,nullptr,&swapChain);
         if(FAILED(hr)){
             exit(1);
         };
@@ -225,7 +339,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     }
 
     SharedHandle<OmegaGraphicsEngine> GED3D12Engine::Create(){
-        return std::make_shared<GED3D12Engine>();
+        return SharedHandle<OmegaGraphicsEngine>(new GED3D12Engine());
     }
 
     SharedHandle<GEFence> GED3D12Engine::makeFence(){

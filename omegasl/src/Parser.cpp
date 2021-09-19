@@ -57,7 +57,8 @@ namespace omegasl {
             ast::builtins::float4_type,
 
             ast::builtins::buffer_type,
-            ast::builtins::texture1d_type
+            ast::builtins::texture1d_type,
+            ast::builtins::texture2d_type
             }),currentContext(nullptr){
 
         };

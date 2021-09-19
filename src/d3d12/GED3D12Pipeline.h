@@ -6,6 +6,11 @@
 
 _NAMESPACE_BEGIN_
 
+struct GED3D12Shader : public GTEShader {
+public:
+    D3D12_SHADER_BYTECODE shaderBytecode;
+};
+
 class GED3D12RenderPipelineState : public __GERenderPipelineState {
 public:
      ComPtr<ID3D12PipelineState> pipelineState;

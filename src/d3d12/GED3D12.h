@@ -66,6 +66,7 @@ _NAMESPACE_BEGIN_
     };
 
     class GED3D12Engine : public OmegaGraphicsEngine {
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
     public:
         GED3D12Engine();
         ComPtr<IDXGIFactory4> dxgi_factory;

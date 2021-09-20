@@ -82,6 +82,10 @@ namespace omegasl {
         bool hasTypeNameInFuncDeclContext(OmegaCommon::StrRef name,ast::FuncDecl *funcDecl){
             auto decl_res = currentContext->funcDeclContextTypeMap.find(funcDecl);
 
+            if(decl_res == currentContext->funcDeclContextTypeMap.end()){
+                return false;
+            }
+
             auto name_it = decl_res->second.begin();
             for(;name_it != decl_res->second.end();name_it++){
                 if(name == *name_it){
@@ -222,6 +226,30 @@ namespace omegasl {
                     std::cout << "Failed to match type in binary expr." << std::endl;
                     return nullptr;
                 }
+            }
+            else if(expr->type == INDEX_EXPR){
+                auto _expr = (ast::IndexExpr *)expr;
+                auto lhs_res = performSemForExpr(_expr->lhs,funcContext);
+                if(!lhs_res){
+                    return nullptr;
+                }
+                auto idx_expr_res = performSemForExpr(_expr->idx_expr,funcContext);
+                if(!idx_expr_res){
+                    return nullptr;
+                }
+
+                auto _t = resolveTypeWithExpr(lhs_res);
+                if(_t != ast::builtins::buffer_type){
+                    std::cout << "Indexing is only supported on buffer types" << std::endl;
+                }
+
+                _t = resolveTypeWithExpr(idx_expr_res);
+                if(_t != ast::builtins::uint_type){
+                    std::cout << "Index of buffer can only be a uint type." << std::endl;
+                }
+
+                return lhs_res->args[0];
+
             }
             return ret;
         }
@@ -970,11 +998,35 @@ namespace omegasl {
                 _member_expr->rhs_id = first_tok.str;
                 _expr = _member_expr;
             }
+            else if(first_tok.type == TOK_LBRACKET){
+                ++tokIdx;
+
+                auto _index_expr = new ast::IndexExpr();
+                _index_expr->type = INDEX_EXPR;
+                _index_expr->lhs = _expr;
+                first_tok = getTok();
+                _expr = parseExpr(first_tok,parentScope);
+                if(_expr == nullptr){
+                    *expr = nullptr;
+                    delete _index_expr;
+                    return false;
+                }
+                first_tok = getTok();
+                if(first_tok.type != TOK_RBRACKET){
+                    std::cout <<"Expected RBracket" << std::endl;
+                    *expr = nullptr;
+                    delete _index_expr;
+                    return false;
+                }
+                _index_expr->idx_expr = _expr;
+                _expr = _index_expr;
+            }
             else {
                 *expr = _expr;
                 break;
             }
             first_tok = aheadTok();
+            _expr->scope = parentScope;
             *expr = _expr;
         }
 
@@ -996,6 +1048,8 @@ namespace omegasl {
                 _expr = parseExpr(first_tok,parentScope);
                 first_tok = getTok();
                 if(first_tok.type != TOK_RPAREN){
+                    if(!_expr)
+                        delete _expr;
                     std::cout << "Expected RParen!" << std::endl;
                     return false;
                 }
@@ -1072,6 +1126,8 @@ namespace omegasl {
 
             first_tok = aheadTok();
 
+            std::cout << "AHEAD TOK:" << first_tok.str << std::endl;
+
             if(first_tok.type == TOK_OP){
                 ++tokIdx;
                 if(first_tok.str == OP_MINUSMINUS || first_tok.str == OP_PLUSPLUS){
@@ -1090,6 +1146,7 @@ namespace omegasl {
                     first_tok = getTok();
                     _expr = parseExpr(first_tok,parentScope);
                     if(_expr == nullptr){
+                        delete binaryExpr;
                         return false;
                     }
                     binaryExpr->rhs = _expr;
@@ -1106,7 +1163,7 @@ namespace omegasl {
 
     ast::Expr *Parser::parseExpr(Tok &first_tok,ast::Scope *parentScope) {
         ast::Expr *expr = nullptr;
-        auto b = parseOpExpr(first_tok,&expr,parentScope);
+        bool b = parseOpExpr(first_tok,&expr,parentScope);
         if(!b){
             return nullptr;
         }
@@ -1141,6 +1198,7 @@ namespace omegasl {
         while((decl = parseGlobalDecl()) != nullptr){
             std::cout << std::hex << "NODE TYPE:" << decl->type << std::dec << std::endl;
             if(sem->performSemForGlobalDecl(decl)){
+                std::cout << "SUCCESS SEM" << std::endl;
                 gen->generateDecl(decl);
                 gen->generateInterfaceAndCompileShader(decl);
             }

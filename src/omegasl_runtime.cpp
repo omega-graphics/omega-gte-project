@@ -32,7 +32,8 @@ public:
     OmegaSLCompilerImpl(){
         omegasl::CodeGenOpts genOpts {false,true};
 #if defined(TARGET_DIRECTX)
-        gen = omegasl::HLSLCodeGenMake(genOpts);
+        omegasl::HLSLCodeOpts hlslCodeOpts {""};
+        gen = omegasl::HLSLCodeGenMake(genOpts,hlslCodeOpts);
 #elif defined(TARGET_METAL)
         omegasl::MetalCodeOpts metalCodeOpts {"",""};
         gen = omegasl::MetalCodeGenMake(genOpts,metalCodeOpts);

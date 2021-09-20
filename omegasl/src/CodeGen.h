@@ -236,7 +236,7 @@ namespace omegasl {
 
 
     std::shared_ptr<CodeGen> GLSLCodeGenMake(CodeGenOpts &opts,GLSLCodeOpts &glslCodeOpts);
-    std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts);
+    std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts,HLSLCodeOpts &hlslCodeOpts);
     std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts);
 
 

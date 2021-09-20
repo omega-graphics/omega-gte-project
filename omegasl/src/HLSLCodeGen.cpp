@@ -7,6 +7,13 @@
 
 #endif
 
+#define TEXTURE1D "Texture1D"
+#define RW_TEXTURE1D "RWTexture1D"
+#define TEXTURE2D "Texture2D"
+#define RW_TEXTURE2D "RWTexture1D"
+#define BUFFER "StructuredBuffer"
+#define RW_BUFFER "RWStructuredBuffer"
+
 namespace omegasl {
 
     class HLSLCodeGen final : public CodeGen {
@@ -18,17 +25,68 @@ namespace omegasl {
     public:
         HLSLCodeGen(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts): CodeGen(opts),hlslCodeOpts(hlslCodeOpts){}
         void generateExpr(ast::Expr *expr) override {
-
+            switch (expr->type) {
+                case BINARY_EXPR : {
+                    auto _expr = (ast::BinaryExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << " " << _expr->op << " ";
+                    generateExpr(_expr->rhs);
+                    break;
+                }
+                case ID_EXPR : {
+                    auto _expr = (ast::IdExpr *)expr;
+                    shaderOut << _expr->id << std::flush;
+                    break;
+                }
+                case MEMBER_EXPR : {
+                    auto _expr = (ast::MemberExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << "." << _expr->rhs_id;
+                    break;
+                }
+                case INDEX_EXPR : {
+                    auto _expr = (ast::IndexExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << "[";
+                    generateExpr(_expr->idx_expr);
+                    shaderOut << "]";
+                    break;
+                }
+            }
         }
+    private:
+        unsigned level_count = 0;
+    public:
         void generateBlock(ast::Block &block) override {
-
+            shaderOut << "{" << std::endl;
+            level_count += 1;
+            for(auto s : block.body){
+                for(unsigned i = 0;i < level_count;i++){
+                    shaderOut << "  ";
+                }
+                if(s->type == VAR_DECL || s->type == RETURN_DECL){
+                    generateDecl((ast::Decl *)s);
+                }
+                else {
+                    generateExpr((ast::Expr *)s);
+                }
+                shaderOut << ";" << std::endl;
+            }
+            level_count -= 1;
+            shaderOut << "}" << std::endl;
         }
         inline void writeAttribute(OmegaCommon::StrRef attributeName,std::ostream & out){
             if(attributeName == ATTRIBUTE_VERTEX_ID){
                 out << "SV_VertexID";
             }
+            else if(attributeName == ATTRIBUTE_POSITION){
+                out << "SV_Position";
+            }
             else if(attributeName == ATTRIBUTE_COLOR){
                 out << "COLOR";
+            }
+            else if(attributeName == ATTRIBUTE_TEXCOORD){
+                out << "TEXCOORD";
             }
         }
         inline void writeTypeExpr(ast::TypeExpr *typeExpr,std::ostream & out){
@@ -58,6 +116,22 @@ namespace omegasl {
         }
         void generateDecl(ast::Decl *decl) override {
             switch (decl->type) {
+                case VAR_DECL : {
+                    auto _decl = (ast::VarDecl *)decl;
+                    writeTypeExpr(_decl->typeExpr,shaderOut);
+                    shaderOut << " " << _decl->spec.name;
+                    if(_decl->spec.initializer.has_value()){
+                        shaderOut << " = ";
+                        generateExpr(_decl->spec.initializer.value());
+                    }
+                    break;
+                }
+                case RETURN_DECL : {
+                    auto _decl = (ast::ReturnDecl *)decl;
+                    shaderOut << "return ";
+                    generateExpr(_decl->expr);
+                    break;
+                }
                 case STRUCT_DECL : {
                     auto _decl = (ast::StructDecl *)decl;
                     std::ostringstream out;
@@ -78,19 +152,130 @@ namespace omegasl {
 
                     break;
                 }
+                case RESOURCE_DECL : {
+                    resourceStore.add((ast::ResourceDecl *)decl);
+                    break;
+                }
                 case SHADER_DECL : {
                     auto _decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::FS::Path(opts.outputLib).append(_decl->name).concat(".hlsl").absPath());
+                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".hlsl").absPath());
 
+                    omegasl_shader shaderDesc {};
+                    /// 1. Write Structs for Shader
+                    OmegaCommon::Vector<OmegaCommon::String> struct_names;
+                    typeResolver->getStructsInFuncDecl(_decl,struct_names);
 
+                    for(auto & s : struct_names){
+                        shaderOut << generatedStructs[s] << std::endl;
+                    }
+
+                    shaderDesc.type =
+                            _decl->shaderType == ast::ShaderDecl::Vertex? OMEGASL_SHADER_VERTEX :
+                            _decl->shaderType == ast::ShaderDecl::Fragment? OMEGASL_SHADER_FRAGMENT :
+                            OMEGASL_SHADER_COMPUTE;
+                    shaderDesc.name = new char[_decl->name.length()];
+                    std::copy(_decl->name.begin(),_decl->name.end(),(char *)shaderDesc.name);
+
+                    OmegaCommon::Vector<omegasl_shader_layout_desc> shaderLayout;
+
+                    /// 2. Write Resources for Shader
+                    unsigned t_resource_count = 0,u_resource_count = 0;
+                    for(auto & res : _decl->resourceMap){
+                        auto res_desc = *(resourceStore.find(res.name));
+
+                        omegasl_shader_layout_desc layoutDesc{};
+                        layoutDesc.offset = 0;
+
+                        auto _t = typeResolver->resolveTypeWithExpr(res_desc->typeExpr);
+
+                        bool isTResource = false;
+
+                        layoutDesc.io_mode =
+                                res.access == ast::ShaderDecl::ResourceMapDesc::In? OMEGASL_SHADER_DESC_IO_IN :
+                                res.access == ast::ShaderDecl::ResourceMapDesc::Inout? OMEGASL_SHADER_DESC_IO_INOUT :
+                                OMEGASL_SHADER_DESC_IO_OUT;
+
+                        if(_t == ast::builtins::buffer_type){
+                            layoutDesc.type = OMEGASL_SHADER_BUFFER_DESC;
+                            isTResource = true;
+                            if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
+                                shaderOut << BUFFER;
+                            }
+                            else {
+                                shaderOut << RW_BUFFER;
+                            }
+                            shaderOut << "<";
+                            writeTypeExpr(res_desc->typeExpr->args[0],shaderOut);
+                            shaderOut << ">";
+
+                        }
+                        else if(_t == ast::builtins::texture1d_type){
+                            layoutDesc.type = OMEGASL_SHADER_TEXTURE1D_DESC;
+                            isTResource = true;
+                            if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
+                                shaderOut << TEXTURE1D;
+                            }
+                            else {
+                                shaderOut << RW_TEXTURE1D;
+                            }
+                        }
+
+                        shaderOut << " " << res_desc->name;
+
+                        shaderOut << ": register(";
+                        layoutDesc.location = res_desc->registerNumber;
+                        if(isTResource){
+                            shaderOut << "t" << t_resource_count;
+                            layoutDesc.gpu_relative_loc = t_resource_count;
+                            ++t_resource_count;
+                        }
+                        else {
+                            shaderOut << "u" << u_resource_count;
+                            layoutDesc.gpu_relative_loc = u_resource_count;
+                            ++u_resource_count;
+                        }
+                        shaderOut << ");" << std::endl;
+                        shaderLayout.push_back(layoutDesc);
+                    }
+
+                    shaderDesc.nLayout = shaderLayout.size();
+                    shaderDesc.pLayout = new omegasl_shader_layout_desc[shaderLayout.size()];
+                    std::copy(shaderLayout.begin(),shaderLayout.end(),shaderDesc.pLayout);
+
+                    /// 3. Write Function Decl
+
+                    writeTypeExpr(_decl->returnType,shaderOut);
+                    shaderOut << " " << _decl->name;
+                    shaderOut << "(";
+                    for(auto p_it = _decl->params.begin();p_it != _decl->params.end();p_it++){
+                        if(p_it != _decl->params.begin()){
+                            shaderOut << ",";
+                        }
+
+                        writeTypeExpr(p_it->typeExpr,shaderOut);
+                        shaderOut << " " << p_it->name;
+                        if(p_it->attributeName.has_value()){
+                            shaderOut << ":";
+                            writeAttribute(p_it->attributeName.value(),shaderOut);
+                        }
+                    }
+                    shaderOut << ")";
+                    if(_decl->shaderType == ast::ShaderDecl::Fragment){
+                        shaderOut << " : SV_TARGET";
+                    }
+                    generateBlock(*_decl->block);
+
+                    auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".cso").str();
 
                     shaderOut.close();
+                    shaderMap.insert(std::make_pair(object_file,shaderDesc));
                     break;
                 }
             }
         }
         void compileShader(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name, const OmegaCommon::FS::Path &path, const OmegaCommon::FS::Path &outputPath) override {
-            std::ostringstream out(" -nologo -T");
+            std::ostringstream out;
+            out << " -nologo -T";
             if(type == ast::ShaderDecl::Vertex){
                 out << "vs_5_0";
             }
@@ -100,8 +285,8 @@ namespace omegasl {
             else if(type == ast::ShaderDecl::Compute){
                 out << "cs_5_0";
             }
-            out << "-Fo " << OmegaCommon::FS::Path(outputPath).append(name).absPath();
-            out << " " << OmegaCommon::FS::Path(path).str();
+            out << " -E" << name.data() << " -Fo " << OmegaCommon::FS::Path(outputPath).append(name).concat(".cso").str();
+            out << " " << OmegaCommon::FS::Path(path).append(name).concat(".hlsl").str() << " /Zi";
 
             auto dxc_process = OmegaCommon::ChildProcess::OpenWithStdoutPipe(hlslCodeOpts.dxc_cmd,out.str().c_str());
             auto res = dxc_process.wait();

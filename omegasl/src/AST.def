@@ -3,8 +3,8 @@
 
 typedef int ASTType;
 
-#define DECL 0x000A
-#define EXPR 0x000F
+#define DECL 0x000F
+#define EXPR 0x000A
 
 #define FUNC_DECL (0x0010 | DECL)
 #define SHADER_DECL (0x0020 | DECL)
@@ -24,11 +24,13 @@ typedef int ASTType;
 #define BINARY_EXPR (0x0060 | EXPR)
 #define POINTER_EXPR (0x0070 | EXPR)
 #define UNARY_EXPR (0x0080 | EXPR)
+#define INDEX_EXPR (0x0090 | EXPR)
 
 //Internal Shader Attributes
 #define ATTRIBUTE_VERTEX_ID "VertexID"
 #define ATTRIBUTE_POSITION "Position"
 #define ATTRIBUTE_COLOR "Color"
+#define ATTRIBUTE_TEXCOORD "TexCoord"
 #define ATTRIBUTE_GLOBALTHREAD_ID "GlobalThreadID"
 #define ATTRIBUTE_THREADGROUP_ID "ThreadGroupID"
 #define ATTRIBUTE_LOCALTHREAD_ID "LocalThreadID"

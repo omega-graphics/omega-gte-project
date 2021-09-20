@@ -7,7 +7,6 @@
 _NAMESPACE_BEGIN_
 
 struct GED3D12Shader : public GTEShader {
-public:
     D3D12_SHADER_BYTECODE shaderBytecode;
 };
 
@@ -15,14 +14,14 @@ class GED3D12RenderPipelineState : public __GERenderPipelineState {
 public:
      ComPtr<ID3D12PipelineState> pipelineState;
      ComPtr<ID3D12RootSignature> rootSignature;
-    GED3D12RenderPipelineState(ID3D12PipelineState *state,ID3D12RootSignature *signature);
+    GED3D12RenderPipelineState(SharedHandle<GTEShader> & _vertShader,SharedHandle<GTEShader> & _fragShader,ID3D12PipelineState *state,ID3D12RootSignature *signature);
 };
 
 class GED3D12ComputePipelineState : public __GEComputePipelineState {
 public: 
     ComPtr<ID3D12PipelineState> pipelineState;
     ComPtr<ID3D12RootSignature> rootSignature;
-    GED3D12ComputePipelineState(ID3D12PipelineState *state,ID3D12RootSignature *signature);
+    GED3D12ComputePipelineState(SharedHandle<GTEShader> & _shader,ID3D12PipelineState *state,ID3D12RootSignature *signature);
 };
 
 _NAMESPACE_END_

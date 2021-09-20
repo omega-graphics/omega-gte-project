@@ -1,21 +1,23 @@
 
 struct MyVertex {
-    float3 pos;
+    float4 pos;
     float4 color;
 };
 
 struct VertexRaster internal {
     float4 pos : Position;
-    float4 color;
+    float4 color : Color;
 };
 
 buffer<MyVertex> v_buffer : 0;
 
 [in v_buffer]
 vertex VertexRaster myVertex(uint vertex_id : VertexID){
-    MyVertex vert;
+
+    MyVertex vert = v_buffer[vertex_id];
 
     VertexRaster data;
+    data.pos = vert.pos;
     data.color = vert.color;
     return data;
 }

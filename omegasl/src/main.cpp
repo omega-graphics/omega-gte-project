@@ -114,6 +114,11 @@ int main(int argc,char *argv[]){
                 glslc_cmd = argv[++i];
             }
         }
+        else if(genMode == GenMode::hlsl){
+            if(arg == "--dxc"){
+                dxc_cmd = argv[++i];
+            }
+        }
     }
 
 
@@ -175,8 +180,11 @@ int main(int argc,char *argv[]){
     if(genMode == GenMode::hlsl){
 #ifdef TARGET_DIRECTX
         hlslCodeOpts.dxc_cmd = "dxc";
+        if(dxc_cmd != nullptr){
+            hlslCodeOpts.dxc_cmd = dxc_cmd;
+        }
 #endif
-        codeGen = omegasl::HLSLCodeGenMake(codeGenOpts);
+        codeGen = omegasl::HLSLCodeGenMake(codeGenOpts,hlslCodeOpts);
     }
     else if(genMode == GenMode::metal){
 #ifdef TARGET_METAL

@@ -212,6 +212,11 @@ namespace omegasl {
             Expr *expr;
         };
 
+        struct IndexExpr : public Expr {
+            Expr *lhs;
+            Expr *idx_expr;
+        };
+
     }
 }
 #endif

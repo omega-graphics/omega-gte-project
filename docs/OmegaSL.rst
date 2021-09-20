@@ -66,6 +66,55 @@ Syntax:
                 return sample(sampler,tex);
             }
 
+Builtin-Functions:
+    There are several builtin functions in the OmegaSL language.
+
+    ``float2 make_float2(float x,float y)``
+        Constructs a float2 vector.
+
+    ``float2 make_float3(float x,float y,float z)
+    float2 make_float3(float2 a,float z)``:
+        Constructs a float3 vector.
+
+    ``float2 make_float4(float x,float y,float z,float w)
+    float2 make_float4(float2 a,float z,float w)
+    float2 make_float4(float3 a,float w)``:
+        Constructs a float4 vector.
+
+    ``number dot(vec<number> a,vec<number> b)``:
+       Calculates dot product of two vectors
+
+    ``vec<number> cross(vec<number> a,vec<number> b)``:
+       Calculates a cross product of two vectors.
+
+    ``float4 sample(texture2d texture,float2 coord)``:
+        Samples a texture2d and returns the color at the provided coord.
+
+    ``float4 sample(texture3d texture,float3 coord)``:
+        Samples a texture3d and returns the color at the provided coord.
+
+Attributes:
+    Render Pipeline Attributes:
+        ``VertexID``:
+            Defines the id of current vertex to draw.
+        ``InstanceID``:
+            Defines the id of current instance to draw.
+        ``Position``:
+            Defines the vertex position during the vertex stage in a render pass.
+        ``Color``:
+            Attributes a vector of 4 components to be used as a fragments color in a render pipeline.
+        ``TexCoord``:
+            Attributes a vector between 2 and 3 components to be used as coordinate for a 2D or 3D texture in a render pipeline.
+    Compute Pipeline Attributes:
+        ``GlobalThreadID``:
+            The working thread's id in the total number of threads in a compute pipeline.
+        ``ThreadGroupID``:
+            The current threadgroup's id in the total number of thread groups dispatched in a pipeline.
+        ``LocalThreadID``:
+            The working thread's id in the total number of threads in its corresponding threadgroup.
+
+
+
 Compilation:
     Via ``omegaslc``
         The main compiler for \*.omegasl sources.
@@ -73,7 +122,8 @@ Compilation:
         and an interface file (structs.h) in the output dir.
 
     Via
-    .. cpp-class:: OmegaSLCompiler
+    .. cpp:class:: OmegaGTE::OmegaSLCompiler
+
         The runtime interface for handling compilation of OmegaSL shaders.
 
 

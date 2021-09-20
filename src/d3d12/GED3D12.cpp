@@ -268,16 +268,19 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         }
         void getFloat(float &v) override {
             memcpy(&v,_data_buffer + currentOffset,sizeof(v));
+            currentOffset += sizeof(v);
         }
         void getFloat2(FVec<2> &v) override {
             DirectX::XMFLOAT2 _v {};
             memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
             v[0][0] = _v.x;
             v[1][0] = _v.y;
         }
         void getFloat3(FVec<3> &v) override {
             DirectX::XMFLOAT3 _v {};
             memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
             v[0][0] = _v.x;
             v[1][0] = _v.y;
             v[2][0] = _v.z;
@@ -285,6 +288,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         void getFloat4(FVec<4> &v) override {
             DirectX::XMFLOAT4 _v {};
             memcpy(&_v,_data_buffer + currentOffset,sizeof(_v));
+            currentOffset += sizeof(_v);
             v[0][0] = _v.x;
             v[1][0] = _v.y;
             v[2][0] = _v.z;
@@ -432,8 +436,11 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         ID3D12RootSignature *signature;
         createRootSignatureFromOmegaSLShaders(2,shaders,&signature);
 
-        d.VS = CD3DX12_SHADER_BYTECODE(desc.vertexFunc->internal.data,desc.vertexFunc->internal.dataSize);
-        d.PS = CD3DX12_SHADER_BYTECODE(desc.fragmentFunc->internal.data,desc.fragmentFunc->internal.dataSize);
+        GED3D12Shader *vertexShader = (GED3D12Shader *)desc.vertexFunc.get(),
+        *fragmentShader = (GED3D12Shader *)desc.fragmentFunc.get();
+
+        d.VS = vertexShader->shaderBytecode;
+        d.PS = fragmentShader->shaderBytecode;
         d.pRootSignature = signature;
         d.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         d.NumRenderTargets = 1;
@@ -452,14 +459,17 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             MessageBoxA(GetForegroundWindow(),"Failed to Create Pipeline State","NOTE",MB_OK);
             exit(1);
         };
-        return std::make_shared<GED3D12RenderPipelineState>(state,signature);
+        return std::make_shared<GED3D12RenderPipelineState>(desc.vertexFunc,desc.fragmentFunc,state,signature);
     };
     SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(ComputePipelineDescriptor &desc){
         D3D12_COMPUTE_PIPELINE_STATE_DESC d;
         HRESULT hr;
         ID3D12PipelineState *state;
+
+        auto computeShader = (GED3D12Shader *)desc.computeFunc.get();
+
         d.NodeMask = d3d12_device->GetNodeCount();
-        d.CS = CD3DX12_SHADER_BYTECODE(desc.computeFunc->internal.data,desc.computeFunc->internal.dataSize);
+        d.CS = computeShader->shaderBytecode;
         omegasl_shader shaders[] = {desc.computeFunc->internal};
 
         ID3D12RootSignature *signature;
@@ -469,7 +479,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d.pRootSignature = signature;
 
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
-        return std::make_shared<GED3D12ComputePipelineState>(state,signature);
+        return std::make_shared<GED3D12ComputePipelineState>(desc.computeFunc,state,signature);
     };
 
     SharedHandle<GENativeRenderTarget> GED3D12Engine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){

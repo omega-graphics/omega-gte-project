@@ -30,15 +30,15 @@ _NAMESPACE_BEGIN_
         size_t size() override{
             return buffer->GetDesc().Width;
         };
-        void * data() override{
-            void *ptr;
-            CD3DX12_RANGE readRange(0,0);
-            buffer->Map(0,&readRange,&ptr);
-            return ptr;
-        };
-        void removePtrRef() {
-             buffer->Unmap(0,nullptr);
-        };
+//        void * data() override{
+//            void *ptr;
+//            CD3DX12_RANGE readRange(0,0);
+//            buffer->Map(0,&readRange,&ptr);
+//            return ptr;
+//        };
+//        void removePtrRef() {
+//             buffer->Unmap(0,nullptr);
+//        };
         GED3D12Buffer(ID3D12Resource *buffer,ID3D12DescriptorHeap *bufferDescHeap):buffer(buffer),bufferDescHeap(bufferDescHeap){
             
         };

@@ -797,7 +797,7 @@ _NAMESPACE_BEGIN_
 #ifdef TARGET_DIRECTX
 #include <DirectXMath.h>
 
-toXMType
+
 
 #elif defined(TARGET_METAL)
 

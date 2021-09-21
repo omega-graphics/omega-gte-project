@@ -72,5 +72,6 @@ if(TARGET_METAL)
 	target_link_system_frameworks("omegaslc" Metal Foundation)
 	target_link_system_frameworks("OmegaGTE" Metal QuartzCore Cocoa)
 endif()
-# add_subdirectory(tests)
+
+ add_subdirectory(tests)
 

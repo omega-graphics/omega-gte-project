@@ -49,17 +49,19 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputSt
         /// 4. Read Shader Layout
         in.read((char *)&shaderEntry.nLayout,sizeof(shaderEntry.nLayout));
 
-        OmegaCommon::Vector<omegasl_shader_layout_desc> layoutDescArr;
         auto layout_count = shaderEntry.nLayout;
 
-        layoutDescArr.resize(layout_count);
+        auto layoutDescArr = new omegasl_shader_layout_desc[layout_count];
 
         for(unsigned i = 0;i < layout_count;i++){
-            in.read((char *)(layoutDescArr.data() + i),sizeof(omegasl_shader_layout_desc));
+            in.read((char *)(layoutDescArr + i),sizeof(omegasl_shader_layout_desc));
         }
 
-        lib->shaders.insert(std::make_pair(shaderEntry.name, _loadShaderFromDesc(&shaderEntry)));
+        shaderEntry.pLayout = layoutDescArr;
+
+        lib->shaders.insert(std::make_pair(OmegaCommon::StrRef((char *)shaderEntry.name,(unsigned)name_len), _loadShaderFromDesc(&shaderEntry)));
     }
+    return lib;
 }
 
 SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibrary(FS::Path path) {

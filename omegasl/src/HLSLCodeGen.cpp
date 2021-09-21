@@ -158,7 +158,7 @@ namespace omegasl {
                 }
                 case SHADER_DECL : {
                     auto _decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".hlsl").absPath());
+                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".hlsl").str());
 
                     omegasl_shader shaderDesc {};
                     /// 1. Write Structs for Shader
@@ -173,8 +173,12 @@ namespace omegasl {
                             _decl->shaderType == ast::ShaderDecl::Vertex? OMEGASL_SHADER_VERTEX :
                             _decl->shaderType == ast::ShaderDecl::Fragment? OMEGASL_SHADER_FRAGMENT :
                             OMEGASL_SHADER_COMPUTE;
-                    shaderDesc.name = new char[_decl->name.length()];
+
+                    std::cout << "Shader Name:" << _decl->name << std::endl;
+
+                    shaderDesc.name = new char[_decl->name.size() + 1];
                     std::copy(_decl->name.begin(),_decl->name.end(),(char *)shaderDesc.name);
+                    ((char *)shaderDesc.name)[_decl->name.size()] = '\0';
 
                     OmegaCommon::Vector<omegasl_shader_layout_desc> shaderLayout;
 
@@ -255,6 +259,9 @@ namespace omegasl {
                         writeTypeExpr(p_it->typeExpr,shaderOut);
                         shaderOut << " " << p_it->name;
                         if(p_it->attributeName.has_value()){
+                            if(p_it->attributeName.value() == ATTRIBUTE_VERTEX_ID){
+                                shaderDesc.vertexShaderInputDesc.useVertexID = true;
+                            }
                             shaderOut << ":";
                             writeAttribute(p_it->attributeName.value(),shaderOut);
                         }

@@ -6,16 +6,34 @@
 
 LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 
+#define VERTEX_SHADER "vertexFunc"
+#define FRAGMENT_SHADER "fragFunc"
+
+
 static OmegaGTE::GTE gte;
-static OmegaGTE::SharedHandle<OmegaGTE::GEFunctionLibrary> library;
+static OmegaGTE::SharedHandle<OmegaGTE::GTEShaderLibrary> library;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> renderTarget;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipelineState;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBuffer> vertexBuffer;
+static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
+
+void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
+    auto vertex_pos = OmegaGTE::FVec<4>::Create();
+    vertex_pos[0][0] = pt.x;
+    vertex_pos[1][0] = pt.y;
+    vertex_pos[2][0] = pt.z;
+    vertex_pos[3][0] = 0.f;
+
+    bufferWriter->structBegin();
+    bufferWriter->writeFloat4(vertex_pos);
+    bufferWriter->writeFloat4(color);
+    bufferWriter->structEnd();
+}
 
 void tessalate(){
 
@@ -27,10 +45,11 @@ void tessalate(){
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
 
     std::cout << "Tessalated GRect" << std::endl;
-    OmegaGTE::FMatrix color = OmegaGTE::FMatrix::Color(1.f,0.f,0.f,1.f);
-    std::cout << "Created Matrix GRect" << std::endl;
-    OmegaGTE::ColoredVertexVector vertexVector;
+    auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
 
+    std::cout << "Created Matrix GRect" << std::endl;
+
+    bufferWriter->setOutputBuffer(vertexBuffer);
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
@@ -45,20 +64,16 @@ void tessalate(){
             ss << "\n}";
             std::cout << ss.str() << std::endl;
             std::cout << "Create Vertex" << std::endl;
-            auto vertex = OmegaGTE::GEColoredVertex::FromGPoint3D(tri.a,color);
-                std::cout << "Created Vertex 1" << std::endl;
-            vertexVector.push_back(vertex);
-            std::cout << "Pushed Vertex" << std::endl;
-            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.b,color));
-            std::cout << "Created Vertex 2" << std::endl;
-            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.c,color));
-            std::cout << "Created Vertex 3" << std::endl;
+            writeVertex(tri.a,color);
+            writeVertex(tri.b,color);
+            writeVertex(tri.c,color);
         };
     };
 
-    vertexBuffer = tessContext->convertToVertexBuffer(gte.graphicsEngine,vertexVector);
+    bufferWriter->finish();
 
 };
+
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd){
     WCHAR name[MAX_PATH];
@@ -71,6 +86,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     MessageBoxW(GetForegroundWindow(),(std::wstring(L"Current Dir:") + name).c_str(),L"NOTE",MB_OK);
 
     gte = OmegaGTE::Init();
+
+
+    library = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
+
+    bufferWriter = OmegaGTE::GEBufferWriter::Create();
 
     WNDCLASSEX wcex;
 
@@ -98,7 +118,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     };
 
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 0","NOTE",MB_OK);
-    library = gte.graphicsEngine->loadStdShaderLibrary();
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 1","NOTE",MB_OK);
 
     OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc;
@@ -107,13 +126,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     renderTargetDesc.isHwnd = true;
 
     OmegaGTE::RenderPipelineDescriptor pipelineDesc;
-    MessageBoxA(GetForegroundWindow(),"Loading Funcs","NOTE",MB_OK);
-
-    pipelineDesc.vertexFunc = library->functions[STD_COLOREDVERTEX_FUNC].get();
-    MessageBoxA(GetForegroundWindow(),"Setting Func","NOTE",MB_OK);
-
-    pipelineDesc.fragmentFunc = library->functions[STD_FRAGMENTVERTEX_FUNC].get();
-    MessageBoxA(GetForegroundWindow(),"Setting Func","NOTE",MB_OK);
+    pipelineDesc.rasterSampleCount = 0;
+    pipelineDesc.vertexFunc = library->shaders[VERTEX_SHADER];
+    pipelineDesc.fragmentFunc = library->shaders[FRAGMENT_SHADER];
+    pipelineDesc.depthAndStencilDesc.enableDepth = false;
+    pipelineDesc.depthAndStencilDesc.enableStencil = false;
 
     renderPipelineState = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 2","NOTE",MB_OK);

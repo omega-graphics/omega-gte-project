@@ -149,7 +149,7 @@ namespace omegasl {
 
                     std::cout << OmegaCommon::FS::Path(opts.tempDir).absPath() << std::endl;
 
-                    auto p = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).absPath() + file_ext;
+                    auto p = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(file_ext).str();
                     std::cout << p << std::endl;
 
                     shaderOut.open(p);

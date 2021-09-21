@@ -167,7 +167,7 @@ namespace omegasl {
                     level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
                     auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
-                    shaderOut.open(OmegaCommon::String(opts.tempDir) + "/" + _decl->name + ".metal",std::ios::out);
+                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metal").str(),std::ios::out);
                     shaderOut << defaultHeaders;
 
                     std::vector<std::string> used_type_list;

@@ -102,10 +102,11 @@ namespace omegasl {
 //                std::cout << "Write Shader :" << p.first << std::endl;
 
                 //2.  Write Shader Name Size and Name
-                size_t shader_name_size = strlen(shader_data.name);
+                size_t shader_name_size = strlen(p.second.name);
 
                 out.write((char *)&shader_name_size,sizeof(shader_name_size));
-                out.write( shader_data.name,std::make_signed_t<decltype(shader_name_size)>(shader_name_size));
+                out.write(shader_data.name,shader_name_size);
+//                std::cout << shader_data.name << std::endl;
 //                std::cout << "Write Shader Name:" << shader_data.name << std::endl;
                 //3.  Write Shader Data Size and Data
                 {

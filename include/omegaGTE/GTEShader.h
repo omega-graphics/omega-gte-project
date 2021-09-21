@@ -13,7 +13,7 @@ struct GTEShaderLibrary {
     std::map<std::string,SharedHandle<GTEShader>> shaders;
 };
 
-struct GEBufferWriter {
+struct OMEGAGTE_EXPORT GEBufferWriter {
     virtual void setOutputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
     virtual void structBegin() = 0;
     virtual void writeFloat(float & v) = 0;
@@ -25,7 +25,7 @@ struct GEBufferWriter {
     static SharedHandle<GEBufferWriter> Create();
 };
 
-struct GEBufferReader {
+struct OMEGAGTE_EXPORT GEBufferReader {
     virtual void setInputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
     virtual void structBegin() = 0;
     virtual void getFloat(float & v) = 0;

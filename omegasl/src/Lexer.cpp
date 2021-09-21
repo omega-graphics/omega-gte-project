@@ -9,7 +9,7 @@ namespace omegasl {
         return std::isalnum(c) || c == '_';
     }
 
-    inline bool isKeyword(OmegaCommon::StrRef & subject){
+    inline bool isKeyword(OmegaCommon::StrRef subject){
         return (subject == KW_VERTEX) ||
         (subject == KW_FRAGMENT) ||
         (subject == KW_COMPUTE) ||
@@ -25,7 +25,7 @@ namespace omegasl {
         (subject == KW_RETURN);
     }
 
-    inline bool isKeywordType(OmegaCommon::StrRef & subject){
+    inline bool isKeywordType(OmegaCommon::StrRef subject){
         return (subject == KW_TY_VOID) ||
         (subject == KW_TY_FLOAT) ||
         (subject == KW_TY_FLOAT2) ||
@@ -63,7 +63,7 @@ namespace omegasl {
 
 #define SEEK_TO_NEXT_CHAR() in->seekg(1,std::ios::cur)
 
-#define PUSH_TOK(t) auto s = OmegaCommon::StrRef (c_buffer,c_buffer_end - c_buffer_st);   \
+#define PUSH_TOK(t) auto s = OmegaCommon::String(c_buffer_st,c_buffer_end);   \
 if(isKeyword(s)) return {TOK_KW,s};      \
 else if(isKeywordType(s)) return {TOK_KW_TYPE,s};   \
 else return {t,s};

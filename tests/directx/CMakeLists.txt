@@ -10,6 +10,8 @@ function(add_d3d12_test)
     
 endfunction()
 
+add_omegasl_lib("2DTestShaders" "${CMAKE_CURRENT_SOURCE_DIR}/2DTest/shaders.omegasl" "${CMAKE_CURRENT_BINARY_DIR}/shaders.omegasllib")
+
 
 add_d3d12_test(
     NAME 

@@ -362,6 +362,9 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         std::vector<D3D12_INPUT_ELEMENT_DESC> inputs;
 
+        assert(desc.vertexFunc && "Vertex Function is not provided");
+        assert(desc.fragmentFunc && "Fragment Function is not provided");
+
         assert(vertexFunc.type == OMEGASL_SHADER_VERTEX && "Function is not a vertex function");
         assert(fragmentFunc.type == OMEGASL_SHADER_FRAGMENT && "Function is not a fragment function");
 
@@ -450,7 +453,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d.DepthStencilState.DepthEnable = desc.depthAndStencilDesc.enableDepth;
         d.SampleMask = UINT_MAX;
         d.SampleDesc.Quality = 0;
-        d.SampleDesc.Count = desc.rasterSampleCount;
+        d.SampleDesc.Count = desc.rasterSampleCount + 1;
 
         MessageBoxA(GetForegroundWindow(),"Create Bytecode Funcs","NOTE",MB_OK);
         ID3D12PipelineState *state;
@@ -669,7 +672,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             ArrayRef<omegasl_shader_layout_desc> sLayout {s.pLayout,s.pLayout + s.nLayout};
             for(auto & l : sLayout){
                 CD3DX12_ROOT_PARAMETER1 parameter1;
-                parameter1.InitAsShaderResourceView(l.location);
+                parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
                 params.push_back(parameter1);
             }
         }

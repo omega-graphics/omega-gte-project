@@ -1,0 +1,25 @@
+struct Vertex {
+    float4 pos;
+    float4 color;
+};
+
+struct VertexRaster internal {
+    float4 pos : Position;
+    float4 color : Color;
+};
+
+buffer<Vertex> v_buffer : 0;
+
+[in v_buffer]
+vertex VertexRaster vertexFunc(uint v_id : VertexID){
+    Vertex v = v_buffer[v_id];
+    VertexRaster raster;
+    raster.pos = v.pos;
+    raster.color = v.color;
+    return raster;
+}
+
+fragment float4 fragFunc(VertexRaster raster){
+    return raster.color;
+}
+

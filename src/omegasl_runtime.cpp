@@ -35,7 +35,7 @@ public:
         omegasl::HLSLCodeOpts hlslCodeOpts {""};
         gen = omegasl::HLSLCodeGenMake(genOpts,hlslCodeOpts);
 #elif defined(TARGET_METAL)
-        omegasl::MetalCodeOpts metalCodeOpts {"",""};
+        omegasl::MetalCodeOpts metalCodeOpts {""};
         gen = omegasl::MetalCodeGenMake(genOpts,metalCodeOpts);
 #endif
         parser = std::make_shared<omegasl::Parser>(gen);

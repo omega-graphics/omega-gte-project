@@ -69,6 +69,9 @@ namespace omegasl {
             else if(attributeName == ATTRIBUTE_VERTEX_ID){
                 out << "vertex_id";
             }
+//            else if(attributeName == ATTRIBUTE_COLOR){
+//                out << "color";
+//            }
         }
         void generateExpr(ast::Expr *expr) override {
             switch (expr->type) {
@@ -77,17 +80,25 @@ namespace omegasl {
                     shaderOut << _expr->id;
                     break;
                 }
+                case BINARY_EXPR : {
+                    auto _expr = (ast::BinaryExpr *)expr;
+                    generateExpr(_expr->lhs);
+                    shaderOut << " " << _expr->op << " ";
+                    generateExpr(_expr->rhs);
+                    break;
+                }
                 case MEMBER_EXPR : {
                     auto _expr = (ast::MemberExpr *)expr;
                     generateExpr(_expr->lhs);
                     shaderOut << "." << _expr->rhs_id;
                     break;
                 }
-                case BINARY_EXPR : {
-                    auto _expr = (ast::BinaryExpr *)expr;
+                case INDEX_EXPR : {
+                    auto _expr = (ast::IndexExpr *)expr;
                     generateExpr(_expr->lhs);
-                    shaderOut << " " << _expr->op << " ";
-                    generateExpr(_expr->rhs);
+                    shaderOut << "[";
+                    generateExpr(_expr->idx_expr);
+                    shaderOut << "]";
                     break;
                 }
             }
@@ -107,7 +118,7 @@ namespace omegasl {
                 for(unsigned l = level_count;l != 0;l--){
                     shaderOut << "    ";
                 }
-                if(stmt->type & DECL){
+                if(stmt->type == VAR_DECL || stmt->type == RETURN_DECL){
                     generateDecl((ast::Decl *)stmt);
                     shaderOut << ";" << std::endl;
                 }
@@ -152,9 +163,11 @@ namespace omegasl {
                         writeTypeExpr(p.typeExpr,out);
                         out << " " << p.name;
                         if(p.attributeName.has_value()){
-                            out << "[[";
-                            writeAttributeName(p.attributeName.value(),out);
-                            out << "]]";
+                            if(p.attributeName != ATTRIBUTE_COLOR && p.attributeName != ATTRIBUTE_TEXCOORD){
+                                out << "[[";
+                                writeAttributeName(p.attributeName.value(),out);
+                                out << "]]";
+                            }
                         }
                         out << ";" << std::endl;
                     }
@@ -180,7 +193,9 @@ namespace omegasl {
                     }
 
                     omegasl_shader shadermap_entry {};
-                    shadermap_entry.name = _decl->name.c_str();
+                    shadermap_entry.name = new char[_decl->name.size() + 1];
+                    std::copy(_decl->name.begin(),_decl->name.end(),(char *)shadermap_entry.name);
+                    ((char *)shadermap_entry.name)[_decl->name.size()] = '\0';
 
 
                     if(_decl->shaderType == ast::ShaderDecl::Vertex){

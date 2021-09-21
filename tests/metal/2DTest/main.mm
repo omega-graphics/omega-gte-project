@@ -6,7 +6,8 @@
 #include <iostream>
 
 static OmegaGTE::GTE gte;
-static OmegaGTE::SharedHandle<OmegaGTE::GEFunctionLibrary> funcLib;
+static OmegaGTE::SharedHandle<OmegaGTE::GTEShaderLibrary> funcLib;
+static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
@@ -19,7 +20,22 @@ void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
 
+static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> &color){
+    auto pos_vec = OmegaGTE::FVec<4>::Create();
+    pos_vec[0][0] = pt.x;
+    pos_vec[1][0] = pt.y;
+    pos_vec[2][0] = pt.z;
+    pos_vec[3][0] = 0.f;
+
+    bufferWriter->structBegin();
+    bufferWriter->writeFloat4(pos_vec);
+    bufferWriter->writeFloat4(color);
+    bufferWriter->structEnd();
+}
+
 static void render(){
+
+
 
     OmegaGTE::GRect rect;
     rect.h = 100;
@@ -28,10 +44,15 @@ static void render(){
     rect.pos.y = 0;
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
 
+
     std::cout << "Tessalated GRect" << std::endl;
-    OmegaGTE::FMatrix color = OmegaGTE::FMatrix::Color(1.f,0.f,0.f,1.f);
+    auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
     std::cout << "Created Matrix GRect" << std::endl;
-    OmegaGTE::ColoredVertexVector vertexVector;
+
+    OmegaGTE::BufferDescriptor bufferDescriptor {6 * (FLOAT4_SIZE + FLOAT4_SIZE),(FLOAT4_SIZE + FLOAT4_SIZE)};
+    auto vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
+
+    bufferWriter->setOutputBuffer(vertexBuffer);
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
@@ -45,19 +66,16 @@ static void render(){
             formatGPoint3D(ss,tri.c);
             ss << "\n}";
             std::cout << ss.str() << std::endl;
-            std::cout << "Create Vertex" << std::endl;
-            auto vertex = OmegaGTE::GEColoredVertex::FromGPoint3D(tri.a,color);
-                std::cout << "Created Vertex 1" << std::endl;
-            vertexVector.push_back(vertex);
-            std::cout << "Pushed Vertex" << std::endl;
-            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.b,color));
-            std::cout << "Created Vertex 2" << std::endl;
-            vertexVector.push_back(OmegaGTE::GEColoredVertex::FromGPoint3D(tri.c,color));
-            std::cout << "Created Vertex 3" << std::endl;
+            writeVertex(tri.a,color);
+            writeVertex(tri.b,color);
+            writeVertex(tri.c,color);
         };
     };
 
-    auto vertexBuffer = tessContext->convertToVertexBuffer(gte.graphicsEngine,vertexVector);
+    bufferWriter->finish();
+
+
+
         
 
     auto commandBuffer = nativeRenderTarget->commandBuffer();
@@ -145,19 +163,23 @@ static void render(){
 
 @end
 
+#define VERTEX_FUNC "vertexFunc"
+#define FRAGMENT_FUNC "fragFunc"
 
 
 int main(int argc,const char * argv[]){
     
     gte = OmegaGTE::Init();
 
-   funcLib = gte.graphicsEngine->loadStdShaderLibrary();
+   funcLib = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
 
-   std::cout << "LIBRARY SIZE:" << funcLib->functions.size() << std::endl;
+   bufferWriter = OmegaGTE::GEBufferWriter::Create();
+
+   std::cout << "LIBRARY SIZE:" << funcLib->shaders.size() << std::endl;
 
    OmegaGTE::RenderPipelineDescriptor pipelineDesc;
-   pipelineDesc.vertexFunc = funcLib->functions[STD_COLOREDVERTEX_FUNC].get();
-   pipelineDesc.fragmentFunc = funcLib->functions[STD_FRAGMENTVERTEX_FUNC].get();
+   pipelineDesc.vertexFunc = funcLib->shaders[VERTEX_FUNC];
+   pipelineDesc.fragmentFunc = funcLib->shaders[FRAGMENT_FUNC];
    renderPipeline = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
 
 

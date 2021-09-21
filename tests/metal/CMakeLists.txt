@@ -25,6 +25,8 @@ function(add_metal_test)
     # set_source_files_properties(${OMEGA_GTE_LIB} PROPERTIES MACOSX_PACKAGE_LOCATION "Frameworks")
 endfunction()
 
+add_omegasl_lib("2DTestShaders" "${CMAKE_CURRENT_SOURCE_DIR}/2DTest/shaders.omegasl" "${CMAKE_CURRENT_BINARY_DIR}/shaders.omegasllib")
+
 
 add_metal_test(
     NAME 

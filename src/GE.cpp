@@ -38,8 +38,9 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputSt
         /// 2. Read Shader Name Length and Data
         size_t name_len;
         in.read((char *)&name_len,sizeof(name_len));
-        shaderEntry.name = new char[name_len];
+        shaderEntry.name = new char[name_len + 1];
         in.read((char *)shaderEntry.name,name_len);
+        ((char *)shaderEntry.name)[name_len] = '\0';
 
         /// 3. Read Shader GPU Code Length and Data
         in.read((char *)&shaderEntry.dataSize,sizeof(shaderEntry.dataSize));

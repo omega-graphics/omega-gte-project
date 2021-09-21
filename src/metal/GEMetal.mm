@@ -173,7 +173,8 @@ _NAMESPACE_BEGIN_
             auto data = dispatch_data_create(shaderDesc->data,shaderDesc->dataSize,nullptr,DISPATCH_DATA_DESTRUCTOR_DEFAULT);
             NSError *error;
             NSSmartPtr library = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithData:data error:&error]};
-            NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:[[NSString alloc] initWithUTF8String:shaderDesc->name]] };
+            NSString *str = [[NSString alloc] initWithUTF8String:shaderDesc->name];
+            NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:str] };
             auto _shader = new GEMetalShader(library,func);
             _shader->internal = *shaderDesc;
             return SharedHandle<GTEShader>(_shader);

@@ -38,6 +38,7 @@ add_metal_test(
     PLIST 
     "${CMAKE_CURRENT_SOURCE_DIR}/2DTest/Info.plist"
     FRAMEWORKS 
-    "Cocoa" 
+    "Cocoa"
+    "Metal"
     "QuartzCore"
 )

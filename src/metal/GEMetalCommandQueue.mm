@@ -148,8 +148,12 @@ _NAMESPACE_BEGIN_
         }
         else if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::TriangleStrip){
             primativeType = MTLPrimitiveTypeTriangleStrip;
+        }
+        else {
+            primativeType = MTLPrimitiveTypeTriangle;
         };
-        std::cout << "CALLING DRAW PRIMITIVES" << std::endl;
+
+        NSLog(@"CALLING DRAW PRIMITIVES");
         [rp drawPrimitives:primativeType vertexStart:startIdx vertexCount:vertexCount];
     };
 
@@ -178,11 +182,21 @@ _NAMESPACE_BEGIN_
          drawable.assertExists();
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) presentDrawable:
         NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,drawable.handle())];
+        NSLog(@"Present Drawable");
     };
     
     void GEMetalCommandBuffer::_commit(){
          buffer.assertExists();
+         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) addCompletedHandler:^(id<MTLCommandBuffer> commandBuffer){
+            if(commandBuffer.status == MTLCommandBufferStatusError){
+                NSLog(@"Command Buffer Failed to Execute. Error: %@",commandBuffer.error);
+            }
+            else if(commandBuffer.status == MTLCommandBufferStatusCompleted){
+                NSLog(@"Successfully completed Command Buffer!");
+            }
+         }];
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) commit];
+        NSLog(@"Commit to GPU!");
     };
 
     void GEMetalCommandBuffer::reset(){
@@ -210,6 +224,8 @@ _NAMESPACE_BEGIN_
     };
 
     void GEMetalCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
+        auto _commandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,_commandBuffer->buffer.handle()) enqueue];
         commandBuffers.push_back(commandBuffer);
     };
 
@@ -218,7 +234,7 @@ _NAMESPACE_BEGIN_
             auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
             mtlCommandBuffer->_commit();
         };
-        commandBuffers.clear();
+//        commandBuffers.clear();
     };
 
     void GEMetalCommandQueue::commitToGPUAndPresent(NSSmartPtr & drawable){
@@ -228,7 +244,7 @@ _NAMESPACE_BEGIN_
             auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
             mtlCommandBuffer->_commit();
         };
-        commandBuffers.clear();
+//        commandBuffers.clear();
     };
 
     GEMetalCommandQueue::~GEMetalCommandQueue(){
@@ -240,6 +256,6 @@ _NAMESPACE_BEGIN_
     SharedHandle<GECommandBuffer> GEMetalCommandQueue::getAvailableBuffer(){
         ++currentlyOccupied;
         auto s = this;
-        return std::make_shared<GEMetalCommandBuffer>(s);
+        return SharedHandle<GECommandBuffer>(new GEMetalCommandBuffer(s));
     };
 _NAMESPACE_END_

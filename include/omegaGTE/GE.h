@@ -141,7 +141,7 @@ _NAMESPACE_BEGIN_
         (NEVER CALL THIS FUNCTION! Please invoke GTE::Init())
         @returns SharedHandle<OmegaGraphicsEngine>
         */
-        static SharedHandle<OmegaGraphicsEngine> Create();
+        static SharedHandle<OmegaGraphicsEngine> Create(void *device);
          /**
           @brief Loads an OmegaSL Shader Library,
           @param path Path to an `omegasllib` file.

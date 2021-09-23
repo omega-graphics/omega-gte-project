@@ -1,5 +1,7 @@
 #include <OmegaGTE.h>
 
+#import <Metal/Metal.h>
+
 #import <Cocoa/Cocoa.h>
 #include <sstream>
 #import <QuartzCore/QuartzCore.h>
@@ -25,15 +27,16 @@ static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> &color){
     pos_vec[0][0] = pt.x;
     pos_vec[1][0] = pt.y;
     pos_vec[2][0] = pt.z;
-    pos_vec[3][0] = 0.f;
+    pos_vec[3][0] = 1.f;
 
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(pos_vec);
     bufferWriter->writeFloat4(color);
     bufferWriter->structEnd();
+    
 }
 
-static void render(){
+static void render(id<MTLDevice> dev){
 
 
 
@@ -79,6 +82,7 @@ static void render(){
         
 
     auto commandBuffer = nativeRenderTarget->commandBuffer();
+    
     NSLog(@"Command Buffer Created");
     OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
     using RenderPassDesc = OmegaGTE::GERenderTarget::RenderPassDesc;
@@ -87,9 +91,10 @@ static void render(){
     commandBuffer->startRenderPass(renderPass);
     commandBuffer->setRenderPipelineState(renderPipeline);
     commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
-    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,vertexBuffer->size(),0);
+    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
     NSLog(@"Ending Render Pass");
     commandBuffer->endRenderPass();
+
     NSLog(@"Ended Render Pass");
     nativeRenderTarget->submitCommandBuffer(commandBuffer);
     NSLog(@"Command Buffer Scheduled for Execution");
@@ -129,13 +134,19 @@ static void render(){
 
         tessContext = gte.tessalationEngine->createTEContextFromNativeRenderTarget(nativeRenderTarget);
         
-        render();
+        MTLCaptureManager *manager = [MTLCaptureManager sharedCaptureManager];
+        
+        NSAssert(metalLayer.device,@"Device is NULL!");
+        
+        render(metalLayer.device);
     
         [rootView addSubview:view];
 
         [self.window setContentView:rootView];
         [self.window center];
         [self.window layoutIfNeeded];
+
+        [manager stopCapture];
     }
     return self;
 }
@@ -169,7 +180,13 @@ static void render(){
 
 int main(int argc,const char * argv[]){
     
-    gte = OmegaGTE::Init();
+    auto dir = OmegaCommon::FS::Path(argv[0]).dir();
+    
+    chdir(dir.c_str());
+
+    __strong id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    
+    gte = OmegaGTE::Init((void *)device);
 
    funcLib = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
 

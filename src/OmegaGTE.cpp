@@ -2,8 +2,8 @@
 
 _NAMESPACE_BEGIN_
 
-GTE Init(){
-    auto ge = OmegaGraphicsEngine::Create();
+GTE Init(void *device){
+    auto ge = OmegaGraphicsEngine::Create(device);
     return {ge,OmegaTessalationEngine::Create()};
 };
 

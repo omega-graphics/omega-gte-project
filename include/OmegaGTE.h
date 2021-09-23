@@ -21,7 +21,7 @@ struct OMEGAGTE_EXPORT GTE {
 
 
 
-OMEGAGTE_EXPORT GTE Init();
+OMEGAGTE_EXPORT GTE Init(void *device);
 OMEGAGTE_EXPORT void Close(GTE &gte);
 
 _NAMESPACE_END_

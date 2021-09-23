@@ -8,6 +8,8 @@ namespace omegasl {
 #include <metal_stdlib>
 #include <simd/simd.h>
 
+using namespace metal;
+
 )";
 
     #ifdef TARGET_METAL

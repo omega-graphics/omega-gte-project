@@ -19,7 +19,8 @@ struct NSObjectHandle {
 
 class NSSmartPtr {
     const void * data = nullptr;
-public:   
+public:
+    NSSmartPtr() = default;
     NSSmartPtr(const NSObjectHandle & handle);
     inline const void* handle() const { return data; }
     void assertExists();
@@ -44,7 +45,7 @@ public:
 
 #endif
 
-    SharedHandle<OmegaGraphicsEngine> CreateMetalEngine();
+SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(void *device);
 _NAMESPACE_END_
 
 #endif

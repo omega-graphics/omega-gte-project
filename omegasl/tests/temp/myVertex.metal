@@ -14,7 +14,7 @@ struct VertexRaster {
 };
 
 
-vertex VertexRaster myVertex (constant MyVertex * v_buffer[[buffer(0)]],uint vertex_id [[vertex_id]]){
+vertex VertexRaster myVertex (device MyVertex * v_buffer[[buffer(0)]],uint vertex_id [[vertex_id]]){
     MyVertex vert = v_buffer[vertex_id];
     VertexRaster data;
     data.pos = vert.pos;

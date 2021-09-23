@@ -73,9 +73,9 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibrary(FS::Path p
     return res;
 }
 
-SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(){
+SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(void *device){
     #ifdef TARGET_METAL
-        return CreateMetalEngine();
+        return CreateMetalEngine(device);
     #endif
     #ifdef TARGET_DIRECTX
         return GED3D12Engine::Create();

@@ -173,15 +173,36 @@ _NAMESPACE_BEGIN_
             auto data = dispatch_data_create(shaderDesc->data,shaderDesc->dataSize,nullptr,DISPATCH_DATA_DESTRUCTOR_DEFAULT);
             NSError *error;
             NSSmartPtr library = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithData:data error:&error]};
+            
             NSString *str = [[NSString alloc] initWithUTF8String:shaderDesc->name];
+            NSLog(@"Loading Function %@",str);
             NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:str] };
             auto _shader = new GEMetalShader(library,func);
             _shader->internal = *shaderDesc;
             return SharedHandle<GTEShader>(_shader);
         }
     public:
-        GEMetalEngine():metalDevice({NSOBJECT_CPP_BRIDGE MTLCreateSystemDefaultDevice()}){
+        GEMetalEngine(id<MTLDevice> device){
+            if(device == nil){
+                NSLog(@"Metal is not supported on this device! Exiting...");
+                exit(1);
+            }
+            MTLCaptureManager *manager = [MTLCaptureManager sharedCaptureManager];
+
+            MTLCaptureDescriptor *captureDesc = [[MTLCaptureDescriptor alloc] init];
+            captureDesc.captureObject = device;
+            captureDesc.destination = MTLCaptureDestinationGPUTraceDocument;
+            captureDesc.outputURL = [NSURL fileURLWithPath:@"./2DTest.gputrace"];
+            NSError *error;
+            BOOL res = [manager startCaptureWithDescriptor:captureDesc error:&error];
+
+            if(!res){
+                NSLog(@"Failed to Start GPU Capture. %@",error);
+            }
+
+            metalDevice = NSObjectHandle {NSOBJECT_CPP_BRIDGE device};
             DEBUG_STREAM("GEMetalEngine Successfully Created");
+            
         };
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override{
             metalDevice.assertExists();
@@ -237,6 +258,7 @@ _NAMESPACE_BEGIN_
             GEMetalShader *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
+            pipelineDesc.label = @"RENDER PIPELINE";
             pipelineDesc.vertexFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,vertexFunc->function.handle());
             pipelineDesc.fragmentFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,fragmentFunc->function.handle());
             pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -244,7 +266,7 @@ _NAMESPACE_BEGIN_
             NSError *error;
             NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newRenderPipelineStateWithDescriptor:pipelineDesc error:&error]};
             
-            if(pipelineState.handle() == nil){
+            if(pipelineState.handle() == nil || error.code < 0){
                 DEBUG_STREAM("Failed to Create Render Pipeline State");
                 exit(1);
             };
@@ -264,7 +286,7 @@ _NAMESPACE_BEGIN_
     };
 
 
-    SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(){
-        return std::shared_ptr<OmegaGraphicsEngine>(new GEMetalEngine());
+    SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(void *device){
+        return std::shared_ptr<OmegaGraphicsEngine>(new GEMetalEngine(NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,device)));
     };
 _NAMESPACE_END_

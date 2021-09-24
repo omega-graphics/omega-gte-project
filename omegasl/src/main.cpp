@@ -53,6 +53,8 @@ GenMode defaultGenModeForHost(){
 
 int main(int argc,char *argv[]){
 
+    omegasl::ast::builtins::Initialize();
+
     bool tokenize = false;
     bool interfaceOnly = false;
 
@@ -208,6 +210,8 @@ int main(int argc,char *argv[]){
     parser.parseContext({in});
 
     codeGen->linkShaderObjects();
+
+    omegasl::ast::builtins::Cleanup();
 
     return 0;
 };

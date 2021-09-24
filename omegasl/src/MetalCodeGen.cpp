@@ -55,6 +55,9 @@ using namespace metal;
             else if(_t == builtins::float4_type){
                 out << "simd_float4";
             }
+            else if(_t == builtins::sampler2d_type || _t == builtins::sampler3d_type){
+                out << "sampler";
+            }
             else {
                 out << t->name;
             }
@@ -101,6 +104,45 @@ using namespace metal;
                     shaderOut << "[";
                     generateExpr(_expr->idx_expr);
                     shaderOut << "]";
+                    break;
+                }
+                case CALL_EXPR : {
+                    auto _expr = (ast::CallExpr *)expr;
+                    OmegaCommon::StrRef func_name = ((ast::IdExpr *)_expr->callee)->id;
+
+                    bool generated = false;
+
+                    if(func_name == BUILTIN_MAKE_FLOAT2){
+                        shaderOut << "simd_make_float2";
+                    }
+                    else if(func_name == BUILTIN_MAKE_FLOAT3){
+                        shaderOut << "simd_make_float3";
+                    }
+                    else if(func_name == BUILTIN_MAKE_FLOAT4){
+                        shaderOut << "simd_make_float4";
+                    }
+                    else if(func_name == BUILTIN_SAMPLE){
+                        generated = true;
+                        generateExpr(_expr->args[0]);
+                        shaderOut << ".sample";
+                        shaderOut << "(";
+                        generateExpr(_expr->args[1]);
+                        shaderOut << ",";
+                        generateExpr(_expr->args[2]);
+                        shaderOut << ")";
+                    }
+
+                    if(!generated){
+                        shaderOut << "(";
+                        for(auto a_it = _expr->args.begin();a_it != _expr->args.end();a_it++){
+                            if(a_it != _expr->args.begin()){
+                                shaderOut << ",";
+                            }
+                            generateExpr(*a_it);
+                        }
+                        shaderOut << ")";
+                    }
+
                     break;
                 }
             }
@@ -257,6 +299,11 @@ using namespace metal;
                             isTexture = true;
                             shaderOut << "texture1d<half,";
                             layoutDescType = OMEGASL_SHADER_TEXTURE1D_DESC;
+                        }
+                        else if(type_ == ast::builtins::texture2d_type){
+                            isTexture = true;
+                            shaderOut << "texture2d<half,";
+                            layoutDescType = OMEGASL_SHADER_TEXTURE2D_DESC;
                         }
 
                         if(isTexture){

@@ -105,9 +105,36 @@ _NAMESPACE_BEGIN_
         virtual SharedHandle<GETexture> makeTexture(const TextureDescriptor & desc) = 0;
     };
 
-    class  OMEGAGTE_EXPORT GEFence {
+    class  OMEGAGTE_EXPORT GEFence {};
+
+    struct OMEGAGTE_EXPORT SamplerDescriptor {
+        enum class AddressMode  : int {
+            Wrap,
+            ClampToEdge,
+            MirrorClampToEdge,
+            MirrorWrap
+        }
+        /// @brief  Address Mode for Width
+        uAddressMode,
+        /// @brief Address Mode for Height
+        vAddressMode,
+        /// @brief Address Mode for Depth
+        wAddressMode;
+        enum class Filter : int {
+            Linear,
+            Point,
+            MagLinearMinPointMipLinear,
+            MagPointMinLinearMipLinear,
+            MagLinearMinLinearMipPoint,
+            MagPointMinLinearMipPoint,
+            MagLinearMinPointMipPoint,
+            Anisotropic
+        } filter;
+        unsigned int maxAnisotropy;
 
     };
+
+    class OMEGAGTE_EXPORT GESamplerState {};
 
     // struct OMEGAGTE_EXPORT GEVertex {
     //     FVector3D pos;
@@ -158,6 +185,12 @@ _NAMESPACE_BEGIN_
          @returns SharedHandle<GEFence>
         */
         virtual SharedHandle<GEFence> makeFence() = 0;
+
+        /**
+         @brief Creates a GESamplerState
+         @returns SharedHandle<GESamplerState>
+         * */
+         virtual SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) = 0;
 
         /**
          @brief Creates a GEBuffer from a BufferDescriptor.

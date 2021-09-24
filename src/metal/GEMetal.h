@@ -43,6 +43,11 @@ public:
     GEMetalFence(NSSmartPtr & fence);
 };
 
+struct GEMetalSamplerState : public GESamplerState {
+    NSSmartPtr samplerState;
+    GEMetalSamplerState(NSSmartPtr & samplerState);
+};
+
 #endif
 
 SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(void *device);

@@ -9,6 +9,7 @@ OmegaSL is a cross-platform shading language designed to be used with OmegaGTE.
 Syntax:
     StructDecl:
         Declares a data structure to be used on the cpu and the gpu unless declared internal (Struct suffixed with the keyword ``internal`` )
+        Internal structures require that all of their fields must annotated with attributes. (For optimal code generation of GLSL and HLSL)
 
         .. code-block:: omegasl
 
@@ -19,7 +20,7 @@ Syntax:
             // Used only to transfer data between vertex and fragment shader stages.
             struct MyVertexRasterData internal {
                 float4 pos : Position;
-                float4 color;
+                float4 color : Color;
             };
 
     ResourceDecl:
@@ -65,6 +66,57 @@ Syntax:
                 sampler2d sampler;
                 return sample(sampler,tex);
             }
+Builtin-Types:
+    There are several builtin data types.
+    ``float2``
+        Defines a vector with 2 float components.
+    ``float3``
+        Defines a vector with 3 float components.
+    ``float4``
+        Defines a vector with 4 float components.
+    ``texture2d``
+        Defines a 2d texture with four 16bit color channels (Format: RGBA) per sample.
+    ``texture3d``
+        Defines a 3d texture with four 16bit color channels (Format: RGBA) per sample.
+    ``sampler2d``
+        Defines a sampler that can sample 2d textures.
+        Can either statically or dynamically declared.
+    ``sampler3d``
+        Defines a sampler that can sample 3d textures.
+        Can either statically or dynamically declared.
+
+    Sampler Declaration Example:
+        Inline:
+            .. code-block:: omegasl
+
+
+                struct RasterData internal {
+                    float4 pos : Position;
+                    float2 coord : TexCoord;
+                };
+
+                texture2d tex : 1;
+
+                fragment float4 myFragmentFunc(RasterData data){
+                    sampler2d<linear> sampler;
+                    return sample(sampler,tex,data.coord);
+                }
+
+        Static:
+            .. code-block:: omegasl
+
+
+                struct RasterData internal {
+                    float4 pos : Position;
+                    float2 coord : TexCoord;
+                };
+
+                texture2d tex : 1;
+                sampler2d<linear> sampler : 2;
+
+                fragment float4 myFragmentFunc(RasterData data){
+                    return sample(sampler,tex,data.coord);
+                }
 
 Builtin-Functions:
     There are several builtin functions in the OmegaSL language.
@@ -87,10 +139,10 @@ Builtin-Functions:
     ``vec<number> cross(vec<number> a,vec<number> b)``:
        Calculates a cross product of two vectors.
 
-    ``float4 sample(texture2d texture,float2 coord)``:
+    ``float4 sample(sampler2d sampler,texture2d texture,float2 coord)``:
         Samples a texture2d and returns the color at the provided coord.
 
-    ``float4 sample(texture3d texture,float3 coord)``:
+    ``float4 sample(sampler3d sampler,texture3d texture,float3 coord)``:
         Samples a texture3d and returns the color at the provided coord.
 
 Attributes:

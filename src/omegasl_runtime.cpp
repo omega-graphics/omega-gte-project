@@ -30,6 +30,7 @@ class OmegaSLCompilerImpl : public OmegaSLCompiler {
     std::shared_ptr<omegasl::Parser> parser;
 public:
     OmegaSLCompilerImpl(){
+        omegasl::ast::builtins::Initialize();
         omegasl::CodeGenOpts genOpts {false,true};
 #if defined(TARGET_DIRECTX)
         omegasl::HLSLCodeOpts hlslCodeOpts {""};
@@ -57,6 +58,10 @@ public:
        auto res = gen->getLibrary("RUNTIME");
        gen->resetShaderMap();
        return res;
+    }
+
+    ~OmegaSLCompilerImpl() {
+        omegasl::ast::builtins::Cleanup();
     }
 };
 

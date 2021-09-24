@@ -52,7 +52,7 @@ static void render(id<MTLDevice> dev){
     auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
     std::cout << "Created Matrix GRect" << std::endl;
 
-    OmegaGTE::BufferDescriptor bufferDescriptor {6 * (FLOAT4_SIZE + FLOAT4_SIZE),(FLOAT4_SIZE + FLOAT4_SIZE)};
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT4_SIZE),(FLOAT4_SIZE + FLOAT4_SIZE)};
     auto vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
     bufferWriter->setOutputBuffer(vertexBuffer);

@@ -16,6 +16,8 @@
 
 _NAMESPACE_BEGIN_
 
+
+
     simd_float2 float2(const FVec<2> &mat){
         return simd::make_float2(mat[0][0],mat[1][0]);
     };
@@ -167,6 +169,10 @@ _NAMESPACE_BEGIN_
 
     GEMetalFence::GEMetalFence(NSSmartPtr & fence):metalFence(fence){};
 
+    GEMetalSamplerState::GEMetalSamplerState(NSSmartPtr &samplerState): samplerState(samplerState) {
+
+    }
+
     class GEMetalEngine : public OmegaGraphicsEngine {
         NSSmartPtr metalDevice;
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override {
@@ -258,7 +264,7 @@ _NAMESPACE_BEGIN_
             GEMetalShader *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
-            pipelineDesc.label = @"RENDER PIPELINE";
+//            pipelineDesc.label = @"RENDER PIPELINE";
             pipelineDesc.vertexFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,vertexFunc->function.handle());
             pipelineDesc.fragmentFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,fragmentFunc->function.handle());
             pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -283,6 +289,83 @@ _NAMESPACE_BEGIN_
             id<MTLTexture> texture = [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newTextureWithDescriptor:mtlDesc];
             return std::shared_ptr<GETexture>(new GEMetalTexture(texture,desc));
         };
+        SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override {
+            MTLSamplerDescriptor *mtlSamplerDescriptor = [[MTLSamplerDescriptor alloc] init];
+
+            switch (desc.filter) {
+                case SamplerDescriptor::Filter::Linear : {
+                    mtlSamplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
+                    mtlSamplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
+                    mtlSamplerDescriptor.mipFilter = MTLSamplerMipFilterLinear;
+                    break;
+                }
+            }
+
+            mtlSamplerDescriptor.maxAnisotropy = desc.maxAnisotropy;
+
+            MTLSamplerAddressMode samplerAddressMode = MTLSamplerAddressModeClampToZero;
+            switch (desc.uAddressMode) {
+                case SamplerDescriptor::AddressMode::Wrap : {
+                    samplerAddressMode = MTLSamplerAddressModeRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::ClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeClampToEdge;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorWrap : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorClampToEdge;
+                    break;
+                }
+            }
+            mtlSamplerDescriptor.sAddressMode = samplerAddressMode;
+            switch (desc.vAddressMode) {
+                case SamplerDescriptor::AddressMode::Wrap : {
+                    samplerAddressMode = MTLSamplerAddressModeRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::ClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeClampToEdge;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorWrap : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorClampToEdge;
+                    break;
+                }
+            }
+            mtlSamplerDescriptor.tAddressMode = samplerAddressMode;
+            switch (desc.wAddressMode) {
+                case SamplerDescriptor::AddressMode::Wrap : {
+                    samplerAddressMode = MTLSamplerAddressModeRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::ClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeClampToEdge;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorWrap : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorRepeat;
+                    break;
+                }
+                case SamplerDescriptor::AddressMode::MirrorClampToEdge : {
+                    samplerAddressMode = MTLSamplerAddressModeMirrorClampToEdge;
+                    break;
+                }
+            }
+            mtlSamplerDescriptor.rAddressMode = samplerAddressMode;
+
+            NSSmartPtr samplerState = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newSamplerStateWithDescriptor:mtlSamplerDescriptor]};
+
+            return SharedHandle<GESamplerState>(new GEMetalSamplerState {samplerState});
+        }
     };
 
 

@@ -2,6 +2,7 @@
 #include "CodeGen.h"
 
 namespace std {
+
     template<>
     struct equal_to<omegasl::ast::ResourceDecl *> {
         auto operator()(omegasl::ast::ResourceDecl *lhs,omegasl::ast::ResourceDecl *rhs){
@@ -12,6 +13,8 @@ namespace std {
 
 namespace omegasl {
 
+
+
     enum class AttributeContext : int {
         VertexShaderArgument,
         FragmentShaderArgument,
@@ -20,19 +23,30 @@ namespace omegasl {
     };
 
     inline bool isValidAttributeInContext(OmegaCommon::StrRef subject,AttributeContext context){
-        return (subject == ATTRIBUTE_VERTEX_ID) || (subject == ATTRIBUTE_COLOR) || (subject == ATTRIBUTE_POSITION);
+        if(context == AttributeContext::StructField){
+            return (subject == ATTRIBUTE_COLOR) || (subject == ATTRIBUTE_POSITION);
+        }
+        else if(context == AttributeContext::VertexShaderArgument){
+            return (subject == ATTRIBUTE_VERTEX_ID);
+        }
+        else if(context == AttributeContext::ComputeShaderArgument){
+            return (subject == ATTRIBUTE_GLOBALTHREAD_ID) || (subject == ATTRIBUTE_THREADGROUP_ID) || (subject == ATTRIBUTE_LOCALTHREAD_ID);
+        }
+        else {
+            return false;
+        };
     }
 
     struct SemContext {
         OmegaCommon::Vector<ast::Type *> typeMap;
+
+        OmegaCommon::Vector<ast::FuncType *> functionMap;
 
         OmegaCommon::SetVector<ast::ResourceDecl *> resourceSet;
 
         OmegaCommon::Map<ast::FuncDecl *,OmegaCommon::Vector<OmegaCommon::String>> funcDeclContextTypeMap;
 
         OmegaCommon::Vector<OmegaCommon::String> shaders;
-
-        OmegaCommon::Vector<OmegaCommon::String> funcs;
 
         OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> variableMap;
     };
@@ -42,6 +56,8 @@ namespace omegasl {
     class Sem : public ast::SemFrontend {
 
         OmegaCommon::Vector<ast::Type *> builtinsTypeMap;
+
+        OmegaCommon::Vector<ast::FuncType *> builtinFunctionMap;
 
         std::shared_ptr<SemContext> currentContext;
 
@@ -59,6 +75,18 @@ namespace omegasl {
             ast::builtins::buffer_type,
             ast::builtins::texture1d_type,
             ast::builtins::texture2d_type
+            }),
+            builtinFunctionMap({
+
+                ast::builtins::make_float2,
+                ast::builtins::make_float3,
+                ast::builtins::make_float4,
+
+                ast::builtins::read,
+                ast::builtins::dot,
+                ast::builtins::cross,
+                ast::builtins::sample,
+                ast::builtins::write
             }),currentContext(nullptr){
 
         };
@@ -75,7 +103,7 @@ namespace omegasl {
             currentContext = _currentContext;
         }
 
-        void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc,OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> & fields){
+        void addTypeToCurrentContext(OmegaCommon::StrRef name, ast::Scope *loc,OmegaCommon::MapVec<OmegaCommon::String,ast::TypeExpr *> & fields){
             currentContext->typeMap.push_back(new ast::Type {name,loc,false,{},fields});
         }
 
@@ -131,6 +159,37 @@ namespace omegasl {
             return nullptr;
         };
 
+        ast::FuncType *resolveFuncTypeWithName(OmegaCommon::StrRef name){
+
+            auto builitin_func_it = builtinFunctionMap.begin();
+            while(builitin_func_it != builtinFunctionMap.end()){
+                auto f = *builitin_func_it;
+                if(f->name == name){
+                    break;
+                }
+                ++builitin_func_it;
+            }
+
+            if(builitin_func_it != builtinFunctionMap.end()){
+                return *builitin_func_it;
+            }
+
+            auto contextual_func_it = currentContext->functionMap.begin();
+            while(contextual_func_it != currentContext->functionMap.end()){
+                auto f = *builitin_func_it;
+                if(f->name == name){
+                    break;
+                }
+                ++contextual_func_it;
+            }
+
+            if(contextual_func_it != currentContext->functionMap.end()){
+                return *contextual_func_it;
+            }
+
+            return nullptr;
+        }
+
         ast::TypeExpr *performSemForDecl(ast::Decl * decl,ast::FuncDecl *funcContext){
             auto ret = ast::TypeExpr::Create(KW_TY_VOID);
             switch (decl->type) {
@@ -164,6 +223,7 @@ namespace omegasl {
             auto ret = ast::TypeExpr::Create(KW_TY_VOID);
             if(expr->type == ID_EXPR){
                 auto _expr = (ast::IdExpr *)expr;
+
                 auto _id_found = currentContext->variableMap.find(_expr->id);
                 if(_id_found == currentContext->variableMap.end()){
                     std::cout << "Unknown Identifier: " << _expr->id << std::endl;
@@ -172,6 +232,8 @@ namespace omegasl {
                 else {
                     return _id_found->second;
                 }
+
+
             }
             else if(expr->type == LITERAL_EXPR){
                 auto _expr = (ast::LiteralExpr *)expr;
@@ -208,6 +270,108 @@ namespace omegasl {
                     else {
                         return member_found->second;
                     }
+                }
+                else {
+#define MATCH_CASE(subject,str) if(subject == str){
+#define MATCH_CASE_END() }
+                    OmegaCommon::StrRef subject = _expr->rhs_id;
+
+                    if(type_res == ast::builtins::float2_type){
+
+                        MATCH_CASE(subject,"x")
+                            return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"y")
+                            return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xy")
+                            return ast::TypeExpr::Create(type_res);
+                        MATCH_CASE_END()
+
+                        std::cout << subject << " does not exist on type `float2`" << std::endl;
+                        return nullptr;
+                    }
+                    else if(type_res == ast::builtins::float3_type){
+                        MATCH_CASE(subject,"x")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"y")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"z")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xy")
+                        return ast::TypeExpr::Create(ast::builtins::float2_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"yz")
+                        return ast::TypeExpr::Create(ast::builtins::float2_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xyz")
+                        return ast::TypeExpr::Create(type_res);
+                        MATCH_CASE_END()
+
+                        std::cout << subject << " does not exist on type `float3`" << std::endl;
+                        return nullptr;
+                    }
+                    else if(ast::builtins::float4_type){
+                        MATCH_CASE(subject,"x")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"y")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"z")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"w")
+                        return ast::TypeExpr::Create(ast::builtins::float_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xy")
+                        return ast::TypeExpr::Create(ast::builtins::float2_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"yz")
+                        return ast::TypeExpr::Create(ast::builtins::float2_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"zw")
+                        return ast::TypeExpr::Create(ast::builtins::float2_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xyz")
+                        return ast::TypeExpr::Create(ast::builtins::float3_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"yzw")
+                        return ast::TypeExpr::Create(ast::builtins::float3_type);
+                        MATCH_CASE_END()
+
+                        MATCH_CASE(subject,"xyzw")
+                        return ast::TypeExpr::Create(type_res);
+                        MATCH_CASE_END()
+
+                        std::cout << subject << " does not exist on type `float4`" << std::endl;
+                        return nullptr;
+                    }
+                    else {
+                        std::cout << "There are no members available with this type." << std::endl;
+                        return nullptr;
+                    }
+
+#undef MATCH_CASE
+#undef MATCH_CASE_END
                 }
             }
             else if(expr->type == BINARY_EXPR){
@@ -249,6 +413,229 @@ namespace omegasl {
                 }
 
                 return lhs_res->args[0];
+
+            }
+            else if(expr->type == CALL_EXPR){
+                auto _expr = (ast::CallExpr *)expr;
+
+                assert(_expr->callee->type == ID_EXPR);
+
+                auto _id_expr = (ast::IdExpr *)_expr->callee;
+
+                auto func_found = resolveFuncTypeWithName(_id_expr->id);
+
+                if(func_found == nullptr){
+                    std::cout << "Function " << _id_expr->id << " does not exist!" << std::endl;
+                    return nullptr;
+                }
+
+                /// Check if is builtin.
+
+                if(func_found == ast::builtins::make_float2){
+
+                    if(_expr->args.size() != 2){
+                        std::cout << BUILTIN_MAKE_FLOAT2 << "() expects 2 arguments with type `float`" << std::endl;
+                        return nullptr;
+                    }
+
+                    auto first_t_e = performSemForExpr(_expr->args[0],funcContext);
+                    auto second_t_e = performSemForExpr(_expr->args[1],funcContext);
+
+                    if(first_t_e == nullptr || second_t_e == nullptr){
+                        return nullptr;
+                    }
+
+                    auto _t = resolveTypeWithExpr(first_t_e);
+                    if(_t != ast::builtins::float_type){
+                        std::cout << "1st param of function " << BUILTIN_MAKE_FLOAT2 << "must be a type `float`" << std::endl;
+                        return nullptr;
+                    }
+
+                    _t = resolveTypeWithExpr(second_t_e);
+                    if(_t != ast::builtins::float_type){
+                        std::cout << "2nd param of function " << BUILTIN_MAKE_FLOAT2 << "must be a type `float`" << std::endl;
+                        return nullptr;
+                    }
+
+                }
+                else if(func_found == ast::builtins::make_float3){
+                    if(!(_expr->args.size() == 2 || _expr->args.size() == 3)){
+                        std::cout << BUILTIN_MAKE_FLOAT3 << "() expects 2 or 3 arguments with type `float` or `float2`" << std::endl;
+                        return nullptr;
+                    }
+
+                    auto first_t_e = performSemForExpr(_expr->args[0],funcContext);
+                    auto second_t_e = performSemForExpr(_expr->args[1],funcContext);
+                    auto third_t_e = performSemForExpr(_expr->args[2],funcContext);
+
+                    if(first_t_e == nullptr || second_t_e == nullptr || third_t_e == nullptr){
+                        return nullptr;
+                    }
+
+                    if(_expr->args.size() == 3){
+
+                        auto _t = resolveTypeWithExpr(first_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "1st param of function " << BUILTIN_MAKE_FLOAT3 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "2nd param of function " << BUILTIN_MAKE_FLOAT3 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(third_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "3rd param of function " << BUILTIN_MAKE_FLOAT3 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                    }
+                    else {
+
+                        auto _t = resolveTypeWithExpr(first_t_e);
+                        if(!(_t == ast::builtins::float_type || _t == ast::builtins::float2_type)){
+                            std::cout << "1st param of function " << BUILTIN_MAKE_FLOAT3 << "must be a type `float` or type `float2`" << std::endl;
+                            return nullptr;
+                        }
+                        auto _first_t = _t;
+
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(!(_t == ast::builtins::float_type || _t == ast::builtins::float2_type)){
+                            std::cout << "2nd param of function " << BUILTIN_MAKE_FLOAT3 << "must be a type `float` or type `float2`" << std::endl;
+                            return nullptr;
+                        }
+
+                        if(_first_t == _t){
+                            std::cout << "Invalid args." << std::endl;
+                            return nullptr;
+                        }
+
+                    }
+
+                }
+                else if(func_found == ast::builtins::make_float4){
+                    if(!(_expr->args.size() == 2 || _expr->args.size() == 3) || _expr->args.size() == 4){
+                        std::cout << BUILTIN_MAKE_FLOAT4 << "() expects 2, 3, or 4 arguments with type `float`, `float2`, or `float3`" << std::endl;
+                        return nullptr;
+                    }
+
+                    auto first_t_e = performSemForExpr(_expr->args[0],funcContext);
+                    auto second_t_e = performSemForExpr(_expr->args[1],funcContext);
+                    auto third_t_e = performSemForExpr(_expr->args[2],funcContext);
+                    auto fourth_t_e = performSemForExpr(_expr->args[3],funcContext);
+
+                    if(first_t_e == nullptr || second_t_e == nullptr || third_t_e == nullptr || fourth_t_e == nullptr){
+                        return nullptr;
+                    }
+
+                    if(_expr->args.size() == 4){
+                        auto _t = resolveTypeWithExpr(first_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "1st param of function " << BUILTIN_MAKE_FLOAT4 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "2nd param of function " << BUILTIN_MAKE_FLOAT4 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(third_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "3rd param of function " << BUILTIN_MAKE_FLOAT4 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(fourth_t_e);
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "4th param of function " << BUILTIN_MAKE_FLOAT4 << "must be a type `float`" << std::endl;
+                            return nullptr;
+                        }
+                    }
+                    /// TODO: Finish make_float4() arg checks!!
+                }
+                /// @brief sample(sampler sampler,texture texture,texcoord coord) function
+                else if(func_found == ast::builtins::sample){
+
+                    if(_expr->args.size() != 3){
+                        std::cout << BUILTIN_SAMPLE << " expects 3 arguments." << std::endl;
+                        return nullptr;
+                    }
+
+                    auto first_t_e = performSemForExpr(_expr->args[0],funcContext);
+                    auto second_t_e = performSemForExpr(_expr->args[1],funcContext);
+                    auto third_t_e = performSemForExpr(_expr->args[2],funcContext);
+
+                    if(first_t_e == nullptr || second_t_e == nullptr || third_t_e == nullptr){
+                        return nullptr;
+                    }
+
+                    auto _t = resolveTypeWithExpr(first_t_e);
+                    if(_t == nullptr){
+                        return nullptr;
+                    }
+
+                    if(!(_t == ast::builtins::sampler2d_type || _t == ast::builtins::sampler3d_type)){
+                        std::cout << "1st param of function " << BUILTIN_SAMPLE << " must be a sampler." << std::endl;
+                        return nullptr;
+                    }
+
+                    auto _first_t = _t;
+                    _t = resolveTypeWithExpr(second_t_e);
+                    if(_t == nullptr){
+                        return nullptr;
+                    }
+                    ///sampler2d
+                    if(_first_t == ast::builtins::sampler2d_type){
+
+                        if(_t != ast::builtins::texture2d_type){
+                            std::cout << "2nd param of function " << BUILTIN_SAMPLE << "must be a texture2d" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(third_t_e);
+                        if(_t == nullptr){
+                            return nullptr;
+                        }
+
+                        if(_t != ast::builtins::float2_type){
+                            std::cout << "3rd param of function " << BUILTIN_SAMPLE << "must be a float2" << std::endl;
+                            return nullptr;
+                        }
+
+                    }
+                    ///sampler3d
+                    else if(_first_t == ast::builtins::sampler3d_type) {
+                        if(_t != ast::builtins::texture3d_type){
+                            std::cout << "2nd param of function " << BUILTIN_SAMPLE << "must be a texture3d" << std::endl;
+                            return nullptr;
+                        }
+
+                        _t = resolveTypeWithExpr(third_t_e);
+                        if(_t == nullptr){
+                            return nullptr;
+                        }
+
+                        if(_t != ast::builtins::float3_type){
+                            std::cout << "3rd param of function " << BUILTIN_SAMPLE << "must be a float3" << std::endl;
+                            return nullptr;
+                        }
+                    }
+                }
+                else {
+
+                    /// Check Params of Function
+                    for(unsigned i = 0;i < _expr->args.size();i++){
+                        auto _ty_expr = performSemForExpr(_expr,funcContext);
+
+                    }
+                }
+
+                return func_found->returnType;
 
             }
             return ret;
@@ -320,7 +707,7 @@ namespace omegasl {
                     /// 2. Check struct fields.
                     /// TODO: Add struct field uniqueness check
 
-                    OmegaCommon::Map<OmegaCommon::String,ast::TypeExpr *> field_types;
+                    OmegaCommon::MapVec<OmegaCommon::String,ast::TypeExpr *> field_types;
 
                     for(auto & f : _decl->fields){
 
@@ -364,10 +751,17 @@ namespace omegasl {
 
                     /// 2. Check resource type.
                     auto ty = resolveTypeWithExpr(_decl->typeExpr);
-                    if(ty != ast::builtins::buffer_type && ty != ast::builtins::texture1d_type){
+                    if(ty != ast::builtins::buffer_type
+                    && ty != ast::builtins::texture1d_type
+                    && ty != ast::builtins::texture2d_type
+                    && ty != ast::builtins::texture3d_type
+                    && ty != ast::builtins::sampler2d_type
+                    && ty != ast::builtins::sampler3d_type){
                         std::cout << "Resource `" << _decl->name << "` is not a valid type. (" << _decl->typeExpr->name << ")" << std::endl;
                         return false;
                     }
+
+                    /// 3. (Applies to sampler types) Check static sampler state.
 
 
                     break;

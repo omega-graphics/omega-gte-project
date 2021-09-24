@@ -29,10 +29,16 @@ namespace omegasl {
             Scope *declaredScope;
             bool builtin = true;
             OmegaCommon::Vector<OmegaCommon::String> typeArgs;
-            OmegaCommon::Map<OmegaCommon::String,TypeExpr *> fields = {};
+            OmegaCommon::MapVec<OmegaCommon::String,TypeExpr *> fields = {};
+        };
+
+        struct FuncType : public Type {
+            TypeExpr *returnType;
         };
 
         namespace builtins {
+            void Initialize();
+            void Cleanup();
             extern Scope *global_scope;
 #define DECLARE_BUILTIN_TYPE(name) extern Type *name
 
@@ -48,6 +54,24 @@ namespace omegasl {
             DECLARE_BUILTIN_TYPE(texture1d_type);
             DECLARE_BUILTIN_TYPE(texture2d_type);
             DECLARE_BUILTIN_TYPE(texture3d_type);
+
+            DECLARE_BUILTIN_TYPE(sampler2d_type);
+            DECLARE_BUILTIN_TYPE(sampler3d_type);
+
+#undef  DECLARE_BUILTIN_TYPE
+#define DECLARE_BUILTIN_FUNC(name) extern FuncType *name;
+
+            DECLARE_BUILTIN_FUNC(make_float2);
+            DECLARE_BUILTIN_FUNC(make_float3);
+            DECLARE_BUILTIN_FUNC(make_float4);
+
+            DECLARE_BUILTIN_FUNC(dot);
+
+            DECLARE_BUILTIN_FUNC(cross);
+
+            DECLARE_BUILTIN_FUNC(sample);
+            DECLARE_BUILTIN_FUNC(write);
+            DECLARE_BUILTIN_FUNC(read);
         }
 
         /// @brief Refers to a type that already exists.

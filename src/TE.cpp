@@ -112,8 +112,8 @@ inline TETessalationResult OmegaTessalationEngineContext::_tessalatePriv(const T
             std::cout << "Tessalate GRect" << std::endl;
             GRect *object = (GRect *)params.params;
 
-            TETessalationResult::TEMesh mesh;
-            TETessalationResult::TEMesh::Triangle tri;
+            TETessalationResult::TEMesh mesh {};
+            TETessalationResult::TEMesh::Triangle tri {};
             float x0,x1,y0,y1;
             translateCoords(object->pos.x,object->pos.y,0.f,viewport,&x0,&y0,nullptr);
             translateCoords(object->pos.x + object->w,object->pos.y + object->h,0.f,viewport,&x1,&y1,nullptr);

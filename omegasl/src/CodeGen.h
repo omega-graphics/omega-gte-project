@@ -141,6 +141,25 @@ namespace omegasl {
                     out.write((char *)&len,sizeof(len));
                 }
 
+                if(shader_data.type == OMEGASL_SHADER_VERTEX) {
+
+                    /// 5. (For Vertex Shaders) Write Shader Vertex Input Desc
+                    out.write((char *) &shader_data.vertexShaderInputDesc.useVertexID,
+                              sizeof(shader_data.vertexShaderInputDesc.useVertexID));
+                    out.write((char *) &shader_data.vertexShaderInputDesc.nParam,
+                              sizeof(shader_data.vertexShaderInputDesc.nParam));
+                    OmegaCommon::ArrayRef<omegasl_vertex_shader_param_desc> vertexShaderParamDescArr{
+                            shader_data.vertexShaderInputDesc.pParams,
+                            shader_data.vertexShaderInputDesc.pParams + shader_data.vertexShaderInputDesc.nParam};
+                    for (auto &param: vertexShaderParamDescArr) {
+                        size_t param_name_len = strlen(param.name);
+                        out.write((char *)&param_name_len,sizeof(param_name_len));
+                        out.write(param.name,param_name_len);
+                        out.write((char *)&param.type,sizeof(param.type));
+                        out.write((char *)&param.offset,sizeof(param.offset));
+                    }
+                }
+
             }
 
             out.close();

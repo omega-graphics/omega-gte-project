@@ -34,6 +34,10 @@
 #include <glm/glm.hpp>
 #endif
 
+#ifdef TARGET_DIRECTX
+#include <DirectXMath.h>
+#endif
+
 #ifdef TARGET_METAL
 #include <simd/simd.h>
 #endif
@@ -778,8 +782,10 @@ _NAMESPACE_BEGIN_
     #define FLOAT_SIZE sizeof(float)
 
 #ifdef TARGET_DIRECTX
-#include <DirectXMath.h>
 
+#define FLOAT2_SIZE sizeof(DirectX::XMFLOAT2)
+#define FLOAT3_SIZE sizeof(DirectX::XMFLOAT3)
+#define FLOAT4_SIZE sizeof(DirectX::XMFLOAT4)
 
 
 #elif defined(TARGET_METAL)

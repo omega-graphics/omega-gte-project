@@ -70,7 +70,7 @@ _NAMESPACE_BEGIN_
             void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index);
             void setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index);
         
-            void setViewports(std::vector<GEViewport> viewport);
+            void setViewports(std::vector<GEViewport> viewports);
             void setScissorRects(std::vector<GEScissorRect> scissorRects);
         
 

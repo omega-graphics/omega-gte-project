@@ -60,6 +60,32 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputSt
 
         shaderEntry.pLayout = layoutDescArr;
 
+        if(shaderEntry.type == OMEGASL_SHADER_VERTEX) {
+            /// 5. (For Vertex Shaders) Read Vertex Shader Input Desc
+            in.read((char *) &shaderEntry.vertexShaderInputDesc.useVertexID,
+                    sizeof(shaderEntry.vertexShaderInputDesc.nParam));
+            in.read((char *) &shaderEntry.vertexShaderInputDesc.nParam,
+                    sizeof(shaderEntry.vertexShaderInputDesc.nParam));
+            auto &param_c = shaderEntry.vertexShaderInputDesc.nParam;
+
+            auto vertexShaderInputParams = new omegasl_vertex_shader_param_desc[param_c];
+
+            for (unsigned i = 0; i < param_c; i++) {
+                omegasl_vertex_shader_param_desc paramDesc{};
+                size_t param_name_len;
+                in.read((char *) &param_name_len, sizeof(param_name_len));
+                paramDesc.name = new char[param_name_len + 1];
+                in.read((char *) paramDesc.name, param_name_len);
+                ((char *) paramDesc.name)[param_name_len] = '\0';
+                in.read((char *) &paramDesc.type, sizeof(paramDesc.type));
+                in.read((char *) &paramDesc.offset, sizeof(paramDesc.offset));
+                memcpy(vertexShaderInputParams + i, &paramDesc, sizeof(paramDesc));
+            }
+
+            shaderEntry.vertexShaderInputDesc.pParams = vertexShaderInputParams;
+
+        }
+
         lib->shaders.insert(std::make_pair(OmegaCommon::StrRef((char *)shaderEntry.name,(unsigned)name_len), _loadShaderFromDesc(&shaderEntry)));
     }
     return lib;

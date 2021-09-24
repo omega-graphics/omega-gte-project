@@ -25,7 +25,11 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessalationEngineContext {
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
-            
+            /// Use Entire Render Target as Viewport.
+            RECT rc;
+            GetClientRect(target->hwnd,&rc);
+            GEViewport geViewport {0,0,float(rc.right - rc.left),float(rc.bottom - rc.top)};
+            translateCoordsDefaultImpl(x,y,z,&geViewport,x_result,y_result,z_result);
         };
     };
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};

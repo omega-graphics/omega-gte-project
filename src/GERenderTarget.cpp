@@ -44,6 +44,14 @@ void GERenderTarget::CommandBuffer::drawPolygons(RenderPassDrawPolygonType polyg
     commandBuffer->drawPolygons(polygonType,vertexCount,start);
 };
 
+void GERenderTarget::CommandBuffer::setViewports(std::vector<GEViewport> viewports) {
+    commandBuffer->setViewports(viewports);
+}
+
+void GERenderTarget::CommandBuffer::setScissorRects(std::vector<GEScissorRect> scissorRects) {
+    commandBuffer->setScissorRects(scissorRects);
+}
+
 void GERenderTarget::CommandBuffer::endRenderPass(){
     commandBuffer->finishRenderPass();
 };

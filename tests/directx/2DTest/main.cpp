@@ -27,7 +27,7 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
     vertex_pos[0][0] = pt.x;
     vertex_pos[1][0] = pt.y;
     vertex_pos[2][0] = pt.z;
-    vertex_pos[3][0] = 0.f;
+    vertex_pos[3][0] = 1.f;
 
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(vertex_pos);
@@ -38,8 +38,8 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
 void tessalate(){
 
     OmegaGTE::GRect rect;
-    rect.h = 100;
-    rect.w = 100;
+    rect.h = 300;
+    rect.w = 300;
     rect.pos.x = 0;
     rect.pos.y = 0;
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
@@ -48,6 +48,10 @@ void tessalate(){
     auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
 
     std::cout << "Created Matrix GRect" << std::endl;
+
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT4_SIZE),FLOAT4_SIZE + FLOAT4_SIZE};
+
+    vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
     bufferWriter->setOutputBuffer(vertexBuffer);
 
@@ -85,7 +89,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SetCurrentDirectoryW(name);
     MessageBoxW(GetForegroundWindow(),(std::wstring(L"Current Dir:") + name).c_str(),L"NOTE",MB_OK);
 
-    gte = OmegaGTE::Init();
+    gte = OmegaGTE::Init(nullptr);
 
 
     library = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
@@ -110,8 +114,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     ATOM a = RegisterClassEx(&wcex);
 
+    UINT dpi = GetDpiFromDpiAwarenessContext(GetThreadDpiAwarenessContext());
 
-    HWND hwnd = CreateWindowA(MAKEINTATOM(a),"",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,hInstance,NULL);
+    FLOAT scaleFactor = FLOAT(dpi)/96.f;
+
+
+    HWND hwnd = CreateWindowA(MAKEINTATOM(a),"",WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,CW_USEDEFAULT,500 * scaleFactor,500 * scaleFactor,NULL,NULL,hInstance,NULL);
     if(!IsWindow(hwnd)){
          MessageBoxA(GetForegroundWindow(),"Failed to Create Window","NOTE",MB_OK);
         exit(1);
@@ -120,7 +128,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 0","NOTE",MB_OK);
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 1","NOTE",MB_OK);
 
-    OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc;
+    OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc {};
 
     renderTargetDesc.hwnd = hwnd;
     renderTargetDesc.isHwnd = true;
@@ -152,12 +160,17 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     MessageBoxA(GetForegroundWindow(),"Loaded Stage 2","NOTE",MB_OK);
     OmegaGTE::GERenderTarget::RenderPassDesc renderPassDesc;
     using ColorAttachment = OmegaGTE::GERenderTarget::RenderPassDesc::ColorAttachment;
-    renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(1.f,0.f,0.f,1.f),ColorAttachment::Clear);
+    renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(1.f,1.f,0.f,1.f),ColorAttachment::Clear);
+
+    OmegaGTE::GEViewport viewport {0,0,500 * scaleFactor,500 * scaleFactor,0,0};
+    OmegaGTE::GEScissorRect scissorRect {0,0,500 * scaleFactor,500 * scaleFactor};
 
     commandBuffer->startRenderPass(renderPassDesc);
     commandBuffer->setRenderPipelineState(renderPipelineState);
     commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
-    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,vertexBuffer->size(),0);
+    commandBuffer->setScissorRects({scissorRect});
+    commandBuffer->setViewports({viewport});
+    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
     MessageBoxA(GetForegroundWindow(),"Loaded Stage 3","NOTE",MB_OK);
     commandBuffer->endRenderPass();
      MessageBoxA(GetForegroundWindow(),"Loaded Stage 4","NOTE",MB_OK);

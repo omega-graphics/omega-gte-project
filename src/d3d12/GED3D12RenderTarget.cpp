@@ -7,10 +7,10 @@ _NAMESPACE_BEGIN_
         SharedHandle<GECommandQueue> commandQueue,
         unsigned frameIndex,
         ID3D12Resource *const *renderTargets,
-        size_t renderTargetViewCount):swapChain(swapChain),
+        size_t renderTargetViewCount,HWND hwnd):swapChain(swapChain),
         descriptorHeapForRenderTarget(descriptorHeapForRenderTarget),
         commandQueue(commandQueue),frameIndex(frameIndex),
-        renderTargets(renderTargets,renderTargets + renderTargetViewCount){
+        renderTargets(renderTargets,renderTargets + renderTargetViewCount),hwnd(hwnd){
         
     };
 
@@ -35,6 +35,14 @@ _NAMESPACE_BEGIN_
 
     void GED3D12NativeRenderTarget::commitAndPresent(){
         HRESULT hr;
+        auto queue = (GED3D12CommandQueue *)commandQueue.get();
+
+        auto commandList = queue->getLastCommandList();
+
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(renderTargets[frameIndex],D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_PRESENT);
+
+        commandList->ResourceBarrier(1,&barrier);
+        /// Close all Command Lists and Commit.
         commandQueue->commitToGPU();
         /// NOTE: Maybe a Fence here to prevent gpu timing problems.
         DXGI_PRESENT_PARAMETERS params;
@@ -52,7 +60,7 @@ _NAMESPACE_BEGIN_
     };
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12TextureRenderTarget::commandBuffer(){
-        return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Texture,commandQueue->getAvailableBuffer()));
+        return SharedHandle<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Texture,commandQueue->getAvailableBuffer()));
     };
 
     void GED3D12TextureRenderTarget::commit(){

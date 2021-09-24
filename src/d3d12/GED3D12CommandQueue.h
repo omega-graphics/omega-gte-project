@@ -15,6 +15,11 @@ _NAMESPACE_BEGIN_
         std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
         friend class GED3D12CommandQueue;
 
+        struct {
+            GED3D12NativeRenderTarget *native = nullptr;
+            GED3D12TextureRenderTarget *texture = nullptr;
+        } currentTarget;
+
        
     public:
         void startBlitPass();
@@ -51,6 +56,7 @@ _NAMESPACE_BEGIN_
         friend class GED3D12Engine;
         friend class GED3D12CommandBuffer;
     public:
+        ID3D12GraphicsCommandList6 * getLastCommandList();
         void commitToGPU();
         void reset();
         void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer);

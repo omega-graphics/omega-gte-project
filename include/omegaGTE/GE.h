@@ -62,6 +62,11 @@ _NAMESPACE_BEGIN_
     };
 
     struct  OMEGAGTE_EXPORT BufferDescriptor {
+        typedef enum : int {
+            Upload,
+            Readback
+        } Usage;
+        Usage usage;
         size_t len;
         size_t objectStride;
         StorageOpts opts;

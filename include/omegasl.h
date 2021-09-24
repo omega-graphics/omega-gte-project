@@ -83,13 +83,13 @@ struct omegasl_vertex_shader_param_desc {
 };
 
 struct omegasl_vertex_shader_input_desc {
-    bool useVertexID;
-    omegasl_vertex_shader_param_desc *pParams;
-    unsigned nParam;
+    bool useVertexID = false;
+    omegasl_vertex_shader_param_desc *pParams = nullptr;
+    unsigned nParam = 0;
 };
 
 struct omegasl_compute_shader_threadgroup_desc {
-    unsigned x,y,z;
+    unsigned x = 0,y = 0,z = 0;
 };
 
 

@@ -49,12 +49,14 @@ _NAMESPACE_BEGIN_
             cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(nativeRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex],D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
             commandList->ResourceBarrier(1,&barrier);
+            currentTarget.native = nativeRenderTarget;
         }
         else if(desc.tRenderTarget){
             auto *textureRenderTarget = (GED3D12TextureRenderTarget *)desc.tRenderTarget;
             cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(textureRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textureRenderTarget->renderTargetView.Get(),D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
             commandList->ResourceBarrier(1,&barrier);
+            currentTarget.texture = textureRenderTarget;
         };
         rt_desc.cpuDescriptor = cpu_handle;
         switch (desc.colorAttachment->loadAction) {
@@ -96,7 +98,8 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const at a Vertex Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootDescriptorTable(index,d3d12_buffer->bufferDescHeap->GetGPUDescriptorHandleForHeapStart());
+        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index){
@@ -200,7 +203,6 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         HRESULT hr;
         auto d3d12_buffer = (GED3D12CommandBuffer *)commandBuffer.get();
-        hr = d3d12_buffer->commandList->Close();
         
         commandLists.push_back(d3d12_buffer->commandList.Get());
     };
@@ -210,6 +212,9 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandQueue::commitToGPU(){
+        for(auto & cl : commandLists){
+            cl->Close();
+        }
         commandQueue->ExecuteCommandLists(commandLists.size(),(ID3D12CommandList *const *)commandLists.data());
     };
 
@@ -232,6 +237,10 @@ _NAMESPACE_BEGIN_
             exit(1);
         };
     };
+
+    ID3D12GraphicsCommandList6 *GED3D12CommandQueue::getLastCommandList() {
+        return commandLists.back();
+    }
 
     GED3D12CommandQueue::~GED3D12CommandQueue(){
 

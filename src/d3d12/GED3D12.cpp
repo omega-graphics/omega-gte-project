@@ -173,10 +173,16 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         // ComPtr<IDXGIAdapter1> hardwareAdapter;
         // getHardwareAdapter(dxgi_factory.Get(),&hardwareAdapter);
 
+        D3D12GetDebugInterface(IID_PPV_ARGS(&debug_interface));
+        debug_interface->EnableDebugLayer();
+        debug_interface->SetEnableGPUBasedValidation(TRUE);
+
         hr = D3D12CreateDevice(NULL,D3D_FEATURE_LEVEL_12_0,IID_PPV_ARGS(&d3d12_device));
         if(FAILED(hr)){
             exit(1);
         };
+
+
 
         DEBUG_STREAM("GED3D12Engine Intialized!");
 
@@ -240,10 +246,11 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         }
         void finish() override {
+            _buffer->buffer->Unmap(0,nullptr);
             _buffer = nullptr;
             _data_buffer = nullptr;
             currentOffset = 0;
-            _buffer->buffer->Unmap(0,nullptr);
+
         }
     };
 
@@ -368,7 +375,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         assert(vertexFunc.type == OMEGASL_SHADER_VERTEX && "Function is not a vertex function");
         assert(fragmentFunc.type == OMEGASL_SHADER_FRAGMENT && "Function is not a fragment function");
 
-        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc;
+        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
         if(vertexFunc.vertexShaderInputDesc.useVertexID){
             auto el = new D3D12_INPUT_ELEMENT_DESC {"SV_VertexID",0,DXGI_FORMAT_R32_UINT,0,D3D12_APPEND_ALIGNED_ELEMENT,D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,0};
             inputLayoutDesc.NumElements = 1;
@@ -379,7 +386,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                                                                  vertexFunc.vertexShaderInputDesc.pParams +
                                                                  vertexFunc.vertexShaderInputDesc.nParam};
             for (auto &attr: inputDesc) {
-                D3D12_INPUT_ELEMENT_DESC inputEl;
+                D3D12_INPUT_ELEMENT_DESC inputEl {};
                 switch (attr.type) {
                     case OMEGASL_FLOAT : {
                         inputEl.Format = DXGI_FORMAT_R32_FLOAT;
@@ -422,15 +429,17 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
             }
             inputLayoutDesc.pInputElementDescs = inputs.data();
-            inputLayoutDesc.NumElements = inputs.size();
+            inputLayoutDesc.NumElements = vertexFunc.vertexShaderInputDesc.nParam;
+
         };
 
 
         MessageBoxA(GetForegroundWindow(),"Creating Pipeline State","NOTE",MB_OK);
 
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC d;
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC d {};
         d.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         d.NodeMask = d3d12_device->GetNodeCount();
+        d.InputLayout = inputLayoutDesc;
         
         HRESULT hr;
 
@@ -519,7 +528,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         // swapChaindesc.Scaling = DXGI_SCALING_NONE;
         // swapChaindesc.Stereo = TRUE;
         swapChaindesc.SampleDesc.Count = 1;
-        // swapChaindesc.SampleDesc.Quality = 0;
+         swapChaindesc.SampleDesc.Quality = 0;
 
         auto commandQueue = makeCommandQueue(64);
 
@@ -540,7 +549,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         
 
-        return std::make_shared<GED3D12NativeRenderTarget>(swapChain,renderTargetHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size());
+        return std::make_shared<GED3D12NativeRenderTarget>(swapChain,renderTargetHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size(),desc.hwnd);
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
@@ -626,15 +635,16 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         HRESULT hr;
         D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
         ID3D12Resource *buffer;
-        auto heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT );
+        auto heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
         hr = d3d12_device->CreateCommittedResource(
             &heap_prop,D3D12_HEAP_FLAG_NONE,
             &d3d12_desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,IID_PPV_ARGS(&buffer));
         if(FAILED(hr)){
             ///
             DEBUG_STREAM("Failed to Create D3D12 Buffer");
+            exit(1);
         };
 
         D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
@@ -659,7 +669,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
 
-        return std::make_shared<GED3D12Buffer>(buffer,descHeap);
+        return SharedHandle<GEBuffer>(new GED3D12Buffer(buffer,descHeap));
     }
 
     bool GED3D12Engine::createRootSignatureFromOmegaSLShaders(unsigned int shaderN, omegasl_shader *shader,
@@ -678,7 +688,8 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         }
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc;
-        desc.Init_1_1(params.size(),params.data());
+        /// @note Always allow input layout regardless of pipeline type.
+        desc.Init_1_1(params.size(),params.data(),NULL,nullptr,D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
         ComPtr<ID3DBlob> sigBlob;
         hr = D3DX12SerializeVersionedRootSignature(&desc,D3D_ROOT_SIGNATURE_VERSION_1_1,&sigBlob,nullptr);
 

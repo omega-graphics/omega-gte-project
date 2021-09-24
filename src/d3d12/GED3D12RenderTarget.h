@@ -11,6 +11,7 @@ _NAMESPACE_BEGIN_
         ComPtr<IDXGISwapChain3> swapChain;
         SharedHandle<GECommandQueue> commandQueue;
     public:
+        HWND hwnd;
         void *getSwapChain();
         SharedHandle<CommandBuffer> commandBuffer();
         void commitAndPresent();
@@ -23,7 +24,7 @@ _NAMESPACE_BEGIN_
                                  SharedHandle<GECommandQueue> commandQueue,
                                  unsigned frameIndex,
                                  ID3D12Resource *const *renderTargets,
-                                 size_t renderTargetViewCount);
+                                 size_t renderTargetViewCount,HWND hwnd);
     };
 
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {

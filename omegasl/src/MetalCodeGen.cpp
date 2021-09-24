@@ -326,6 +326,9 @@ using namespace metal;
                         }
 
                         if(p.attributeName.has_value()){
+                            if(p.attributeName.value() == ATTRIBUTE_VERTEX_ID){
+                                shadermap_entry.vertexShaderInputDesc.useVertexID = true;
+                            }
                             shaderOut << "[[";
                             writeAttributeName(p.attributeName.value(),shaderOut);
                             shaderOut << "]]";

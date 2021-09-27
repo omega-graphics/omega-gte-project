@@ -26,6 +26,10 @@ _NAMESPACE_BEGIN_
 
     };
 
+    enum class RenderCullMode {
+
+    };
+
     /**
      A Reusable interface for directly uploading commands to a GPU.
      */

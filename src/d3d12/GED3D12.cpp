@@ -175,26 +175,14 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         D3D12GetDebugInterface(IID_PPV_ARGS(&debug_interface));
         debug_interface->EnableDebugLayer();
-        debug_interface->SetEnableGPUBasedValidation(TRUE);
+        debug_interface->SetEnableGPUBasedValidation(true);
 
         hr = D3D12CreateDevice(NULL,D3D_FEATURE_LEVEL_12_0,IID_PPV_ARGS(&d3d12_device));
         if(FAILED(hr)){
             exit(1);
         };
 
-
-
         DEBUG_STREAM("GED3D12Engine Intialized!");
-
-        // D3D12_DESCRIPTOR_HEAP_DESC desc;
-        // desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        // desc.NodeMask = d3d12_device->GetNodeCount();
-        // desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-
-        // hr = d3d12_device->CreateDescriptorHeap(&desc,IID_PPV_ARGS(&descriptorHeapForRes));
-        // if(FAILED(hr)){
-        //     exit(1);
-        // };
 
     };
 
@@ -457,12 +445,45 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         d.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         d.NumRenderTargets = 1;
         d.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+
+        D3D12_CULL_MODE cullMode;
+        switch (desc.cullMode) {
+            case RasterCullMode::None : {
+                cullMode = D3D12_CULL_MODE_NONE;
+                break;
+            }
+            case RasterCullMode::Front : {
+                cullMode = D3D12_CULL_MODE_FRONT;
+                break;
+            }
+            case RasterCullMode::Back : {
+                cullMode = D3D12_CULL_MODE_BACK;
+                break;
+            }
+        }
+
+        d.RasterizerState.CullMode = cullMode;
+        
+        D3D12_FILL_MODE fillMode;
+        switch (desc.triangleFillMode) {
+            case TriangleFillMode::Wireframe : {
+                fillMode = D3D12_FILL_MODE_WIREFRAME;
+                break;
+            }
+            case TriangleFillMode::Solid : {
+                fillMode = D3D12_FILL_MODE_SOLID;
+                break;
+            }
+        }
+        
+        d.RasterizerState.FillMode = fillMode;
+        d.RasterizerState.ForcedSampleCount = desc.rasterSampleCount;
         d.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         d.DepthStencilState.StencilEnable = desc.depthAndStencilDesc.enableStencil;
         d.DepthStencilState.DepthEnable = desc.depthAndStencilDesc.enableDepth;
         d.SampleMask = UINT_MAX;
         d.SampleDesc.Quality = 0;
-        d.SampleDesc.Count = desc.rasterSampleCount + 1;
+        d.SampleDesc.Count = 1;
 
         MessageBoxA(GetForegroundWindow(),"Create Bytecode Funcs","NOTE",MB_OK);
         ID3D12PipelineState *state;

@@ -173,8 +173,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     using ColorAttachment = OmegaGTE::GERenderTarget::RenderPassDesc::ColorAttachment;
     renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(0.f,1.f,0.f,1.f),ColorAttachment::Clear);
 
-    OmegaGTE::GEViewport viewport {0,0,300 * scaleFactor,300 * scaleFactor,0,1.f};
-    OmegaGTE::GEScissorRect scissorRect {0,0,300 * scaleFactor,300 * scaleFactor};
+    OmegaGTE::GEViewport viewport {0,0,300,300,0,1.f};
+    OmegaGTE::GEScissorRect scissorRect {0,0,300,300};
 
     commandBuffer->startRenderPass(renderPassDesc);
     commandBuffer->setRenderPipelineState(renderPipelineState);

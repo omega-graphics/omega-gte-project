@@ -144,8 +144,25 @@ _NAMESPACE_BEGIN_
         auto viewports_it = viewports.begin();
         while(viewports_it != viewports.end()){
             GEViewport & viewport = *viewports_it;
-            CD3DX12_VIEWPORT v(viewport.x,viewport.height - viewport.y,viewport.width,viewport.height,viewport.nearDepth,viewport.farDepth);
-            d3d12_viewports.push_back(std::move(v));
+            GRect rect {};
+            if(currentTarget.native != nullptr) {
+                RECT rc;
+                GetClientRect(currentTarget.native->hwnd, &rc);
+                rect.pos.x = (float)rc.left;
+                rect.pos.y = (float)rc.top;
+                rect.w = float(rc.right - rc.left);
+                rect.h = float(rc.bottom - rc.top);
+            }
+            else {
+                rect.pos.x = 0;
+                rect.pos.y = 0;
+                auto res_desc = currentTarget.texture->renderTargetView->GetDesc();
+                rect.w = (float)res_desc.Width;
+                rect.h = (float)res_desc.Height;
+            }
+
+            CD3DX12_VIEWPORT v(viewport.x,rect.h - (viewport.y + viewport.height),viewport.width,viewport.height,viewport.nearDepth,viewport.farDepth);
+            d3d12_viewports.push_back(v);
             ++viewports_it;
         };
         commandList->RSSetViewports(d3d12_viewports.size(),d3d12_viewports.data());
@@ -155,9 +172,29 @@ _NAMESPACE_BEGIN_
         std::vector<D3D12_RECT> d3d12_rects;
         auto rects_it = scissorRects.begin();
         while(rects_it != scissorRects.end()){
-            GEScissorRect & rect = *rects_it;
-            CD3DX12_RECT r(rect.x,rect.y,rect.width + rect.x,rect.height + rect.y);
-            d3d12_rects.push_back(std::move(r));
+            GEScissorRect & _rect = *rects_it;
+
+            GRect rect {};
+            if(currentTarget.native != nullptr) {
+                RECT rc;
+                GetClientRect(currentTarget.native->hwnd, &rc);
+                rect.pos.x = (float)rc.left;
+                rect.pos.y = (float)rc.top;
+                rect.w = float(rc.right - rc.left);
+                rect.h = float(rc.bottom - rc.top);
+            }
+            else {
+                rect.pos.x = 0;
+                rect.pos.y = 0;
+                auto res_desc = currentTarget.texture->renderTargetView->GetDesc();
+                rect.w = (float)res_desc.Width;
+                rect.h = (float)res_desc.Height;
+            }
+
+            float top_coord = rect.h - (_rect.height + _rect.y);
+
+            CD3DX12_RECT r((LONG)_rect.x,(LONG)top_coord,LONG(_rect.width + _rect.x),LONG(top_coord + _rect.height));
+            d3d12_rects.push_back(r);
             ++rects_it;
         };
         commandList->RSSetScissorRects(d3d12_rects.size(),d3d12_rects.data());
@@ -190,6 +227,8 @@ _NAMESPACE_BEGIN_
         commandList->SetDescriptorHeaps(descriptorHeapBuffer.size(),descriptorHeapBuffer.data());
         commandList->EndRenderPass();
         descriptorHeapBuffer.clear();
+        currentTarget.texture = nullptr;
+        currentTarget.native = nullptr;
     };
 
     void GED3D12CommandBuffer::startComputePass(const GEComputePassDescriptor &desc){

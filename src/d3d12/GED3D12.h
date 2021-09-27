@@ -41,6 +41,15 @@ _NAMESPACE_BEGIN_
         explicit GED3D12Fence(ID3D12Fence *fence):fence(fence){};
     };
 
+    class GED3D12SamplerState : public GESamplerState {
+    public:
+        ComPtr<ID3D12DescriptorHeap> descHeap;
+        D3D12_SAMPLER_DESC staticSampler;
+        explicit GED3D12SamplerState(ID3D12DescriptorHeap *descriptorHeap,D3D12_SAMPLER_DESC & samplerDesc):descHeap(descriptorHeap),staticSampler(samplerDesc){
+
+        };
+    };
+
     class GED3D12Engine;
 
     class GED3D12Heap : public GEHeap {
@@ -70,6 +79,7 @@ _NAMESPACE_BEGIN_
         // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
         bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,ID3D12RootSignature **pRootSignature);
         SharedHandle<GEFence> makeFence() override;
+        SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override;
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc)  override;
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc)  override;
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount)  override;

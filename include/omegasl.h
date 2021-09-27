@@ -25,9 +25,34 @@ typedef enum : int {
     OMEGASL_SHADER_TEXTURE1D_DESC,
     OMEGASL_SHADER_TEXTURE2D_DESC,
     OMEGASL_SHADER_TEXTURE3D_DESC,
+
+    OMEGASL_SHADER_SAMPLER1D_DESC,
     OMEGASL_SHADER_SAMPLER2D_DESC,
-    OMEGASL_SHADER_SAMPLER3D_DESC
+    OMEGASL_SHADER_SAMPLER3D_DESC,
+
+    OMEGASL_SHADER_STATIC_SAMPLER1D_DESC,
+    OMEGASL_SHADER_STATIC_SAMPLER2D_DESC,
+    OMEGASL_SHADER_STATIC_SAMPLER3D_DESC
 } omegasl_shader_layout_desc_type;
+
+typedef enum : int {
+    OMEGASL_SHADER_SAMPLER_LINEAR_FILTER,
+    OMEGASL_SHADER_SAMPLER_POINT_FILTER,
+    OMEGASL_SHADER_SAMPLER_MAX_ANISOTROPY_FILTER,
+    OMEGASL_SHADER_SAMPLER_MIN_ANISOTROPY_FILTER
+} omegasl_shader_static_sampler_filter;
+
+typedef enum : int {
+    OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_CLAMPTOEDGE,
+    OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP,
+    OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRRORWRAP
+} omegasl_shader_static_sampler_address_mode;
+
+struct omegasl_shader_static_sampler_desc {
+    omegasl_shader_static_sampler_filter filter;
+    omegasl_shader_static_sampler_address_mode u_address_mode,v_address_mode,w_address_mode;
+    unsigned int max_anisotropy;
+};
 
 struct omegasl_shader_layout_desc {
     omegasl_shader_layout_desc_type type;
@@ -35,6 +60,7 @@ struct omegasl_shader_layout_desc {
     omegasl_shader_layout_desc_io_mode io_mode;
     size_t location;
     size_t offset;
+    omegasl_shader_static_sampler_desc sampler_desc;
 };
 
 typedef enum : int {

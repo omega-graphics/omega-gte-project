@@ -13,6 +13,8 @@
 #define RW_TEXTURE2D "RWTexture1D"
 #define BUFFER "StructuredBuffer"
 #define RW_BUFFER "RWStructuredBuffer"
+#define SAMPLER2D "SamplerState"
+#define SAMPLER3D "SamplerState"
 
 namespace omegasl {
 
@@ -50,6 +52,54 @@ namespace omegasl {
                     shaderOut << "[";
                     generateExpr(_expr->idx_expr);
                     shaderOut << "]";
+                    break;
+                }
+                case CALL_EXPR : {
+                    auto _expr = (ast::CallExpr *)expr;
+                    OmegaCommon::StrRef _id_expr = ((ast::IdExpr *)_expr->callee)->id;
+                    bool generatedExprBody = false;
+                    /// 1. If call expression is invoking standard method, generate HLSL std method impl.
+                    if(_id_expr == BUILTIN_MAKE_FLOAT2){
+                        shaderOut << "float2";
+                    }
+                    else if(_id_expr == BUILTIN_MAKE_FLOAT3){
+                        shaderOut << "float3";
+                    }
+                    else if(_id_expr == BUILTIN_MAKE_FLOAT4){
+                        shaderOut << "float4";
+                    }
+                    else if(_id_expr == BUILTIN_SAMPLE){
+                        generatedExprBody = true;
+                        /// Texture has instance method
+                        generateExpr(_expr->args[1]);
+                        shaderOut << ".Sample(";
+                        generateExpr(_expr->args[0]);
+                        shaderOut << ",";
+                        generateExpr(_expr->args[2]);
+                        shaderOut << ")";
+                    }
+                    else if(_id_expr == BUILTIN_WRITE){
+                        /// Texture has method for accessing texel data.
+                        generatedExprBody = true;
+                        generateExpr(_expr->args[0]);
+                        shaderOut << "[";
+                        generateExpr(_expr->args[1]);
+                        shaderOut << "]";
+                    }
+                    else {
+                        shaderOut << _id_expr;
+                    }
+
+                    if(!generatedExprBody){
+                        shaderOut << "(";
+                        for(auto e_it = _expr->args.begin();e_it != _expr->args.end();e_it++){
+                            if(e_it != _expr->args.begin()){
+                                shaderOut << ",";
+                            }
+                            generateExpr(*e_it);
+                        }
+                        shaderOut << ")";
+                    }
                     break;
                 }
             }
@@ -183,7 +233,7 @@ namespace omegasl {
                     OmegaCommon::Vector<omegasl_shader_layout_desc> shaderLayout;
 
                     /// 2. Write Resources for Shader
-                    unsigned t_resource_count = 0,u_resource_count = 0;
+                    unsigned t_resource_count = 0,u_resource_count = 0,s_resource_count = 0;
                     for(auto & res : _decl->resourceMap){
                         auto res_desc = *(resourceStore.find(res.name));
 
@@ -192,7 +242,7 @@ namespace omegasl {
 
                         auto _t = typeResolver->resolveTypeWithExpr(res_desc->typeExpr);
 
-                        bool isTResource = false;
+                        bool isTResource = false,isSResource = false;
 
                         layoutDesc.io_mode =
                                 res.access == ast::ShaderDecl::ResourceMapDesc::In? OMEGASL_SHADER_DESC_IO_IN :
@@ -222,6 +272,25 @@ namespace omegasl {
                             else {
                                 shaderOut << RW_TEXTURE1D;
                             }
+                        }
+                        else if(_t == ast::builtins::texture2d_type){
+                            layoutDesc.type = OMEGASL_SHADER_TEXTURE2D_DESC;
+                            isTResource = true;
+                            if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
+                                shaderOut << TEXTURE2D;
+                            }
+                            else {
+                                shaderOut << RW_TEXTURE2D;
+                            }
+                        }
+                        else if(_t == ast::builtins::sampler2d_type){
+                            if(res_desc->isStatic) {
+                                layoutDesc.type = OMEGASL_SHADER_STATIC_SAMPLER2D_DESC;
+                            }
+                            else {
+                                layoutDesc.type = OMEGASL_SHADER_SAMPLER2D_DESC;
+                            }
+                            shaderOut << SAMPLER2D;
                         }
 
                         shaderOut << " " << res_desc->name;

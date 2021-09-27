@@ -35,6 +35,22 @@ _NAMESPACE_BEGIN_
         inBlitPass = true;
     };
 
+    void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
+        assert(inBlitPass && "Not in Blit Pass! Exiting...");
+        GED3D12Texture *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+        commandList->CopyResource(destText->resource.Get(),srcText->resource.Get());
+    }
+
+    void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,const TextureRegion & region,const GPoint3D & destCoord) {
+        assert(inBlitPass && "Not in Blit Pass! Exiting...");
+        GED3D12Texture *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+        CD3DX12_TEXTURE_COPY_LOCATION srcLoc(srcText->resource.Get()),
+                                        destLoc(destText->resource.Get());
+        LONG top_pos = LONG(region.h) - LONG(region.y);
+        CD3DX12_BOX _region ((LONG)region.x,top_pos,region.x + region.w,top_pos + region.h);
+        commandList->CopyTextureRegion(&destLoc,(UINT)destCoord.x,(UINT)destCoord.y,(UINT)destCoord.z,&srcLoc,&_region);
+    }
+
     void GED3D12CommandBuffer::finishBlitPass(){
         inBlitPass = false;
     };
@@ -105,21 +121,22 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) &&"Cannot set Resource Const at a Vertex Func when not in render pass");
         GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
-        commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->descHeap->GetGPUDescriptorHandleForHeapStart());
-        descriptorHeapBuffer.push_back(d3d12_texture->descHeap.Get());
+        commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootDescriptorTable(index,d3d12_buffer->bufferDescHeap->GetGPUDescriptorHandleForHeapStart());
+        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
          GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
-         commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->descHeap->GetGPUDescriptorHandleForHeapStart());
-         descriptorHeapBuffer.push_back(d3d12_texture->descHeap.Get());
+         commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+         descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::setViewports(std::vector<GEViewport> viewports){
@@ -158,7 +175,7 @@ _NAMESPACE_BEGIN_
 
     void GED3D12CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx){
         assert(!inComputePass && "Cannot Draw Polygons while in Compute Pass");
-        D3D12_PRIMITIVE_TOPOLOGY topology;
+        D3D12_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         if(polygonType == GECommandBuffer::RenderPassDrawPolygonType::Triangle){
             topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         }
@@ -188,6 +205,16 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::finishComputePass(){
         inComputePass = false;
     };
+
+    void GED3D12CommandBuffer::waitForFence(SharedHandle<GEFence> &fence,unsigned val) {
+        auto _fence = (GED3D12Fence *)fence.get();
+        parentQueue->commandQueue->Wait(_fence->fence.Get(),val);
+    }
+
+    void GED3D12CommandBuffer::signalFence(SharedHandle<GEFence> &fence,unsigned val) {
+        auto _fence = (GED3D12Fence *)fence.get();
+        parentQueue->commandQueue->Signal(_fence->fence.Get(),val);
+    }
 
     GED3D12CommandBuffer::~GED3D12CommandBuffer(){
         

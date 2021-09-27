@@ -22,28 +22,33 @@ _NAMESPACE_BEGIN_
 
        
     public:
-        void startBlitPass();
-        void finishBlitPass();
 
-        void startRenderPass(const GERenderPassDescriptor &desc);
-        void setVertexBuffer(SharedHandle<GEBuffer> &buffer);
-        void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
-        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
-        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index);
-        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index);
-        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index);
+        void startBlitPass() override;
+        void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest);
+        void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord);
+        void finishBlitPass() override;
+
+        void startRenderPass(const GERenderPassDescriptor &desc) override;
+        void setVertexBuffer(SharedHandle<GEBuffer> &buffer) override;
+        void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState) override;
+        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index) override;
+        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index) override;
+        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index) override;
+        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index) override;
        
-        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx);
-        void setViewports(std::vector<GEViewport> viewports);
-        void setScissorRects(std::vector<GEScissorRect> scissorRects);
-        void finishRenderPass();
+        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx) override;
+        void setViewports(std::vector<GEViewport> viewports) override;
+        void setScissorRects(std::vector<GEScissorRect> scissorRects) override;
+        void finishRenderPass() override;
 
-        void startComputePass(const GEComputePassDescriptor &desc);
-        void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState);
-        void finishComputePass();
+        void startComputePass(const GEComputePassDescriptor &desc) override;
+        void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
+        void finishComputePass() override;
 
         GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
-        void reset();
+        void reset() override;
+        void waitForFence(SharedHandle<GEFence> &fence,unsigned val) override;
+        void signalFence(SharedHandle<GEFence> &fence,unsigned val) override;
         ~GED3D12CommandBuffer();
     };
 

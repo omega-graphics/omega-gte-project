@@ -128,37 +128,14 @@ _NAMESPACE_BEGIN_
             MagLinearMinLinearMipPoint,
             MagPointMinLinearMipPoint,
             MagLinearMinPointMipPoint,
-            Anisotropic
+            MaxAnisotropic,
+            MinAnisotropic
         } filter;
         unsigned int maxAnisotropy;
 
     };
 
     class OMEGAGTE_EXPORT GESamplerState {};
-
-    // struct OMEGAGTE_EXPORT GEVertex {
-    //     FVector3D pos;
-    // };
-
-    // struct OMEGAGTE_EXPORT GEColoredVertex : public GEVertex {
-    //     FMatrix & color;
-    // private:
-    //     GEColoredVertex(FVector3D pos,FMatrix & color);
-    // public:
-    //     static GEColoredVertex FromGPoint3D(GPoint3D & pt,FMatrix & color);
-    //     GEColoredVertex(GEColoredVertex && vertex);
-    //     GEColoredVertex(GEColoredVertex & vertex);
-    //     GEColoredVertex(const GEColoredVertex & vertex);
-    // };
-
-    // struct OMEGAGTE_EXPORT GETexturedVertex : public GEVertex {
-    //     FVector2D textureCoord;
-    //     GETexturedVertex(GEColoredVertex && vertex);
-    // };
-
-
-    // typedef std::vector<GEColoredVertex> ColoredVertexVector;
-    // typedef std::vector<GETexturedVertex> TexturedVertexVector;
 
     /**
      @brief The Omega Graphics Engine

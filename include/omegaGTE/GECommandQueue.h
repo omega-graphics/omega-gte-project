@@ -62,6 +62,8 @@ _NAMESPACE_BEGIN_
          Compute Pass
         */
     public:
+        virtual void waitForFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
+        virtual void signalFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
         virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;

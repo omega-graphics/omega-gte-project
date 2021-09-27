@@ -516,7 +516,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         
         RECT rc;
         GetClientRect(desc.hwnd,&rc);
-        DXGI_SWAP_CHAIN_DESC1 swapChaindesc = {};
+        DXGI_SWAP_CHAIN_DESC1 swapChaindesc {};
         swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         // swapChaindesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
         swapChaindesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -560,7 +560,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return std::make_shared<GED3D12CommandQueue>(this,maxBufferCount);
     };
 
-    SharedHandle<GETexture> GED3D12Engine::makeTexture(const TextureDescriptor &desc){\
+    SharedHandle<GETexture> GED3D12Engine::makeTexture(const TextureDescriptor &desc){
         HRESULT hr;
         D3D12_RESOURCE_DESC d3d12_desc;
         D3D12_RESOURCE_STATES res_states;
@@ -575,6 +575,9 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         }   
         else if(desc.usage & GETexture::GPUWrite){
             res_states |= D3D12_RESOURCE_STATE_COPY_DEST;
+        }
+        else {
+            res_states = D3D12_RESOURCE_STATE_COMMON;
         };
 
          res_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -599,23 +602,41 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         };
 
         ID3D12Resource *texture;
-        auto heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT );
+        CD3DX12_HEAP_PROPERTIES heap_prop;
+
+
+        if(desc.usage & GETexture::GPUWrite) {
+            heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+        }
+        else {
+            heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
+        }
+
+
         hr = d3d12_device->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE,&d3d12_desc,res_states,nullptr,IID_PPV_ARGS(&texture));
         if(FAILED(hr)){
 
         };
+
+        ID3D12DescriptorHeap *descHeap = nullptr, *rtvDescHeap = nullptr;
+
         D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
         descHeapDesc.NumDescriptors = 1;
         descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
-        descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        ID3D12DescriptorHeap *descHeap, *rtvDescHeap = nullptr;
-        hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
-        if(FAILED(hr)){
 
-        };
+        if(desc.usage & GETexture::GPURead || desc.usage & GETexture::GPUWrite) {
+            descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-        d3d12_device->CreateShaderResourceView(texture,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+            hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&descHeap));
+            if (FAILED(hr)) {
+
+            };
+
+            d3d12_device->CreateShaderResourceView(texture, &res_view_desc,
+                                                   descHeap->GetCPUDescriptorHandleForHeapStart());
+
+        }
 
         if(desc.usage & GETexture::RenderTarget){
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -635,7 +656,18 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         HRESULT hr;
         D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
         ID3D12Resource *buffer;
-        auto heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
+        D3D12_HEAP_TYPE heap_type;
+        switch (desc.usage) {
+            case BufferDescriptor::Upload : {
+                heap_type = D3D12_HEAP_TYPE_UPLOAD;
+                break;
+            }
+            case BufferDescriptor::Readback : {
+                heap_type = D3D12_HEAP_TYPE_READBACK;
+                break;
+            }
+        }
+        auto heap_prop = CD3DX12_HEAP_PROPERTIES( heap_type );
         hr = d3d12_device->CreateCommittedResource(
             &heap_prop,D3D12_HEAP_FLAG_NONE,
             &d3d12_desc,
@@ -647,7 +679,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             exit(1);
         };
 
-        D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
+        D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc {};
         descHeapDesc.NumDescriptors = 1;
         descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
@@ -658,7 +690,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         };
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
+        D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc {};
         res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
@@ -672,24 +704,96 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return SharedHandle<GEBuffer>(new GED3D12Buffer(buffer,descHeap));
     }
 
+    inline D3D12_TEXTURE_ADDRESS_MODE convertAddressMode(const omegasl_shader_static_sampler_address_mode & addressMode){
+        switch (addressMode) {
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP : {
+                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+            }
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_CLAMPTOEDGE : {
+                return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+            }
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRRORWRAP : {
+                return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+            }
+            default : {
+                break;
+            }
+        }
+    }
+
+    inline D3D12_TEXTURE_ADDRESS_MODE convertAddressModeGTE(const SamplerDescriptor::AddressMode & addressMode){
+        switch (addressMode) {
+            case SamplerDescriptor::AddressMode::Wrap : {
+                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+            }
+            case SamplerDescriptor::AddressMode::ClampToEdge : {
+                return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+            }
+            case SamplerDescriptor::AddressMode::MirrorWrap : {
+                return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+            }
+            default : {
+                break;
+            }
+        }
+    }
+
+
     bool GED3D12Engine::createRootSignatureFromOmegaSLShaders(unsigned int shaderN, omegasl_shader *shader,
                                                               ID3D12RootSignature **pRootSignature) {
         HRESULT hr;
         ArrayRef<omegasl_shader> shaders {shader,shader + shaderN};
 
         std::vector<D3D12_ROOT_PARAMETER1> params;
+        std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
+
         for(auto & s : shaders){
             ArrayRef<omegasl_shader_layout_desc> sLayout {s.pLayout,s.pLayout + s.nLayout};
             for(auto & l : sLayout){
                 CD3DX12_ROOT_PARAMETER1 parameter1;
-                parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
+                if(l.type == OMEGASL_SHADER_SAMPLER2D_DESC || l.type == OMEGASL_SHADER_SAMPLER3D_DESC){
+                    CD3DX12_DESCRIPTOR_RANGE1 desc_table;
+                    desc_table.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,1,l.gpu_relative_loc);
+                    parameter1.InitAsDescriptorTable(1,&desc_table);
+                }
+                else if(l.type == OMEGASL_SHADER_STATIC_SAMPLER2D_DESC || l.type == OMEGASL_SHADER_STATIC_SAMPLER3D_DESC){
+                    D3D12_FILTER filter;
+
+                    switch (l.sampler_desc.filter) {
+                        case OMEGASL_SHADER_SAMPLER_LINEAR_FILTER : {
+                            filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+                            break;
+                        }
+                        case OMEGASL_SHADER_SAMPLER_POINT_FILTER : {
+                            filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+                            break;
+                        }
+                        case OMEGASL_SHADER_SAMPLER_MAX_ANISOTROPY_FILTER : {
+                            filter = D3D12_FILTER_MAXIMUM_ANISOTROPIC;
+                            break;
+                        }
+                        case OMEGASL_SHADER_SAMPLER_MIN_ANISOTROPY_FILTER : {
+                            filter = D3D12_FILTER_MINIMUM_ANISOTROPIC;
+                            break;
+                        }
+                    }
+
+                    CD3DX12_STATIC_SAMPLER_DESC desc;
+                    desc.Init(l.gpu_relative_loc,filter, convertAddressMode(l.sampler_desc.u_address_mode),
+                              convertAddressMode(l.sampler_desc.v_address_mode), convertAddressMode(l.sampler_desc.w_address_mode));
+                    staticSamplers.push_back(desc);
+                    continue;
+                }
+                else {
+                    parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
+                }
                 params.push_back(parameter1);
             }
         }
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc;
         /// @note Always allow input layout regardless of pipeline type.
-        desc.Init_1_1(params.size(),params.data(),NULL,nullptr,D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        desc.Init_1_1(params.size(),params.data(),staticSamplers.size(),staticSamplers.data(),D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
         ComPtr<ID3DBlob> sigBlob;
         hr = D3DX12SerializeVersionedRootSignature(&desc,D3D_ROOT_SIGNATURE_VERSION_1_1,&sigBlob,nullptr);
 
@@ -704,88 +808,47 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         return true;
     };
 
-//    SharedHandle<GTEShader> GED3D12Engine::compileShaderSource(TStrRef src,Shader::Type ty){
-//        TStrRef target;
-//
-//        switch (ty) {
-//            case Shader::Vertex : {
-//                target = "vs_5_0";
-//                break;
-//            }
-//            case Shader::Fragment : {
-//                target = "ps_5_0";
-//                break;
-//            }
-//            case Shader::Compute : {
-//                target = "cs_5_0";
-//                break;
-//            }
-//        }
-//
-//        ID3DBlob *blob;
-//        D3DCompile(src.data(),src.size(),"INLINE_SOURCE",NULL,D3D_COMPILE_STANDARD_FILE_INCLUDE,"main",target.data(),0,0,&blob,nullptr);
-//
-//        return std::make_shared<GED3D12Shader>(blob);
-//    };
 
-    void loadLibrary(){
-//        auto shader = std::make_shared<GTEShader>();
-//        shader->internal.
+    SharedHandle<GESamplerState> GED3D12Engine::makeSamplerState(const SamplerDescriptor &desc) {
+        D3D12_DESCRIPTOR_HEAP_DESC desc1 {};
+        desc1.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        desc1.NodeMask = d3d12_device->GetNodeCount();
+        desc1.NumDescriptors = 1;
+        desc1.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+        D3D12_FILTER filter;
+
+        switch (desc.filter) {
+            case SamplerDescriptor::Filter::Linear : {
+                filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+                break;
+            }
+            case SamplerDescriptor::Filter::Point : {
+                filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+                break;
+            }
+            case SamplerDescriptor::Filter::MaxAnisotropic : {
+                filter = D3D12_FILTER_MAXIMUM_ANISOTROPIC;
+                break;
+            }
+            case SamplerDescriptor::Filter::MinAnisotropic : {
+                filter = D3D12_FILTER_MINIMUM_ANISOTROPIC;
+                break;
+            }
+        }
+
+        ID3D12DescriptorHeap *descHeap;
+        d3d12_device->CreateDescriptorHeap(&desc1,IID_PPV_ARGS(&descHeap));
+        D3D12_SAMPLER_DESC samplerDesc {};
+        samplerDesc.AddressU = convertAddressModeGTE(desc.uAddressMode);
+        samplerDesc.AddressV = convertAddressModeGTE(desc.vAddressMode);
+        samplerDesc.AddressW = convertAddressModeGTE(desc.wAddressMode);
+        samplerDesc.Filter = filter;
+        samplerDesc.MaxAnisotropy = desc.maxAnisotropy;
+        
+        d3d12_device->CreateSampler(&samplerDesc,descHeap->GetCPUDescriptorHandleForHeapStart());
+
+        return SharedHandle<GESamplerState>(new GED3D12SamplerState(descHeap,samplerDesc));
     }
 
-//     SharedHandle<GEShaderLibrary> GED3D12Engine::loadShaderLibrary(FS::Path path){
-        // MessageBoxA(GetForegroundWindow(),("PathStr:" + path.str()).c_str(),"NOTE",MB_OK);
-        // MessageBoxA(GetForegroundWindow(),("AbsPath:" + path.absPath()).c_str(),"NOTE",MB_OK);
-        //  MessageBoxA(GetForegroundWindow(),("Dir:" + path.dir()).c_str(),"NOTE",MB_OK);
-        // MessageBoxA(GetForegroundWindow(),("FName:" + path.filename()).c_str(),"NOTE",MB_OK);
-        // MessageBoxA(GetForegroundWindow(),("Extension:" + path.ext()).c_str(),"NOTE",MB_OK);
-        // unsigned entryCount;
-        // std::ifstream in(path.absPath(),std::ios::in | std::ios::binary);
-        // if(in.is_open()){
-        //     MessageBoxA(GetForegroundWindow(),("OpenedFile" + path.absPath()).c_str(),"NOTE",MB_OK);
-        //     auto library = std::make_shared<GEShaderLibrary>();
-        //     in.read((char *)&entryCount,sizeof(entryCount));
-        //     MessageBoxA(GetForegroundWindow(),("EntryCount:" + std::to_string(entryCount)).c_str(),"NOTE",MB_OK);
-        //     while(entryCount > 0){
-        //         unsigned entryNameCharC;
-        //         in.read((char *)&entryNameCharC,sizeof(entryNameCharC));
-        //         String entryName;
-        //         entryName.resize(entryNameCharC);
-        //         in.read((char *)entryName.data(),entryNameCharC);
-        //         unsigned entryShaderCount;
-        //         in.read((char *)&entryShaderCount,sizeof(entryShaderCount));
-            
-        //         unsigned shaderNameCount;
-        //         in.read((char *)&shaderNameCount,sizeof(shaderNameCount));
-        //         String str;
-        //         str.resize(shaderNameCount);
-        //         in.read((char *)str.data(),shaderNameCount);
-
-        //         ID3DBlob *blob;
-
-        //         ATL::CStringW wstr(entryName.data());
-
-        //         auto dir_name = path.dir();
-        //         SetCurrentDirectoryA(dir_name.c_str());
-
-        //         D3DReadFileToBlob(wstr.GetBuffer(),&blob); 
-        //         MessageBoxA(GetForegroundWindow(),("Will Insert Pair:" + str).c_str(),"NOTE",MB_OK);
-        //         libraryfunctions.insert(std::make_pair(str,new GED3D12Function(blob)));
-        //         MessageBoxA(GetForegroundWindow(),"Done;","NOTE",MB_OK);
-        //         --entryCount;
-        //     };
-        //     in.close();
-        //     MessageBoxA(GetForegroundWindow(),"Returning","NOTE",MB_OK);
-        //     return library;
-        // }
-        // else {
-        //     return nullptr;
-        // };
-    //     return nullptr;
-//     };
-
-    // SharedHandle<GEShaderLibrary> GED3D12Engine::loadStdShaderLibrary(){
-    //     // return loadShaderLibrary("./stdshaderlib/std.shadermap");
-    //     return nullptr;
-    // };
 _NAMESPACE_END_

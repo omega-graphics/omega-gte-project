@@ -761,7 +761,19 @@ namespace omegasl {
                         return false;
                     }
 
-                    /// 3. (Applies to sampler types) Check static sampler state.
+                    /// 3. (Applies to sampler types) Check sampler state if declared static.
+
+                    if(_decl->isStatic && ty != ast::builtins::sampler2d_type
+                       && ty != ast::builtins::sampler3d_type){
+                        std::cout << "Resource `" << _decl->name << "` with type `" << ty->name << "` cannot be declared static unless it is a sampler type." << std::endl;
+                        return false;
+                    }
+
+                    if(_decl->isStatic){
+
+                    }
+
+
 
 
                     break;
@@ -795,6 +807,12 @@ namespace omegasl {
                     for(auto & r : _decl->resourceMap){
                         for(auto res : currentContext->resourceSet){
                             if(res->name == r.name){
+                                /// Resource Exists!
+                                auto _t = resolveTypeWithExpr(res->typeExpr);
+                                if((_t == ast::builtins::sampler2d_type || _t == ast::builtins::sampler3d_type) && r.access != ast::ShaderDecl::ResourceMapDesc::In){
+                                    std::cout << "In Shader Decl `" << _decl->name << "`, resource `" << r.name << "` with type `" << _t->name << "` can only be granted input access to shader." << std::endl;
+                                    return false;
+                                }
                                 currentContext->variableMap.insert(std::make_pair(r.name,res->typeExpr));
                             }
                         }
@@ -885,6 +903,7 @@ namespace omegasl {
     ast::Decl *Parser::parseGlobalDecl() {
         ast::Decl *node = nullptr;
         bool shaderDecl;
+        bool staticResourceDecl = false;
 
         auto t = lexer->nextTok();
         if(t.type == TOK_EOF){
@@ -1028,6 +1047,12 @@ namespace omegasl {
                 std::cout << "Struct cannot have a resource map!" << std::endl;
                 return nullptr;
             }
+            else if(t.str == KW_STATIC) {
+                node = (ast::Decl *)new ast::ResourceDecl();
+                node->type = RESOURCE_DECL;
+                ((ast::ResourceDecl *)node)->isStatic = true;
+                staticResourceDecl = true;
+            }
 
             if(node == nullptr){
                 node = (ast::Decl *)new ast::ShaderDecl();
@@ -1170,8 +1195,14 @@ namespace omegasl {
 
         }
         else if(t.type == TOK_COLON){
-            auto * resourceDecl = new ast::ResourceDecl();
-            resourceDecl->type = RESOURCE_DECL;
+            ast::ResourceDecl *resourceDecl = nullptr;
+            if(!staticResourceDecl) {
+                resourceDecl = new ast::ResourceDecl();
+                resourceDecl->type = RESOURCE_DECL;
+            }
+            else {
+                resourceDecl = (ast::ResourceDecl *)node;
+            }
             resourceDecl->name = id_for_decl;
             resourceDecl->typeExpr = ty_for_decl;
             t = lexer->nextTok();

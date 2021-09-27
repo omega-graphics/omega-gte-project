@@ -112,10 +112,15 @@ namespace omegasl {
 
         struct Decl : public Stmt {};
 
+        /// @brief Declares a Resource on the GPU.
+        /// @paragraph All resources are dynamically uploaded onto the GPU,
+        /// but samplers unlike any other resource can be static declared
+        /// and preloaded onto the GPU with a set configuration throughout the duration of execution.
         struct ResourceDecl : public Decl {
             TypeExpr *typeExpr;
             OmegaCommon::String name;
             size_t registerNumber;
+            bool isStatic = false;
         };
 
         struct AttributedFieldDecl {

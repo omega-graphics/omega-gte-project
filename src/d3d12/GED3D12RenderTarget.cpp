@@ -24,7 +24,7 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12NativeRenderTarget::commandBuffer(){
         std::ostringstream ss;
-        ss << "About to Get Buffer" << commandQueue << std::endl;
+//        ss << "About to Get Buffer" << commandQueue << std::endl;
         //  MessageBoxA(GetForegroundWindow(),ss.str().c_str(),"NOTE",MB_OK);
 
         auto commandBuffer = commandQueue->getAvailableBuffer();

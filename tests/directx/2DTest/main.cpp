@@ -37,7 +37,7 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
 
 void tessalate(){
 
-    OmegaGTE::GRect rect;
+    OmegaGTE::GRect rect {};
     rect.h = 300;
     rect.w = 300;
     rect.pos.x = 0;
@@ -125,12 +125,30 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         exit(1);
     };
 
+    WNDCLASSEXA wndclass {};
+    wndclass.cbClsExtra = 0;
+    wndclass.cbSize = sizeof(wndclass);
+    wndclass.cbWndExtra = 0;
+    wndclass.hCursor = LoadCursorA(hInstance,IDC_ARROW);
+    wndclass.hIcon = NULL;
+    wndclass.lpszClassName = "_TestChild";
+    wndclass.hIconSm = NULL;
+    wndclass.hInstance = hInstance;
+    wndclass.hbrBackground = (HBRUSH)(COLOR_WINDOW);
+    wndclass.lpfnWndProc = WndProc;
+    wndclass.style = CS_HREDRAW | CS_VREDRAW;
+    wndclass.lpszMenuName = NULL;
+
+    a = RegisterClassExA(&wndclass);
+
+    HWND childHwnd = CreateWindowA(MAKEINTATOM(a),"",WS_CHILDWINDOW | WS_VISIBLE,0,(500 - 300) * scaleFactor,300 *scaleFactor,300 * scaleFactor,hwnd,NULL,hInstance,NULL);
+
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 0","NOTE",MB_OK);
     MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 1","NOTE",MB_OK);
 
     OmegaGTE::NativeRenderTargetDescriptor renderTargetDesc {};
 
-    renderTargetDesc.hwnd = hwnd;
+    renderTargetDesc.hwnd = childHwnd;
     renderTargetDesc.isHwnd = true;
 
     OmegaGTE::RenderPipelineDescriptor pipelineDesc;
@@ -141,10 +159,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     pipelineDesc.depthAndStencilDesc.enableStencil = false;
 
     renderPipelineState = gte.graphicsEngine->makeRenderPipelineState(pipelineDesc);
-    MessageBoxA(GetForegroundWindow(),"App Pre Launch -- Stage 2","NOTE",MB_OK);
-
-
-    MessageBoxA(GetForegroundWindow(),"App Started..","NOTE",MB_OK);
        
     renderTarget = gte.graphicsEngine->makeNativeRenderTarget(renderTargetDesc);
 
@@ -152,18 +166,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     tessalate();
 
-    MessageBoxA(GetForegroundWindow(),"Loaded Stage 1","NOTE",MB_OK);
-
 
     auto commandBuffer = renderTarget->commandBuffer();
 
-    MessageBoxA(GetForegroundWindow(),"Loaded Stage 2","NOTE",MB_OK);
     OmegaGTE::GERenderTarget::RenderPassDesc renderPassDesc;
     using ColorAttachment = OmegaGTE::GERenderTarget::RenderPassDesc::ColorAttachment;
-    renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(1.f,1.f,0.f,1.f),ColorAttachment::Clear);
+    renderPassDesc.colorAttachment = new ColorAttachment(ColorAttachment::ClearColor(0.f,1.f,0.f,1.f),ColorAttachment::Clear);
 
-    OmegaGTE::GEViewport viewport {0,0,500 * scaleFactor,500 * scaleFactor,0,0};
-    OmegaGTE::GEScissorRect scissorRect {0,0,500 * scaleFactor,500 * scaleFactor};
+    OmegaGTE::GEViewport viewport {0,0,300 * scaleFactor,300 * scaleFactor,0,1.f};
+    OmegaGTE::GEScissorRect scissorRect {0,0,300 * scaleFactor,300 * scaleFactor};
 
     commandBuffer->startRenderPass(renderPassDesc);
     commandBuffer->setRenderPipelineState(renderPipelineState);
@@ -171,20 +182,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     commandBuffer->setScissorRects({scissorRect});
     commandBuffer->setViewports({viewport});
     commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
-    MessageBoxA(GetForegroundWindow(),"Loaded Stage 3","NOTE",MB_OK);
     commandBuffer->endRenderPass();
-     MessageBoxA(GetForegroundWindow(),"Loaded Stage 4","NOTE",MB_OK);
 
     renderTarget->submitCommandBuffer(commandBuffer);
-    MessageBoxA(GetForegroundWindow(),"Loaded Stage 5","NOTE",MB_OK);
 
     renderTarget->commitAndPresent();
-    MessageBoxA(GetForegroundWindow(),"Loaded Stage 6","NOTE",MB_OK);
 
     ShowWindow(hwnd,nShowCmd);
-    
 
-    UpdateWindow(hwnd);
+//    UpdateWindow(hwnd);
 
 
 
@@ -216,9 +222,6 @@ LRESULT CALLBACK   WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam){
         PAINTSTRUCT ps;
         HDC dc = BeginPaint(hwnd,&ps);
 
-
-
-
         EndPaint(hwnd,&ps);
         break;
     }
@@ -228,7 +231,6 @@ LRESULT CALLBACK   WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam){
     }
     default:
         return DefWindowProcA(hwnd,uMsg,wParam,lParam);
-        break;
     }
 
     return lr;

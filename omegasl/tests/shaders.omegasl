@@ -26,6 +26,12 @@ fragment float4 myFrag(VertexRaster raster){
      return raster.color;
 }
 
+// Dynamic Sampler
+sampler2d mySampler : 1;
+
+// Static Sampler
+static sampler2d(filter=linear,max_anisotropy=16) myStaticSampler : 2;
+
 
 
 

@@ -19,14 +19,13 @@ _NAMESPACE_BEGIN_
         GETextureRenderTarget *tRenderTarget = nullptr;
         typedef GERenderTarget::RenderPassDesc::ColorAttachment ColorAttachment;
         ColorAttachment *colorAttachment;
+        bool multisampleResolve = false;
+        typedef GERenderTarget::RenderPassDesc::MultisampleResolveDesc MultisampleResolveDesc;
+        MultisampleResolveDesc resolveDesc;
     };
 
 
     struct  OMEGAGTE_EXPORT GEComputePassDescriptor {
-
-    };
-
-    enum class RenderCullMode {
 
     };
 

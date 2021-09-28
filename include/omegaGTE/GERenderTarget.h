@@ -36,6 +36,10 @@ _NAMESPACE_BEGIN_
                 ColorAttachment(ClearColor clearColor,LoadAction loadAction);
             };
             ColorAttachment * colorAttachment;
+            struct OMEGAGTE_EXPORT MultisampleResolveDesc {
+                SharedHandle<GETexture> multiSampleTextureSrc = nullptr;
+                unsigned level,slice,depth;
+            } mutlisampleResolveDesc;
         };
         class OMEGAGTE_EXPORT CommandBuffer {
             GERenderTarget *renderTargetPtr;

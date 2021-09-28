@@ -12,6 +12,14 @@ _NAMESPACE_BEGIN_
         GED3D12CommandQueue *parentQueue;
         bool inComputePass;
         bool inBlitPass;
+        bool inRenderPass;
+        bool firstRenderPass = true;
+        bool closed = false;
+
+        bool hasMultisampleDesc;
+        GERenderTarget::RenderPassDesc::MultisampleResolveDesc *multisampleResolveDesc = nullptr;
+
+
         std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
         friend class GED3D12CommandQueue;
 
@@ -20,7 +28,7 @@ _NAMESPACE_BEGIN_
             GED3D12TextureRenderTarget *texture = nullptr;
         } currentTarget;
 
-       
+       friend class GED3D12CommandQueue;
     public:
 
         void startBlitPass() override;

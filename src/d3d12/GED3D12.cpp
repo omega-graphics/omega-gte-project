@@ -507,9 +507,13 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         ID3D12RootSignature *signature;
 
-        createRootSignatureFromOmegaSLShaders(1,shaders,&signature);
+        auto b = createRootSignatureFromOmegaSLShaders(1,shaders,&signature);
+        if(b) {
+            d.pRootSignature = signature;
+        }
+        else {
 
-        d.pRootSignature = signature;
+        }
 
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
         return std::make_shared<GED3D12ComputePipelineState>(desc.computeFunc,state,signature);
@@ -604,21 +608,52 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
          res_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
         D3D12_RENDER_TARGET_VIEW_DESC view_desc;
+        if(desc.type == GETexture::Texture1D){
+            d3d12_desc = CD3DX12_RESOURCE_DESC::Tex1D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,1,desc.mipLevels);
+            res_view_desc.Texture1D.MostDetailedMip = -1;
+            res_view_desc.Texture1D.MipLevels = desc.mipLevels;
+            res_view_desc.Texture1D.ResourceMinLODClamp = 2.f;
+        }
+        else if(desc.type == GETexture::Texture2D){
+            d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,1,desc.mipLevels,desc.sampleCount);
+            if(desc.sampleCount > 1){
+                res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+            }
+            else {
+                res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            }
+            res_view_desc.Texture2D.MipLevels = desc.mipLevels;
+            res_view_desc.Texture2D.MostDetailedMip = -1;
+            res_view_desc.Texture2D.PlaneSlice = 0;
+            res_view_desc.Texture2D.ResourceMinLODClamp = 2.f;
 
-        if(desc.type == GETexture::Texture2D){
-            d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height);
-            res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
              if(desc.usage & GETexture::RenderTarget){
-                 view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+                 if(desc.sampleCount > 1) {
+                     view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+                 }
+                 else {
+                     view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+                 }
                   view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                  view_desc.Texture2D.PlaneSlice = 0;
+                  view_desc.Texture2D.MipSlice = 0;
              }
         }
         else if(desc.type == GETexture::Texture3D){
-           d3d12_desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,desc.depth);
+           d3d12_desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,desc.depth,desc.mipLevels);
+           d3d12_desc.SampleDesc.Count = desc.sampleCount;
+           d3d12_desc.DepthOrArraySize = 1;
            res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+           res_view_desc.Texture3D.ResourceMinLODClamp = 2.f;
+           res_view_desc.Texture3D.MostDetailedMip = -1;
+           res_view_desc.Texture3D.MipLevels = desc.mipLevels;
+
            if(desc.usage & GETexture::RenderTarget){
                  view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
                  view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                 view_desc.Texture3D.MipSlice = 0;
+                 view_desc.Texture3D.FirstWSlice = 0;
+                 view_desc.Texture3D.WSize = desc.depth;
             }
         };
 
@@ -628,6 +663,9 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         if(desc.usage & GETexture::GPUWrite) {
             heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+        }
+        else if(desc.usage & GETexture::MSResolveDest){
+            heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
         }
         else {
             heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
@@ -678,6 +716,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
         ID3D12Resource *buffer;
         D3D12_HEAP_TYPE heap_type;
+
         switch (desc.usage) {
             case BufferDescriptor::Upload : {
                 heap_type = D3D12_HEAP_TYPE_UPLOAD;
@@ -711,16 +750,32 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         };
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc {};
-        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-        res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-        res_view_desc.Buffer.StructureByteStride = desc.objectStride;
-        res_view_desc.Buffer.FirstElement = 0;
-        res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-        res_view_desc.Buffer.NumElements = desc.len/desc.objectStride;
+        if(desc.usage == BufferDescriptor::Upload) {
 
-        d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+            D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc{};
+            res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+            res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+            res_view_desc.Buffer.StructureByteStride = desc.objectStride;
+            res_view_desc.Buffer.FirstElement = 0;
+            res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+            res_view_desc.Buffer.NumElements = desc.len / desc.objectStride;
+
+            d3d12_device->CreateShaderResourceView(buffer, &res_view_desc,
+                                                   descHeap->GetCPUDescriptorHandleForHeapStart());
+        }
+        else {
+            D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc{};
+            uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+            uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+            uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+            uav_desc.Buffer.NumElements = desc.len/desc.objectStride;
+            uav_desc.Buffer.StructureByteStride = desc.objectStride;
+            uav_desc.Buffer.CounterOffsetInBytes = 0;
+            uav_desc.Buffer.FirstElement = 0;
+
+            d3d12_device->CreateUnorderedAccessView(buffer,nullptr,&uav_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+        }
 
         return SharedHandle<GEBuffer>(new GED3D12Buffer(buffer,descHeap));
     }

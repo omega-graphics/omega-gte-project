@@ -9,13 +9,15 @@ _NAMESPACE_BEGIN_
     class  OMEGAGTE_EXPORT GETexture {
     public:
         typedef enum : unsigned char {
+            Texture1D,
             Texture2D,
             Texture3D,
         } GETextureType;
         typedef enum : unsigned char {
             GPURead = 0x00,
             GPUWrite = 0x01,
-            RenderTarget = 0x02
+            RenderTarget = 0x02,
+            MSResolveDest = 0x03
         } GETextureUsage;
     protected:
         GETextureType type;
@@ -37,6 +39,8 @@ _NAMESPACE_BEGIN_
         unsigned width;
         unsigned height;
         unsigned depth;
+        unsigned mipLevels = 0;
+        unsigned sampleCount = 1;
     };
 
 _NAMESPACE_END_

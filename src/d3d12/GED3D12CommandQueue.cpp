@@ -56,22 +56,45 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandBuffer::startRenderPass(const GERenderPassDescriptor &desc){
+        inRenderPass = true;
         assert(!inComputePass && "Cannot start a Render Pass while in a compute pass.");
         D3D12_RENDER_PASS_RENDER_TARGET_DESC rt_desc;
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
 
         if(desc.nRenderTarget) {
             auto *nativeRenderTarget = (GED3D12NativeRenderTarget *)desc.nRenderTarget;
-            cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(nativeRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
-            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex],D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
-            commandList->ResourceBarrier(1,&barrier);
+            if(desc.multisampleResolve){
+                auto resolveTexture = (GED3D12Texture *)desc.resolveDesc.multiSampleTextureSrc.get();
+                cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(resolveTexture->rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                D3D12_RESOURCE_STATES resource_state;
+                if(firstRenderPass) {
+                    resource_state = D3D12_RESOURCE_STATE_PRESENT;
+                }
+                else {
+                    resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+                }
+                auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex], resource_state,
+                        D3D12_RESOURCE_STATE_RESOLVE_DEST);
+                commandList->ResourceBarrier(1, &barrier);
+            }
+            else {
+                cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                        nativeRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
+                if(firstRenderPass) {
+                    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                            nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex],
+                            D3D12_RESOURCE_STATE_PRESENT,
+                            D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+                    commandList->ResourceBarrier(1, &barrier);
+                }
+            }
             currentTarget.native = nativeRenderTarget;
         }
         else if(desc.tRenderTarget){
             auto *textureRenderTarget = (GED3D12TextureRenderTarget *)desc.tRenderTarget;
             cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(textureRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
-            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textureRenderTarget->renderTargetView.Get(),D3D12_RESOURCE_STATE_PRESENT,D3D12_RESOURCE_STATE_RENDER_TARGET);
-            commandList->ResourceBarrier(1,&barrier);
             currentTarget.texture = textureRenderTarget;
         };
         rt_desc.cpuDescriptor = cpu_handle;
@@ -100,8 +123,18 @@ _NAMESPACE_BEGIN_
                 break;
             }
         }
+
+        hasMultisampleDesc = desc.multisampleResolve;
+        if(desc.multisampleResolve){
+            typedef decltype(desc.resolveDesc) MSResolveDesc;
+            multisampleResolveDesc = new MSResolveDesc;
+            memcpy_s(multisampleResolveDesc,sizeof(MSResolveDesc),&desc.resolveDesc,sizeof(MSResolveDesc));
+        }
         
         commandList->BeginRenderPass(1,&rt_desc,nullptr,D3D12_RENDER_PASS_FLAG_NONE);
+        if(firstRenderPass){
+            firstRenderPass = false;
+        }
     };
 
     void GED3D12CommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState){
@@ -134,7 +167,7 @@ _NAMESPACE_BEGIN_
 
     void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
-         GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
+         auto *d3d12_texture = (GED3D12Texture *)texture.get();
          commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
          descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
@@ -224,8 +257,35 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandBuffer::finishRenderPass(){
+        assert(inRenderPass && "");
         commandList->SetDescriptorHeaps(descriptorHeapBuffer.size(),descriptorHeapBuffer.data());
         commandList->EndRenderPass();
+        if(hasMultisampleDesc) {
+            ID3D12Resource *destTarget;
+            if(currentTarget.native != nullptr){
+                destTarget = currentTarget.native->renderTargets[currentTarget.native->frameIndex];
+            }
+            else {
+                destTarget = currentTarget.texture->renderTargetView.Get();
+            }
+            auto destTargetDesc = destTarget->GetDesc();
+            auto resolveTexture = ((GED3D12Texture *)multisampleResolveDesc->multiSampleTextureSrc.get())->resource.Get();
+            auto resolveTextureDesc = resolveTexture->GetDesc();
+
+            D3D12_RESOURCE_BARRIER
+            barrierA = CD3DX12_RESOURCE_BARRIER::Transition(resolveTexture,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+            barrierB = CD3DX12_RESOURCE_BARRIER::Transition(destTarget,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_RESOLVE_DEST);
+            D3D12_RESOURCE_BARRIER barriers[] = {barrierA,barrierB};
+            commandList->ResourceBarrier(2,barriers);
+            commandList->ResolveSubresource(destTarget,
+                                            D3D12CalcSubresource(0,0,0,destTargetDesc.MipLevels,destTargetDesc.DepthOrArraySize),
+                                            resolveTexture,
+                                            D3D12CalcSubresource(multisampleResolveDesc->slice,0,multisampleResolveDesc->level,resolveTextureDesc.MipLevels,resolveTextureDesc.DepthOrArraySize),DXGI_FORMAT_R8G8B8A8_UNORM);
+            barrierA = CD3DX12_RESOURCE_BARRIER::Transition(destTarget,D3D12_RESOURCE_STATE_RESOLVE_DEST,D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandList->ResourceBarrier(1,&barrierA);
+            hasMultisampleDesc = false;
+            delete multisampleResolveDesc;
+        }
         descriptorHeapBuffer.clear();
         currentTarget.texture = nullptr;
         currentTarget.native = nullptr;
@@ -269,11 +329,14 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         HRESULT hr;
         auto d3d12_buffer = (GED3D12CommandBuffer *)commandBuffer.get();
+        d3d12_buffer->closed = true;
         
         commandLists.push_back(d3d12_buffer->commandList.Get());
     };
 
     void GED3D12CommandBuffer::reset(){
+        closed = false;
+        firstRenderPass = true;
         commandList->Reset(parentQueue->bufferAllocator.Get(),nullptr);
     };
 

@@ -66,7 +66,7 @@ _NAMESPACE_BEGIN_
             Upload,
             Readback
         } Usage;
-        Usage usage;
+        Usage usage = Upload;
         size_t len;
         size_t objectStride;
         StorageOpts opts;
@@ -115,11 +115,11 @@ _NAMESPACE_BEGIN_
             MirrorWrap
         }
         /// @brief  Address Mode for Width
-        uAddressMode,
+        uAddressMode = AddressMode::Wrap,
         /// @brief Address Mode for Height
-        vAddressMode,
+        vAddressMode = AddressMode::Wrap,
         /// @brief Address Mode for Depth
-        wAddressMode;
+        wAddressMode = AddressMode::Wrap;
         enum class Filter : int {
             Linear,
             Point,
@@ -130,8 +130,8 @@ _NAMESPACE_BEGIN_
             MagLinearMinPointMipPoint,
             MaxAnisotropic,
             MinAnisotropic
-        } filter;
-        unsigned int maxAnisotropy;
+        } filter = Filter::Linear;
+        unsigned int maxAnisotropy = 16;
 
     };
 

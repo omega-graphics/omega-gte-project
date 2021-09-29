@@ -23,6 +23,7 @@ _NAMESPACE_BEGIN_
     struct GTEMetalDevice : public GTEDevice {
         __strong id<MTLDevice> device;
         GTEMetalDevice(Type type,const char *name,GTEDeviceFeatures & features,id<MTLDevice> _device): GTEDevice(type,name,features),device(_device){}
+        ~GTEMetalDevice() = default;
     };
 
     /// GTE Device Enumerate

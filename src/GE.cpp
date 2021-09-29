@@ -109,7 +109,7 @@ SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(SharedHandle<GTEDe
         return CreateMetalEngine(device);
     #endif
     #ifdef TARGET_DIRECTX
-        return GED3D12Engine::Create();
+        return GED3D12Engine::Create(device);
     #endif
     #ifdef TARGET_VULKAN
         return GEVulkanEngine::Create();

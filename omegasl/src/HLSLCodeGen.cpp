@@ -138,9 +138,6 @@ namespace omegasl {
             else if(attributeName == ATTRIBUTE_TEXCOORD){
                 out << "TEXCOORD";
             }
-            else if(attributeName == ATTRIBUTE_COLOR){
-                out << "COLOR";
-            }
             else if(attributeName == ATTRIBUTE_GLOBALTHREAD_ID){
                 out << "SV_DispatchThreadID";
             }
@@ -164,6 +161,12 @@ namespace omegasl {
             }
             else if(_ty == ast::builtins::float4_type){
                 out << "float4";
+            }
+            else if(_ty == ast::builtins::int_type){
+                out << "int";
+            }
+            else if(_ty == ast::builtins::uint_type){
+                out << "uint";
             }
             else {
                 out << _ty->name;
@@ -296,6 +299,7 @@ namespace omegasl {
                             }
                         }
                         else if(_t == ast::builtins::sampler2d_type){
+                            isSResource = true;
                             if(res_desc->isStatic) {
                                 layoutDesc.type = OMEGASL_SHADER_STATIC_SAMPLER2D_DESC;
                             }
@@ -307,19 +311,82 @@ namespace omegasl {
 
                         shaderOut << " " << res_desc->name;
 
-                        shaderOut << ": register(";
-                        layoutDesc.location = res_desc->registerNumber;
-                        if(isTResource){
-                            shaderOut << "t" << t_resource_count;
-                            layoutDesc.gpu_relative_loc = t_resource_count;
-                            ++t_resource_count;
+                        auto convertAddressMode = [=](omegasl_shader_static_sampler_address_mode &mode,std::ostream & out){
+                            switch (mode) {
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP : {
+                                    out << "Wrap";
+                                    break;
+                                }
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRROR : {
+                                    out << "MIRROR";
+                                    break;
+                                }
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRRORWRAP : {
+                                    out << "MirrorWrap";
+                                    break;
+                                }
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_CLAMPTOEDGE : {
+                                    out << "ClampToEdge";
+                                    break;
+                                }
+                            }
+                        };
+
+                        if(isSResource){
+                            if(res_desc->isStatic){
+                                /// Write Static Sampler Desc
+#define INDENT "    "
+                                layoutDesc.sampler_desc.filter = res_desc->staticSamplerDesc->filter;
+                                layoutDesc.sampler_desc.u_address_mode = res_desc->staticSamplerDesc->uAddressMode;
+                                layoutDesc.sampler_desc.v_address_mode = res_desc->staticSamplerDesc->vAddressMode;
+                                layoutDesc.sampler_desc.w_address_mode = res_desc->staticSamplerDesc->wAddressMode;
+                                layoutDesc.sampler_desc.max_anisotropy = res_desc->staticSamplerDesc->maxAnisotropy;
+                                shaderOut << "{" << std::endl;
+                                shaderOut << INDENT << "Filter=";
+                                switch (layoutDesc.sampler_desc.filter) {
+                                    case OMEGASL_SHADER_SAMPLER_LINEAR_FILTER : {
+                                        shaderOut << "MIN_MAG_MIP_LINEAR";
+                                        break;
+                                    }
+                                    case OMEGASL_SHADER_SAMPLER_POINT_FILTER : {
+                                        shaderOut << "MIN_MAG_MIP_LINEAR";
+                                        break;
+                                    }
+                                }
+                                shaderOut << std::endl;
+                                shaderOut << INDENT << "AddressU=";
+                                convertAddressMode(layoutDesc.sampler_desc.u_address_mode,shaderOut);
+                                shaderOut << std::endl;
+                                shaderOut << INDENT << "AddressV=";
+                                convertAddressMode(layoutDesc.sampler_desc.v_address_mode,shaderOut);
+                                shaderOut << std::endl;
+                                shaderOut << INDENT << "AddressW=";
+                                convertAddressMode(layoutDesc.sampler_desc.w_address_mode,shaderOut);
+                                shaderOut << std::endl;
+                                shaderOut << INDENT << "MaxAnisotropy=" << layoutDesc.sampler_desc.max_anisotropy << std::endl;
+                                shaderOut << "};" << std::endl;
+                            }
                         }
-                        else {
-                            shaderOut << "u" << u_resource_count;
-                            layoutDesc.gpu_relative_loc = u_resource_count;
-                            ++u_resource_count;
+
+                        if(!res_desc->isStatic) {
+
+                            shaderOut << ": register(";
+                            layoutDesc.location = res_desc->registerNumber;
+                            if (isTResource) {
+                                shaderOut << "t" << t_resource_count;
+                                layoutDesc.gpu_relative_loc = t_resource_count;
+                                ++t_resource_count;
+                            } else if (isSResource) {
+                                shaderOut << "s" << s_resource_count;
+                                layoutDesc.gpu_relative_loc = s_resource_count;
+                                ++s_resource_count;
+                            } else {
+                                shaderOut << "u" << u_resource_count;
+                                layoutDesc.gpu_relative_loc = u_resource_count;
+                                ++u_resource_count;
+                            }
+                            shaderOut << ");" << std::endl;
                         }
-                        shaderOut << ");" << std::endl;
                         shaderLayout.push_back(layoutDesc);
                     }
 

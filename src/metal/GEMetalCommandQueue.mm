@@ -256,7 +256,7 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
         assert(cp != nil && "");
         auto & threadgroup_desc = computePipelineState->computeShader->internal.threadgroupDesc;
-        [cp dispatchThreads:MTLSizeMake(x,y,z) threadsPerThreadgroup:MTLSizeMake(threadgroup_desc.x,threadgroup_desc.y,threadgroup_desc.z)];
+        [cp dispatchThreadgroups:MTLSizeMake(x,y,z) threadsPerThreadgroup:MTLSizeMake(threadgroup_desc.x,threadgroup_desc.y,threadgroup_desc.z)];
     }
 
     void GEMetalCommandBuffer::finishComputePass(){

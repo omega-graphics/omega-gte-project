@@ -31,23 +31,67 @@ _NAMESPACE_BEGIN_
         
     };
 
+    unsigned int GED3D12CommandBuffer::getRootParameterIndexOfResource(unsigned int id, omegasl_shader &shader){
+        bool isSRV = false,isUAV = false,isDescriptorTable = false;
+        OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layoutArr {shader.pLayout,shader.pLayout + shader.nLayout};
+        unsigned relative_index = 0;
+        for(auto & l : layoutArr){
+            if(l.location == id) {
+                relative_index = l.gpu_relative_loc;
+                if (l.type == OMEGASL_SHADER_BUFFER_DESC || l.type == OMEGASL_SHADER_TEXTURE2D_DESC || l.type == OMEGASL_SHADER_TEXTURE3D_DESC) {
+                    if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
+                        isSRV = true;
+                    }
+                    else {
+                        isUAV = true;
+                    }
+                }
+                else {
+                    isDescriptorTable = true;
+                }
+                break;
+            }
+        }
+
+        unsigned idx = 0;
+        for(;idx < currentRootSignature->NumParameters;idx++){
+            auto & param = currentRootSignature->pParameters[idx];
+            if(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV && isSRV){
+                if(param.Descriptor.ShaderRegister == relative_index){
+                    break;
+                }
+            }
+            else if(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV && isUAV){
+                if(param.Descriptor.ShaderRegister == relative_index){
+                    break;
+                }
+            }
+            else if(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && isDescriptorTable){
+                if(param.DescriptorTable.pDescriptorRanges->BaseShaderRegister == relative_index){
+                    break;
+                }
+            }
+        }
+        return idx;
+    }
+
     void GED3D12CommandBuffer::startBlitPass(){
         inBlitPass = true;
     };
 
     void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
         assert(inBlitPass && "Not in Blit Pass! Exiting...");
-        GED3D12Texture *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+        auto *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
         commandList->CopyResource(destText->resource.Get(),srcText->resource.Get());
     }
 
     void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,const TextureRegion & region,const GPoint3D & destCoord) {
         assert(inBlitPass && "Not in Blit Pass! Exiting...");
-        GED3D12Texture *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+        auto *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
         CD3DX12_TEXTURE_COPY_LOCATION srcLoc(srcText->resource.Get()),
                                         destLoc(destText->resource.Get());
         LONG top_pos = LONG(region.h) - LONG(region.y);
-        CD3DX12_BOX _region ((LONG)region.x,top_pos,region.x + region.w,top_pos + region.h);
+        CD3DX12_BOX _region ((LONG)region.x,top_pos,LONG(region.x + region.w),LONG(top_pos + region.h));
         commandList->CopyTextureRegion(&destLoc,(UINT)destCoord.x,(UINT)destCoord.y,(UINT)destCoord.z,&srcLoc,&_region);
     }
 
@@ -139,36 +183,38 @@ _NAMESPACE_BEGIN_
 
     void GED3D12CommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState){
          assert(!inComputePass && "Cannot set Render Pipeline State while in Compute Pass");
-        GED3D12RenderPipelineState *d3d12_pipeline_state = (GED3D12RenderPipelineState *)pipelineState.get();
+        auto *d3d12_pipeline_state = (GED3D12RenderPipelineState *)pipelineState.get();
         commandList->SetPipelineState(d3d12_pipeline_state->pipelineState.Get());
+        currentRenderPipeline = d3d12_pipeline_state;
         commandList->SetGraphicsRootSignature(d3d12_pipeline_state->rootSignature.Get());
+        currentRootSignature = &d3d12_pipeline_state->rootSignatureDesc;
     };
 
-    void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
+    void GED3D12CommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> &buffer, unsigned int index){
         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const at a Vertex Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
         descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
-    void GED3D12CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned int index){
+    void GED3D12CommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) &&"Cannot set Resource Const at a Vertex Func when not in render pass");
         GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
-        commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
         descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
-    void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned int index){
+    void GED3D12CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
         GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(index,d3d12_buffer->buffer->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
         descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
-    void GED3D12CommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned int index){
+    void GED3D12CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
          auto *d3d12_texture = (GED3D12Texture *)texture.get();
-         commandList->SetGraphicsRootDescriptorTable(index,d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+         commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
          descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
@@ -286,9 +332,12 @@ _NAMESPACE_BEGIN_
             hasMultisampleDesc = false;
             delete multisampleResolveDesc;
         }
+        commandList->ClearState(nullptr);
         descriptorHeapBuffer.clear();
         currentTarget.texture = nullptr;
         currentTarget.native = nullptr;
+        currentRenderPipeline = nullptr;
+        currentRootSignature = nullptr;
     };
 
     void GED3D12CommandBuffer::startComputePass(const GEComputePassDescriptor &desc){
@@ -296,13 +345,73 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandBuffer::setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState){
-        GED3D12ComputePipelineState *d3d12_pipeline_state = (GED3D12ComputePipelineState *)pipelineState.get();
+        auto *d3d12_pipeline_state = (GED3D12ComputePipelineState *)pipelineState.get();
         commandList->SetPipelineState(d3d12_pipeline_state->pipelineState.Get());
         commandList->SetComputeRootSignature(d3d12_pipeline_state->rootSignature.Get());
+        currentComputePipeline = d3d12_pipeline_state;
+        currentRootSignature = &d3d12_pipeline_state->rootSignatureDesc;
     };
 
+    void GED3D12CommandBuffer::bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned int id) {
+        assert(inComputePass && "");
+        auto *d3d12_buffer = (GED3D12Buffer *)buffer.get();
+        D3D12_HEAP_PROPERTIES heap_props;
+        D3D12_HEAP_FLAGS heapFlags;
+        d3d12_buffer->buffer->GetHeapProperties(&heap_props,&heapFlags);
+        if(heap_props.Type == D3D12_HEAP_TYPE_UPLOAD){
+            commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        }
+        else if(heap_props.Type == D3D12_HEAP_TYPE_READBACK){
+            auto resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_buffer->buffer.Get(),D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            commandList->ResourceBarrier(1,&resource_barrier);
+            commandList->SetGraphicsRootUnorderedAccessView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+            uavResourceBuffer.push_back(d3d12_buffer->buffer.Get());
+        }
+        descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
+
+    }
+
+    void GED3D12CommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int id) {
+        assert(inComputePass && "");
+        auto *d3d12_texture = (GED3D12Texture *)texture.get();
+        D3D12_HEAP_PROPERTIES heap_props;
+        D3D12_HEAP_FLAGS heapFlags;
+        d3d12_texture->resource->GetHeapProperties(&heap_props,&heapFlags);
+        if(heap_props.Type == D3D12_HEAP_TYPE_READBACK){
+            auto resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_texture->resource.Get(),D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            commandList->ResourceBarrier(1,&resource_barrier);
+            uavResourceBuffer.push_back(d3d12_texture->resource.Get());
+        }
+        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
+    }
+
+    void GED3D12CommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
+        assert(inComputePass && "");
+        commandList->SetDescriptorHeaps(descriptorHeapBuffer.size(),descriptorHeapBuffer.data());
+        commandList->Dispatch(x,y,z);
+        descriptorHeapBuffer.clear();
+    }
+
     void GED3D12CommandBuffer::finishComputePass(){
+        OmegaCommon::Vector<D3D12_RESOURCE_BARRIER> uavBarriers;
+        for(auto & r : uavResourceBuffer){
+            auto res_desc = r->GetDesc();
+            if(res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D || res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D || res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D){
+                uavBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(r,D3D12_RESOURCE_STATE_UNORDERED_ACCESS,D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+            }
+            else {
+                uavBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(r,D3D12_RESOURCE_STATE_UNORDERED_ACCESS,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+            }
+        }
+        if(!uavBarriers.empty()){
+            commandList->ResourceBarrier(uavBarriers.size(),uavBarriers.data());
+        }
+        commandList->ClearState(nullptr);
+        uavResourceBuffer.clear();
         inComputePass = false;
+        currentComputePipeline = nullptr;
+        currentRootSignature = nullptr;
     };
 
     void GED3D12CommandBuffer::waitForFence(SharedHandle<GEFence> &fence,unsigned val) {

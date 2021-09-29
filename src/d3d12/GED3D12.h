@@ -51,6 +51,7 @@ _NAMESPACE_BEGIN_
     };
 
     class GED3D12Engine;
+    class GTED3D12Device;
 
     class GED3D12Heap : public GEHeap {
         GED3D12Engine *engine;
@@ -68,16 +69,16 @@ _NAMESPACE_BEGIN_
     class GED3D12Engine : public OmegaGraphicsEngine {
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
     public:
-        GED3D12Engine();
-        ComPtr<IDXGIFactory4> dxgi_factory;
+        ComPtr<IDXGIFactory6> dxgi_factory;
+        GED3D12Engine(SharedHandle<GTED3D12Device> device);
         ComPtr<ID3D12Debug1> debug_interface;
         ComPtr<ID3D12Device8> d3d12_device;
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
-        static SharedHandle<OmegaGraphicsEngine> Create();
+        static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
         void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
         // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);
         // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
-        bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,ID3D12RootSignature **pRootSignature);
+        bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,D3D12_ROOT_SIGNATURE_DESC1 * rootSignatureDesc,ID3D12RootSignature **pRootSignature);
         SharedHandle<GEFence> makeFence() override;
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override;
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc)  override;

@@ -30,6 +30,8 @@ protected:
     GTEDevice(Type type,const char *name,GTEDeviceFeatures & features):type(type),name(name),features(features){
 
     };
+public:
+    virtual ~GTEDevice() = default;
 };
 
 OMEGAGTE_EXPORT OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices();

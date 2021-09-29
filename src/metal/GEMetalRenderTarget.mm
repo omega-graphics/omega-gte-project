@@ -33,7 +33,9 @@ void GEMetalNativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> 
 };
 
 
-GEMetalTextureRenderTarget::GEMetalTextureRenderTarget(SharedHandle<GEMetalTexture> texture):texturePtr(texture){
+
+
+GEMetalTextureRenderTarget::GEMetalTextureRenderTarget(SharedHandle<GETexture> & texture,SharedHandle<GECommandQueue> & commandQueue):commandQueue(commandQueue),texturePtr(std::dynamic_pointer_cast<GEMetalTexture>(texture)){
     
 };
 
@@ -42,9 +44,16 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalTextureRenderTarget::commandB
     return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,GERenderTarget::CommandBuffer::Native,commandQueue->getAvailableBuffer()));
 };
 
+void GEMetalTextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){
+    if(commandBuffer->commandBuffer)
+        commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
+};
+
 void GEMetalTextureRenderTarget::commit(){
     commandQueue->commitToGPU();
 };
+
+
 
 
 _NAMESPACE_END_

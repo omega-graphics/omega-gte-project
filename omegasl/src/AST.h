@@ -4,6 +4,8 @@
 
 #include <omega-common/common.h>
 
+#include "omegasl.h"
+
 #ifndef OMEGASL_AST_H
 #define OMEGASL_AST_H
 
@@ -121,6 +123,15 @@ namespace omegasl {
             OmegaCommon::String name;
             size_t registerNumber;
             bool isStatic = false;
+            struct StaticSamplerDesc {
+                omegasl_shader_static_sampler_address_mode
+                uAddressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP,
+                vAddressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP,
+                wAddressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP;
+                omegasl_shader_static_sampler_filter filter = OMEGASL_SHADER_SAMPLER_LINEAR_FILTER;
+                unsigned int maxAnisotropy = 16;
+            };
+            std::unique_ptr<StaticSamplerDesc> staticSamplerDesc;
         };
 
         struct AttributedFieldDecl {
@@ -180,6 +191,9 @@ namespace omegasl {
                 OmegaCommon::String name;
             };
             OmegaCommon::Vector<ResourceMapDesc> resourceMap;
+            struct {
+                unsigned x,y,z;
+            } threadgroupDesc;
         };
 
         struct Expr : public Stmt {};

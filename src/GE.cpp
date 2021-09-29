@@ -75,7 +75,7 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputSt
                 size_t param_name_len;
                 in.read((char *) &param_name_len, sizeof(param_name_len));
                 paramDesc.name = new char[param_name_len + 1];
-                in.read((char *) paramDesc.name, param_name_len);
+                in.read((char *) paramDesc.name, (std::streamsize)param_name_len);
                 ((char *) paramDesc.name)[param_name_len] = '\0';
                 in.read((char *) &paramDesc.type, sizeof(paramDesc.type));
                 in.read((char *) &paramDesc.offset, sizeof(paramDesc.offset));
@@ -84,6 +84,11 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputSt
 
             shaderEntry.vertexShaderInputDesc.pParams = vertexShaderInputParams;
 
+        }
+        else if(shaderEntry.type == OMEGASL_SHADER_COMPUTE){
+            in.read((char *)&shaderEntry.threadgroupDesc.x,sizeof(unsigned int));
+            in.read((char *)&shaderEntry.threadgroupDesc.y,sizeof(unsigned int));
+            in.read((char *)&shaderEntry.threadgroupDesc.z,sizeof(unsigned int));
         }
 
         lib->shaders.insert(std::make_pair(OmegaCommon::StrRef((char *)shaderEntry.name,(unsigned)name_len), _loadShaderFromDesc(&shaderEntry)));
@@ -99,7 +104,7 @@ SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibrary(FS::Path p
     return res;
 }
 
-SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(void *device){
+SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(SharedHandle<GTEDevice> & device){
     #ifdef TARGET_METAL
         return CreateMetalEngine(device);
     #endif

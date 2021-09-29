@@ -159,6 +159,11 @@ namespace omegasl {
                         out.write((char *)&param.offset,sizeof(param.offset));
                     }
                 }
+                else if(shader_data.type == OMEGASL_SHADER_COMPUTE){
+                    out.write((char *)&shader_data.threadgroupDesc.x,sizeof(unsigned int));
+                    out.write((char *)&shader_data.threadgroupDesc.y,sizeof(unsigned int));
+                    out.write((char *)&shader_data.threadgroupDesc.z,sizeof(unsigned int));
+                }
 
             }
 

@@ -41,6 +41,8 @@ _NAMESPACE_BEGIN_
          Blit Pass
          */
         virtual void startBlitPass() = 0;
+        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest) = 0;
+        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) = 0;
         virtual void finishBlitPass() = 0;
          /**
          Render Pass
@@ -50,11 +52,11 @@ _NAMESPACE_BEGIN_
         //
         virtual void setVertexBuffer(SharedHandle<GEBuffer> & buffer) = 0;
         
-        virtual void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index) = 0;
-        virtual void setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index) = 0;
+        virtual void bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned id) = 0;
+        virtual void bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
         
-        virtual void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index) = 0;
-        virtual void setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index) = 0;
+        virtual void bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned id) = 0;
+        virtual void bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
         
         virtual void setViewports(std::vector<GEViewport> viewport) = 0;
         virtual void setScissorRects(std::vector<GEScissorRect> scissorRects) = 0;
@@ -68,8 +70,11 @@ _NAMESPACE_BEGIN_
         virtual void waitForFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
         virtual void signalFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
-        virtual void finishComputePass() = 0;
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
+        virtual void bindResourceAtComputeShader(SharedHandle<GEBuffer> & buffer,unsigned id) = 0;
+        virtual void bindResourceAtComputeShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
+        virtual void dispatchThreads(unsigned x,unsigned y,unsigned z) = 0;
+        virtual void finishComputePass() = 0;
         virtual void reset() = 0;
         virtual ~GECommandBuffer(){};
     };

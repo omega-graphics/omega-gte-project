@@ -2,6 +2,8 @@
 #include <metal_stdlib>
 #include <simd/simd.h>
 
+using namespace metal;
+
 struct MyVertex {
     simd_float4 pos;
     simd_float4 color;
@@ -14,7 +16,8 @@ struct VertexRaster {
 };
 
 
-vertex VertexRaster myVertex (device MyVertex * v_buffer[[buffer(0)]],uint vertex_id [[vertex_id]]){
+vertex VertexRaster myVertex (constant MyVertex * v_buffer[[buffer(0)]],uint vertex_id [[vertex_id]]){
+
     MyVertex vert = v_buffer[vertex_id];
     VertexRaster data;
     data.pos = vert.pos;

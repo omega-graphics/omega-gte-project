@@ -7,6 +7,10 @@
 #import "GEMetalPipeline.h"
 #include <cassert>
 #include <fstream>
+#include <cstdlib>
+#include <cstring>
+
+#include "OmegaGTE.h"
 
 #import <Metal/Metal.h>
 
@@ -15,6 +19,36 @@
 #endif
 
 _NAMESPACE_BEGIN_
+
+    struct GTEMetalDevice : public GTEDevice {
+        __strong id<MTLDevice> device;
+        GTEMetalDevice(Type type,const char *name,GTEDeviceFeatures & features,id<MTLDevice> _device): GTEDevice(type,name,features),device(_device){}
+    };
+
+    /// GTE Device Enumerate
+    OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
+        OmegaCommon::Vector<SharedHandle<GTEDevice>> devs;
+        NSArray<id<MTLDevice>> *mtlDevices = MTLCopyAllDevices();
+
+        for(id<MTLDevice> dev in mtlDevices){
+            GTEDeviceFeatures features {
+                    (bool)dev.supportsRaytracing
+            };
+            GTEDevice::Type type;
+            if(dev.lowPower){
+                type = GTEDevice::Integrated;
+            }
+            else {
+                type = GTEDevice::Discrete;
+            }
+            devs.push_back(SharedHandle<GTEDevice>(new GTEMetalDevice {type,dev.name.UTF8String,features,dev}));
+        }
+        return devs;
+    }
+
+
+
+    /// =========================================================>
 
 
 
@@ -46,7 +80,9 @@ _NAMESPACE_BEGIN_
         assert(data);
     };
 
-    GEMetalBuffer::GEMetalBuffer(NSSmartPtr & buffer):metalBuffer(buffer){};
+    GEMetalBuffer::GEMetalBuffer(NSSmartPtr & buffer,NSSmartPtr &layoutDesc):metalBuffer(buffer), layoutDesc(layoutDesc){
+
+    };
     
     size_t GEMetalBuffer::size(){
         metalBuffer.assertExists();
@@ -167,7 +203,7 @@ _NAMESPACE_BEGIN_
 
 
 
-    GEMetalFence::GEMetalFence(NSSmartPtr & fence):metalFence(fence){};
+    GEMetalFence::GEMetalFence(NSSmartPtr & event):metalEvent(event){};
 
     GEMetalSamplerState::GEMetalSamplerState(NSSmartPtr &samplerState): samplerState(samplerState) {
 
@@ -188,7 +224,8 @@ _NAMESPACE_BEGIN_
             return SharedHandle<GTEShader>(_shader);
         }
     public:
-        GEMetalEngine(id<MTLDevice> device){
+        GEMetalEngine(SharedHandle<GTEDevice> & __device){
+            __strong id<MTLDevice> device = ((GTEMetalDevice *)__device.get())->device;
             if(device == nil){
                 NSLog(@"Metal is not supported on this device! Exiting...");
                 exit(1);
@@ -217,14 +254,25 @@ _NAMESPACE_BEGIN_
         };
         SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override{
             metalDevice.assertExists();
-            NSSmartPtr buffer ({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newBufferWithLength:desc.len options:MTLResourceStorageModeShared]});
-            return std::shared_ptr<GEBuffer>(new GEMetalBuffer(buffer));
+            MTLBufferLayoutDescriptor *descriptor = [[MTLBufferLayoutDescriptor alloc] init];
+            descriptor.stride = desc.objectStride;
+            /// Only defines object stride.
+            id<MTLBuffer> mtlBuffer = [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newBufferWithLength:desc.len options:MTLResourceStorageModeShared];
+
+            NSSmartPtr buffer ({NSOBJECT_CPP_BRIDGE mtlBuffer}),
+            layoutDesc(NSObjectHandle {NSOBJECT_CPP_BRIDGE descriptor});
+            return std::shared_ptr<GEBuffer>(new GEMetalBuffer(buffer,layoutDesc));
         };
         SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override{
             metalDevice.assertExists();
-            /// TODO: Make MTLComputeFunctionReflection from omegasl_shader desc.
+//
+//
+//
+            auto & threadgroup_desc = desc.computeFunc->internal.threadgroupDesc;
 
             MTLComputePipelineDescriptor *pipelineDescriptor = [[MTLComputePipelineDescriptor alloc] init];
+            pipelineDescriptor.maxTotalThreadsPerThreadgroup = (threadgroup_desc.x * threadgroup_desc.y * threadgroup_desc.z);
+
 
             GEMetalShader *computeShader = (GEMetalShader *)desc.computeFunc.get();
             computeShader->function.assertExists();
@@ -242,9 +290,8 @@ _NAMESPACE_BEGIN_
             return std::shared_ptr<GEComputePipelineState>(new GEMetalComputePipelineState(desc.computeFunc,pipelineState));
         };
         SharedHandle<GEFence> makeFence() override{
-            // auto fence = [metalDevice newFence];
-            // return std::make_shared<GEMetalFence>(fence);
-            return nullptr;
+             NSSmartPtr fence = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newEvent]};
+             return SharedHandle<GEFence>(new GEMetalFence(fence));
         };
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc) override{
             MTLHeapDescriptor *heapDesc = [[MTLHeapDescriptor alloc] init];
@@ -260,8 +307,8 @@ _NAMESPACE_BEGIN_
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
             
-            GEMetalShader *vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
-            GEMetalShader *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
+            auto *vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
+            auto *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
 //            pipelineDesc.label = @"RENDER PIPELINE";
@@ -280,13 +327,77 @@ _NAMESPACE_BEGIN_
             return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(desc.vertexFunc,desc.fragmentFunc,pipelineState));
         };
 
-        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override{
-            return nullptr;
+        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override {
+            metalDevice.assertExists();
+            SharedHandle<GETexture> texture;
+            if(desc.renderToExistingTexture){
+                texture = texture;
+            }
+            else {
+                TextureDescriptor textureDescriptor {
+                    GETexture::Texture2D,
+                    Shared,
+                    GETexture::RenderTarget,
+                    TexturePixelFormat::RGBA8Unorm,
+                    (unsigned int)desc.rect.w,
+                    (unsigned int)desc.rect.h,0};
+
+                texture = makeTexture(textureDescriptor);
+            }
+            auto commandQueue = makeCommandQueue(100);
+            return SharedHandle<GETextureRenderTarget>(new GEMetalTextureRenderTarget(texture,commandQueue));
         };
         SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override{
+            assert(desc.sampleCount >= 1 && "Can only create textures with 1 or more samples");
             metalDevice.assertExists();
             MTLTextureDescriptor *mtlDesc = [[MTLTextureDescriptor alloc] init];
-            id<MTLTexture> texture = [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newTextureWithDescriptor:mtlDesc];
+            MTLTextureType textureType;
+            switch (desc.type) {
+                case GETexture::Texture1D : {
+                    textureType = MTLTextureType1D;
+                    break;
+                }
+                case GETexture::Texture2D : {
+                    if(desc.sampleCount > 1){
+                        textureType = MTLTextureType2DMultisample;
+                    }
+                    else {
+                        textureType = MTLTextureType2D;
+                    }
+                    break;
+                }
+                case GETexture::Texture3D : {
+                    textureType = MTLTextureType3D;
+                    break;
+                }
+            }
+            mtlDesc.textureType = textureType;
+            mtlDesc.width = desc.width;
+            mtlDesc.height = desc.height;
+            mtlDesc.sampleCount = desc.sampleCount;
+            mtlDesc.depth = desc.depth;
+            mtlDesc.arrayLength = 1;
+            mtlDesc.storageMode = MTLStorageModeShared;
+
+            MTLPixelFormat pixelFormat;
+            switch (desc.pixelFormat) {
+                case TexturePixelFormat::RGBA8Unorm : {
+                    pixelFormat = MTLPixelFormatRGBA8Unorm;
+                    break;
+                }
+                case TexturePixelFormat::RGBA16Unorm : {
+                    pixelFormat = MTLPixelFormatRGBA16Unorm;
+                    break;
+                }
+                case TexturePixelFormat::RGBA8Unorm_SRGB : {
+                    pixelFormat = MTLPixelFormatRGBA8Unorm_sRGB;
+                    break;
+                }
+            }
+
+            mtlDesc.pixelFormat = pixelFormat;
+
+            NSSmartPtr texture = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newTextureWithDescriptor:mtlDesc]};
             return std::shared_ptr<GETexture>(new GEMetalTexture(texture,desc));
         };
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override {
@@ -369,7 +480,7 @@ _NAMESPACE_BEGIN_
     };
 
 
-    SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(void *device){
-        return std::shared_ptr<OmegaGraphicsEngine>(new GEMetalEngine(NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,device)));
+    SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(SharedHandle<GTEDevice> & device){
+        return std::shared_ptr<OmegaGraphicsEngine>(new GEMetalEngine(device));
     };
 _NAMESPACE_END_

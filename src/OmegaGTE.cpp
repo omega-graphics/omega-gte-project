@@ -2,10 +2,15 @@
 
 _NAMESPACE_BEGIN_
 
-GTE Init(void *device){
+GTE Init(SharedHandle<GTEDevice> & device){
     auto ge = OmegaGraphicsEngine::Create(device);
     return {ge,OmegaTessalationEngine::Create()};
 };
+
+GTE InitWithDefaultDevice(){
+    auto devices = enumerateDevices();
+    return Init(devices.front());
+}
 
 
 void Close(GTE &gte){

@@ -22,7 +22,8 @@ namespace omegasl {
         (subject == KW_IN) ||
         (subject == KW_OUT) ||
         (subject == KW_INOUT) ||
-        (subject == KW_RETURN);
+        (subject == KW_RETURN) ||
+        (subject == KW_STATIC);
     }
 
     inline bool isKeywordType(OmegaCommon::StrRef subject){

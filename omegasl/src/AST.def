@@ -47,4 +47,23 @@ typedef int ASTType;
 #define ATTRIBUTE_THREADGROUP_ID "ThreadGroupID"
 #define ATTRIBUTE_LOCALTHREAD_ID "LocalThreadID"
 
+// Static Sampler Properties
+#define SAMPLER_PROP_FILTER "filter"
+#define SAMPLER_PROP_MIN_FILTER "min_filter"
+#define SAMPLER_PROP_MAG_FILTER "mag_filter"
+#define SAMPLER_PROP_MIP_FILTER "mip_filter"
+
+#define SAMPLER_FILTER_ANISOTROPIC "anisotropic"
+#define SAMPLER_FILTER_LINEAR "linear"
+#define SAMPLER_FILTER_POINT "point"
+
+#define SAMPLER_PROP_ADDRESS_MODE "address_mode"
+
+#define SAMPLER_ADDRESS_MODE_WRAP "wrap"
+#define SAMPLER_ADDRESS_MODE_CLAMPTOEDGE "clamp_to_edge"
+#define SAMPLER_ADDRESS_MODE_MIRROR "mirror"
+#define SAMPLER_ADDRESS_MODE_MIRRORWRAP "mirror_wrap"
+
+#define SAMPLER_PROP_MAX_ANISOTROPY "max_anisotropy"
+
 #endif

@@ -138,6 +138,18 @@ namespace omegasl {
             else if(attributeName == ATTRIBUTE_TEXCOORD){
                 out << "TEXCOORD";
             }
+            else if(attributeName == ATTRIBUTE_COLOR){
+                out << "COLOR";
+            }
+            else if(attributeName == ATTRIBUTE_GLOBALTHREAD_ID){
+                out << "SV_DispatchThreadID";
+            }
+            else if(attributeName == ATTRIBUTE_LOCALTHREAD_ID){
+                out << "SV_GroupThreadID";
+            }
+            else if(attributeName == ATTRIBUTE_THREADGROUP_ID){
+                out << "SV_GroupID";
+            }
         }
         inline void writeTypeExpr(ast::TypeExpr *typeExpr,std::ostream & out){
             auto _ty = typeResolver->resolveTypeWithExpr(typeExpr);
@@ -224,7 +236,7 @@ namespace omegasl {
                             _decl->shaderType == ast::ShaderDecl::Fragment? OMEGASL_SHADER_FRAGMENT :
                             OMEGASL_SHADER_COMPUTE;
 
-                    std::cout << "Shader Name:" << _decl->name << std::endl;
+//                    std::cout << "Shader Name:" << _decl->name << std::endl;
 
                     shaderDesc.name = new char[_decl->name.size() + 1];
                     std::copy(_decl->name.begin(),_decl->name.end(),(char *)shaderDesc.name);
@@ -316,6 +328,14 @@ namespace omegasl {
                     std::copy(shaderLayout.begin(),shaderLayout.end(),shaderDesc.pLayout);
 
                     /// 3. Write Function Decl
+
+                    if(_decl->shaderType == ast::ShaderDecl::Compute){
+                        /// Write Threadgroup Size Desc.
+                        shaderOut << "[numthreads("
+                        << _decl->threadgroupDesc.x << ","
+                        << _decl->threadgroupDesc.y << ","
+                        << _decl->threadgroupDesc.z << ")]" << std::endl;
+                    }
 
                     writeTypeExpr(_decl->returnType,shaderOut);
                     shaderOut << " " << _decl->name;

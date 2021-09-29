@@ -3,6 +3,8 @@
 #import "GEMetalPipeline.h"
 #import "GEMetal.h"
 
+#include <cstdlib>
+
 #import <QuartzCore/QuartzCore.h>
 
 _NAMESPACE_BEGIN_
@@ -11,10 +13,40 @@ _NAMESPACE_BEGIN_
        
     };
 
+    unsigned GEMetalCommandBuffer::getResourceLocalIndexFromGlobalIndex(unsigned _id,omegasl_shader & shader){
+        OmegaCommon::ArrayRef<omegasl_shader_layout_desc> descArr {shader.pLayout,shader.pLayout + shader.nLayout};
+        for(auto l : descArr){
+            if(l.location == _id){
+                return l.gpu_relative_loc;
+            }
+        }
+        return -1;
+    };
+
     void GEMetalCommandBuffer::startBlitPass(){
         buffer.assertExists();
         bp = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) blitCommandEncoder];
     };
+
+    void GEMetalCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
+        assert(bp && "Must be in BLIT PASS");
+        [bp copyFromTexture:
+                NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)src.get())->texture.handle())
+                  toTexture:
+        NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)dest.get())->texture.handle())];
+    }
+
+    void GEMetalCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,
+                                                    const TextureRegion &region, const GPoint3D &destCoord) {
+        assert(bp && "Must be in BLIT PASS");
+        auto mtl_src_texture = (GEMetalTexture *)src.get();
+        auto mtl_dest_texture = (GEMetalTexture *)dest.get();
+        [bp copyFromTexture: NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_src_texture->texture.handle())
+                sourceSlice:0 sourceLevel:0
+                  toTexture: NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_dest_texture->texture.handle())
+           destinationSlice:0 destinationLevel:0 sliceCount:1 levelCount:
+                        NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_src_texture->texture.handle()).mipmapLevelCount];
+    }
 
     void GEMetalCommandBuffer::finishBlitPass(){
         [bp endEncoding];
@@ -28,24 +60,51 @@ _NAMESPACE_BEGIN_
         buffer.assertExists();
         MTLRenderPassDescriptor *renderPassDesc = [MTLRenderPassDescriptor renderPassDescriptor];
         renderPassDesc.renderTargetArrayLength = 1;
+
+        id<MTLTexture> multiSampleTextureTarget = nil;
+
         if(desc.nRenderTarget){
-            GEMetalNativeRenderTarget *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
+            auto *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
             auto metalDrawable = n_rt->getDrawable();
             metalDrawable.assertExists();
             renderPassDesc.renderTargetWidth = n_rt->drawableSize.width;
             renderPassDesc.renderTargetHeight = n_rt->drawableSize.height;
-            renderPassDesc.colorAttachments[0].texture = NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,metalDrawable.handle()).texture;
+            id<MTLTexture> renderTarget;
+            if(desc.multisampleResolve){
+                renderTarget = NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get())->texture.handle());
+                multiSampleTextureTarget = NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,metalDrawable.handle()).texture;
+            }
+            else {
+                renderTarget =  NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,metalDrawable.handle()).texture;
+            }
+            renderPassDesc.colorAttachments[0].texture =renderTarget;
         }
         else if(desc.tRenderTarget){
-            GEMetalTextureRenderTarget *t_rt = (GEMetalTextureRenderTarget *)desc.tRenderTarget;
+            auto *t_rt = (GEMetalTextureRenderTarget *)desc.tRenderTarget;
             renderPassDesc.renderTargetWidth = t_rt->texturePtr->desc.width;
             renderPassDesc.renderTargetHeight = t_rt->texturePtr->desc.height;
-            renderPassDesc.colorAttachments[0].texture = t_rt->texturePtr->texture;
+            id<MTLTexture> renderTarget;
+            if(desc.multisampleResolve){
+                renderTarget = NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get())->texture.handle());
+                multiSampleTextureTarget =  NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,t_rt->texturePtr->texture.handle());
+            }
+            else {
+                renderTarget =  NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,t_rt->texturePtr->texture.handle());
+            }
+            renderPassDesc.colorAttachments[0].texture = renderTarget;
         }
         else {
             DEBUG_STREAM("Failed to Create GERenderPass");
             exit(1);
         };
+
+        if(desc.multisampleResolve){
+            auto resolveTexture = (GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get();
+            renderPassDesc.colorAttachments[0].resolveTexture = multiSampleTextureTarget;
+            renderPassDesc.colorAttachments[0].resolveSlice = desc.resolveDesc.slice;
+            renderPassDesc.colorAttachments[0].resolveDepthPlane = desc.resolveDesc.depth;
+            renderPassDesc.colorAttachments[0].resolveLevel = desc.resolveDesc.level;
+        }
         
         switch (desc.colorAttachment->loadAction) {
             case GERenderPassDescriptor::ColorAttachment::Load : {
@@ -75,35 +134,40 @@ _NAMESPACE_BEGIN_
     };
 
     void GEMetalCommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState){
-        GEMetalRenderPipelineState *ps = (GEMetalRenderPipelineState *)pipelineState.get();
+        auto *ps = (GEMetalRenderPipelineState *)pipelineState.get();
         ps->renderPipelineState.assertExists();
         [rp setRenderPipelineState:NSOBJECT_OBJC_BRIDGE(id<MTLRenderPipelineState>,ps->renderPipelineState.handle())];
+        renderPipelineState = ps;
     };
 
-    void GEMetalCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index){
+    void GEMetalCommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
         GEMetalBuffer *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
+        unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
         [rp setVertexBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
     };
 
-    void GEMetalCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index){
+    void GEMetalCommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
         GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
-        [rp setVertexTexture:metalTexture->texture atIndex:index];
+        unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
+        [rp setVertexTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
     };
 
-    void GEMetalCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index){
+    void GEMetalCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
-        GEMetalBuffer *metalBuffer = (GEMetalBuffer *)buffer.get();
+        auto *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
+        unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
         [rp setFragmentBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
     };
 
-    void GEMetalCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index){
+    void GEMetalCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
-        GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
-        [rp setFragmentTexture:metalTexture->texture atIndex:index];
+        auto *metalTexture = (GEMetalTexture *)texture.get();
+        unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
+        [rp setFragmentTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
     };
 
     void GEMetalCommandBuffer::setViewports(std::vector<GEViewport> viewports){
@@ -118,10 +182,11 @@ _NAMESPACE_BEGIN_
             metalViewport.height = viewport.height;
             metalViewport.znear = viewport.nearDepth;
             metalViewport.zfar = viewport.farDepth;
-            metalViewports.push_back(std::move(metalViewport));
+            metalViewports.push_back(metalViewport);
             ++viewports_it;
         };
-        [rp setViewports:metalViewports.data() count:metalViewports.size()];
+        auto s = metalViewports.size();
+        [rp setViewports:metalViewports.data() count:s];
     };
 
     void GEMetalCommandBuffer::setScissorRects(std::vector<GEScissorRect> scissorRects){
@@ -130,14 +195,15 @@ _NAMESPACE_BEGIN_
         while(rects_it != scissorRects.end()){
             GEScissorRect & rect = *rects_it;
             MTLScissorRect metalRect;
-            metalRect.x = rect.x;
-            metalRect.y = rect.y;
-            metalRect.width = rect.width;
-            metalRect.height = rect.height;
-            metalRects.push_back(std::move(metalRect));
+            metalRect.x = (NSUInteger)rect.x;
+            metalRect.y = (NSUInteger)rect.y;
+            metalRect.width = (NSUInteger)rect.width;
+            metalRect.height = (NSUInteger)rect.height;
+            metalRects.push_back(metalRect);
             ++rects_it;
         };
-        [rp setScissorRects:metalRects.data() count:metalRects.size()];
+        auto s = metalRects.size();
+        [rp setScissorRects:metalRects.data() count:s];
     };
     
     void GEMetalCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx){
@@ -158,6 +224,7 @@ _NAMESPACE_BEGIN_
     };
 
     void GEMetalCommandBuffer::finishRenderPass(){
+        renderPipelineState = nullptr;
         [rp endEncoding];
     };
 
@@ -167,14 +234,34 @@ _NAMESPACE_BEGIN_
     };
 
     void GEMetalCommandBuffer::setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState){
-        GEMetalComputePipelineState *ps = (GEMetalComputePipelineState *)pipelineState.get();
+        assert(cp != nil && "");
+        auto * ps = (GEMetalComputePipelineState *)pipelineState.get();
         ps->computePipelineState.assertExists();
+        computePipelineState = ps;
         [cp setComputePipelineState:NSOBJECT_OBJC_BRIDGE(id<MTLComputePipelineState>,ps->computePipelineState.handle())];
     };
 
-    void GEMetalCommandBuffer::finishComputePass(){
+    void GEMetalCommandBuffer::bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned int _id) {
+        assert(cp != nil && "");
+        auto mtl_buffer = (GEMetalBuffer *)buffer.get();
+        [cp setBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,mtl_buffer->metalBuffer.handle()) offset:0 atIndex:getResourceLocalIndexFromGlobalIndex(_id,computePipelineState->computeShader->internal)];
+    }
 
+    void GEMetalCommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int _id) {
+        assert(cp != nil && "");
+        auto mtl_texture = (GEMetalTexture *)texture.get();
+        [cp setTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_texture->texture.handle()) atIndex:getResourceLocalIndexFromGlobalIndex(_id,computePipelineState->computeShader->internal)];
+    }
+
+    void GEMetalCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
+        assert(cp != nil && "");
+        auto & threadgroup_desc = computePipelineState->computeShader->internal.threadgroupDesc;
+        [cp dispatchThreads:MTLSizeMake(x,y,z) threadsPerThreadgroup:MTLSizeMake(threadgroup_desc.x,threadgroup_desc.y,threadgroup_desc.z)];
+    }
+
+    void GEMetalCommandBuffer::finishComputePass(){
         [cp endEncoding];
+        computePipelineState = nullptr;
     };
 
     void GEMetalCommandBuffer::_present_drawable(NSSmartPtr & drawable){
@@ -199,6 +286,18 @@ _NAMESPACE_BEGIN_
         NSLog(@"Commit to GPU!");
     };
 
+    void GEMetalCommandBuffer::waitForFence(SharedHandle<GEFence> &fence, unsigned int val) {
+        auto event = (GEMetalFence *)fence.get();
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
+                encodeWaitForEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
+    }
+
+    void GEMetalCommandBuffer::signalFence(SharedHandle<GEFence> &fence, unsigned int val) {
+        auto event = (GEMetalFence *)fence.get();
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
+                encodeSignalEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
+    }
+
     void GEMetalCommandBuffer::reset(){
         buffer = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,parentQueue->commandQueue.handle()) commandBuffer]};
     };
@@ -209,17 +308,9 @@ _NAMESPACE_BEGIN_
         // [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) autorelease];
     }
 
-//    void GEMetalCommandBuffer::setResourceConstAtComputeFunc(SharedHandle<GEBuffer> &buffer, unsigned int index) {
-//
-//    }
-//
-//    void GEMetalCommandBuffer::setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned int index) {
-//
-//    };
-
     GEMetalCommandQueue::GEMetalCommandQueue(NSSmartPtr & queue,unsigned size):
     GECommandQueue(size),
-    commandQueue(queue),commandBuffers(0){
+    commandQueue(queue),commandBuffers(){
         
     };
 

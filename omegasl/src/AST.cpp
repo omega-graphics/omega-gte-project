@@ -85,9 +85,10 @@ namespace omegasl::ast {
                     },TypeExpr::Create("VECTOR_TYPE")};
 
                 write = new FuncType {BUILTIN_WRITE,global_scope,true,{},{
+                    {"dest",TypeExpr::Create("TEXTURE_TYPE")},
+                    {"coord",TypeExpr::Create("VECTOR_TYPE")},
                     {"data",TypeExpr::Create("VECTOR_TYPE")},
-                    {"dest",TypeExpr::Create("TEXTURE_TYPE")}
-                    },TypeExpr::Create("void")};
+                    },TypeExpr::Create(void_type)};
 
                 sample = new FuncType {BUILTIN_SAMPLE,global_scope,true,{},{
                     {"sampler",TypeExpr::Create("SAMPLER_TYPE")},

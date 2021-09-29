@@ -19,20 +19,21 @@ class GEMetalNativeRenderTarget : public GENativeRenderTarget {
 public:
     GEMetalNativeRenderTarget(SharedHandle<GECommandQueue> commandQueue,CAMetalLayer *metalLayer);
     CGSize drawableSize;
-    SharedHandle<CommandBuffer> commandBuffer();
+    SharedHandle<CommandBuffer> commandBuffer() override;
     NSSmartPtr & getDrawable();
-    void commitAndPresent();
+    void commitAndPresent() override;
     void reset();
-    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer);
+    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
 };
 
 class GEMetalTextureRenderTarget : public GETextureRenderTarget {
     SharedHandle<GECommandQueue> commandQueue;
 public:
-    GEMetalTextureRenderTarget(SharedHandle<GEMetalTexture> texture);
+    GEMetalTextureRenderTarget(SharedHandle<GETexture> & texture,SharedHandle<GECommandQueue> & commandQueue);
     SharedHandle<GEMetalTexture> texturePtr;
-    SharedHandle<CommandBuffer> commandBuffer();
-    void commit();
+    SharedHandle<CommandBuffer> commandBuffer() override;
+    void commit() override;
+    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
 };
 
 _NAMESPACE_END_

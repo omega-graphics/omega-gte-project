@@ -87,13 +87,15 @@ static void render(id<MTLDevice> dev){
     OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
     using RenderPassDesc = OmegaGTE::GERenderTarget::RenderPassDesc;
     renderPass.colorAttachment = new RenderPassDesc::ColorAttachment(RenderPassDesc::ColorAttachment::ClearColor(1.f,1.f,1.f,1.f),RenderPassDesc::ColorAttachment::Clear);
-    NSLog(@"Starting Render Pass");
+//    NSLog(@"Starting Render Pass");
+//    commandBuffer->startRenderPass(renderPass);
+//    commandBuffer->setRenderPipelineState(renderPipeline);
+//    commandBuffer->bindResourceAtVertexShader(vertexBuffer,0);
+//    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
+//    NSLog(@"Ending Render Pass");
+//    commandBuffer->endRenderPass();
     commandBuffer->startRenderPass(renderPass);
-    commandBuffer->setRenderPipelineState(renderPipeline);
-    commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
-    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
-    NSLog(@"Ending Render Pass");
-    commandBuffer->endRenderPass();
+//    commandBuffer->
 
     NSLog(@"Ended Render Pass");
     nativeRenderTarget->submitCommandBuffer(commandBuffer);
@@ -127,7 +129,7 @@ static void render(id<MTLDevice> dev){
 
 
     
-        OmegaGTE::NativeRenderTargetDescriptor desc;
+        OmegaGTE::NativeRenderTargetDescriptor desc{};
         desc.metalLayer = metalLayer;
 
         nativeRenderTarget = gte.graphicsEngine->makeNativeRenderTarget(desc);
@@ -183,10 +185,8 @@ int main(int argc,const char * argv[]){
     auto dir = OmegaCommon::FS::Path(argv[0]).dir();
     
     chdir(dir.c_str());
-
-    __strong id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     
-    gte = OmegaGTE::Init((void *)device);
+    gte = OmegaGTE::InitWithDefaultDevice();
 
    funcLib = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
 

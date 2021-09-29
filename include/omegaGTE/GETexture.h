@@ -6,6 +6,12 @@
 
 _NAMESPACE_BEGIN_
 
+    enum class TexturePixelFormat : int {
+        RGBA8Unorm,
+        RGBA16Unorm,
+        RGBA8Unorm_SRGB
+    };
+
     class  OMEGAGTE_EXPORT GETexture {
     public:
         typedef enum : unsigned char {
@@ -22,6 +28,7 @@ _NAMESPACE_BEGIN_
     protected:
         GETextureType type;
         GETextureUsage usage;
+        TexturePixelFormat pixelFormat;
     public:
         virtual void copyBytes(void *bytes,size_t len) = 0;
     };
@@ -35,7 +42,8 @@ _NAMESPACE_BEGIN_
     struct  OMEGAGTE_EXPORT TextureDescriptor {
         GETexture::GETextureType type;
         StorageOpts storage_opts;
-        GETexture::GETextureUsage usage;
+        GETexture::GETextureUsage usage = GETexture::GPURead;
+        TexturePixelFormat pixelFormat = TexturePixelFormat::RGBA8Unorm;
         unsigned width;
         unsigned height;
         unsigned depth;

@@ -74,9 +74,18 @@ using namespace metal;
             else if(attributeName == ATTRIBUTE_VERTEX_ID){
                 out << "vertex_id";
             }
-//            else if(attributeName == ATTRIBUTE_COLOR){
-//                out << "color";
-//            }
+            else if(attributeName == ATTRIBUTE_INSTANCE_ID){
+                out << "instance_id";
+            }
+            else if(attributeName == ATTRIBUTE_GLOBALTHREAD_ID){
+                out << "thread_position_in_grid";
+            }
+            else if(attributeName == ATTRIBUTE_THREADGROUP_ID){
+                out << "threadgroup_position_in_grid";
+            }
+            else if(attributeName == ATTRIBUTE_LOCALTHREAD_ID){
+                out << "thread_position_in_threadgroup";
+            }
         }
         void generateExpr(ast::Expr *expr) override {
             switch (expr->type) {
@@ -123,12 +132,20 @@ using namespace metal;
                     }
                     else if(func_name == BUILTIN_SAMPLE){
                         generated = true;
-                        generateExpr(_expr->args[0]);
+                        generateExpr(_expr->args[1]);
                         shaderOut << ".sample";
                         shaderOut << "(";
-                        generateExpr(_expr->args[1]);
+                        generateExpr(_expr->args[0]);
                         shaderOut << ",";
                         generateExpr(_expr->args[2]);
+                        shaderOut << ")";
+                    }
+                    else if(func_name == BUILTIN_WRITE){
+                        generated = true;
+                        generateExpr(_expr->args[0]);
+                        shaderOut << ".write";
+                        shaderOut << "(";
+                        generateExpr(_expr->args[1]);
                         shaderOut << ")";
                     }
 
@@ -149,13 +166,19 @@ using namespace metal;
         }
     private:
         unsigned level_count;
+        bool shaderDecl = false;
     public:
         void generateBlock(ast::Block &block) override {
 
             for(unsigned l = level_count;l != 0;l--){
                 shaderOut << "    ";
             }
-            shaderOut << "{" << std::endl;
+            if(shaderDecl) {
+                shaderDecl = false;
+            }
+            else {
+                shaderOut << "{" << std::endl;
+            }
             ++level_count;
 
             for(auto stmt : block.body){
@@ -221,6 +244,7 @@ using namespace metal;
                     break;
                 }
                 case SHADER_DECL : {
+                    shaderDecl = true;
                     level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
                     auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
@@ -253,6 +277,9 @@ using namespace metal;
                     else if(_decl->shaderType == ast::ShaderDecl::Compute){
                         shaderOut << "kernel";
                         shadermap_entry.type = OMEGASL_SHADER_COMPUTE;
+                        shadermap_entry.threadgroupDesc.x = _decl->threadgroupDesc.x;
+                        shadermap_entry.threadgroupDesc.y = _decl->threadgroupDesc.y;
+                        shadermap_entry.threadgroupDesc.z = _decl->threadgroupDesc.z;
                     }
 
                     shaderOut << " ";
@@ -262,32 +289,72 @@ using namespace metal;
 
                     OmegaCommon::Vector<omegasl_shader_layout_desc> shaderLayout;
 
-                    unsigned i = 0,bufferCount = 0,textureCount = 0;
+                    OmegaCommon::Vector<OmegaCommon::String> staticSamplers;
+
+                    unsigned i = 0,bufferCount = 0,textureCount = 0,samplerCount = 0;
                     for(auto & res : _decl->resourceMap){
 
                         omegasl_shader_layout_desc_type layoutDescType;
                         omegasl_shader_layout_desc_io_mode  ioMode;
 
-                        if(i != 0){
-                            shaderOut << ",";
-                        }
+
+
                         auto & res_desc = *(resourceStore.find(res.name));
                         auto type_ = typeResolver->resolveTypeWithExpr(res_desc->typeExpr);
 
-                        if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
-                            shaderOut << "constant ";
-                            ioMode = OMEGASL_SHADER_DESC_IO_IN;
-                        }
-                        else if(res.access == ast::ShaderDecl::ResourceMapDesc::Inout) {
-                            shaderOut << "device ";
-                            ioMode = OMEGASL_SHADER_DESC_IO_INOUT;
-                        }
-                        else if(res.access == ast::ShaderDecl::ResourceMapDesc::Out){
-                            shaderOut << "device ";
-                            ioMode = OMEGASL_SHADER_DESC_IO_OUT;
+                        if(i != 0 && !(res_desc->isStatic)){
+                            shaderOut << ",";
                         }
 
-                        bool isTexture = false,isBuffer = false;
+                        if(type_ == ast::builtins::buffer_type) {
+
+                            if (res.access == ast::ShaderDecl::ResourceMapDesc::In) {
+                                shaderOut << "constant ";
+                                ioMode = OMEGASL_SHADER_DESC_IO_IN;
+                            } else if (res.access == ast::ShaderDecl::ResourceMapDesc::Inout) {
+                                shaderOut << "device ";
+                                ioMode = OMEGASL_SHADER_DESC_IO_INOUT;
+                            } else {
+                                shaderOut << "device ";
+                                ioMode = OMEGASL_SHADER_DESC_IO_OUT;
+                            }
+
+                        }
+
+                        bool isTexture = false,isBuffer = false,isSampler = false;
+
+                        auto writeSampler = [&](){
+                            std::ostringstream out;
+                            out << "constexpr sampler " << res_desc->name << " = sampler(filter::";
+                            /// 1. Write Filter Mode
+                            switch (res_desc->staticSamplerDesc->filter) {
+                                case OMEGASL_SHADER_SAMPLER_LINEAR_FILTER : {
+                                    out << "linear";
+                                    break;
+                                }
+                                case OMEGASL_SHADER_SAMPLER_POINT_FILTER : {
+                                    out << "nearest";
+                                    break;
+                                }
+                            }
+
+                            out << ",address::";
+
+                            /// 2. Write Address Mode
+
+                            switch(res_desc->staticSamplerDesc->uAddressMode){
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP : {
+                                    out << "repeat";
+                                    break;
+                                }
+                                case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRROR : {
+                                    out << "mirror";
+                                }
+                            }
+
+                            out << ");" << std::endl;
+                            staticSamplers.push_back(out.str());
+                        };
 
                         if(type_ == ast::builtins::buffer_type){
                             isBuffer = true;
@@ -297,18 +364,45 @@ using namespace metal;
                         }
                         else if(type_ == ast::builtins::texture1d_type){
                             isTexture = true;
-                            shaderOut << "texture1d<half,";
+                            shaderOut << "texture1d<float,";
                             layoutDescType = OMEGASL_SHADER_TEXTURE1D_DESC;
                         }
                         else if(type_ == ast::builtins::texture2d_type){
                             isTexture = true;
-                            shaderOut << "texture2d<half,";
+                            shaderOut << "texture2d<float,";
                             layoutDescType = OMEGASL_SHADER_TEXTURE2D_DESC;
+                        }
+                        else if(type_ == ast::builtins::texture3d_type){
+                            isTexture = true;
+                            shaderOut << "texture3d<float,";
+                            layoutDescType = OMEGASL_SHADER_TEXTURE3D_DESC;
+                        }
+                        else if(type_ == ast::builtins::sampler2d_type){
+                            isSampler = true;
+                            if(res_desc->isStatic){
+                                layoutDescType = OMEGASL_SHADER_STATIC_SAMPLER2D_DESC;
+                                writeSampler();
+                            }
+                            else {
+                                layoutDescType = OMEGASL_SHADER_SAMPLER2D_DESC;
+                            }
+                        }
+                        else if(type_ == ast::builtins::sampler3d_type){
+                            isSampler = true;
+                            if(res_desc->isStatic){
+                                layoutDescType = OMEGASL_SHADER_STATIC_SAMPLER3D_DESC;
+                                writeSampler();
+                            }
+                            else {
+                                shaderOut << "sampler";
+                                layoutDescType = OMEGASL_SHADER_SAMPLER3D_DESC;
+                            }
+                            continue;
                         }
 
                         if(isTexture){
                             if(res.access == ast::ShaderDecl::ResourceMapDesc::In){
-                                shaderOut << "access::read>";
+                                shaderOut << "access::sample>";
                             }
                             else if(res.access == ast::ShaderDecl::ResourceMapDesc::Inout){
                                 shaderOut << "access::readwrite>";
@@ -318,7 +412,9 @@ using namespace metal;
                             }
                         }
 
-                        shaderOut << " " << res_desc->name;
+                        if(!res_desc->isStatic) {
+                            shaderOut << " " << res_desc->name;
+                        }
 
                         unsigned *binding;
 
@@ -327,6 +423,9 @@ using namespace metal;
                         }
                         else if(isBuffer){
                             binding = &bufferCount;
+                        }
+                        else if(isSampler){
+                            binding = &samplerCount;
                         }
 
                         shaderLayout.push_back({layoutDescType,*binding,ioMode,res_desc->registerNumber});
@@ -340,6 +439,11 @@ using namespace metal;
                         else if(isBuffer){
                             shaderOut << "[[buffer(" << bufferCount;
                             ++bufferCount;
+                            shaderOut << ")]]";
+                        }
+                        else if(isSampler && !(res_desc->isStatic)){
+                            shaderOut << "[[sampler(" << samplerCount;
+                            ++samplerCount;
                             shaderOut << ")]]";
                         }
                         i++;
@@ -381,7 +485,12 @@ using namespace metal;
                             shaderOut << "]]";
                         }
                     }
-                    shaderOut << ")";
+                    shaderOut << "){" << std::endl;
+
+                    for(auto & ss : staticSamplers){
+                        shaderOut << ss;
+                    }
+                    shaderOut << std::endl;
 
                     shaderMap.insert(std::make_pair(object_file,shadermap_entry));
 

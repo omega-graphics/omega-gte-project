@@ -145,6 +145,12 @@ Builtin-Functions:
     ``float4 sample(sampler3d sampler,texture3d texture,float3 coord)``:
         Samples a texture3d and returns the color at the provided coord.
 
+    ``void write(texture2d texture,float2 coord,float4 color)``:
+        Samples a texture3d and returns the color at the provided coord.
+
+    ``void write(texture3d texture,float3 coord,float4 color)``:
+        Samples a texture3d and returns the color at the provided coord.
+
 Attributes:
     Render Pipeline Attributes:
         ``VertexID``:

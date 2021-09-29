@@ -68,11 +68,11 @@ _NAMESPACE_BEGIN_
             void startRenderPass(const RenderPassDesc & desc);
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
 
-            void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned index);
-            void setResourceConstAtVertexFunc(SharedHandle<GETexture> & texture,unsigned index);
+            void bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned id);
+            void bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned id);
         
-            void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> & buffer,unsigned index);
-            void setResourceConstAtFragmentFunc(SharedHandle<GETexture> & texture,unsigned index);
+            void bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned id);
+            void bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned id);
         
             void setViewports(std::vector<GEViewport> viewports);
             void setScissorRects(std::vector<GEScissorRect> scissorRects);

@@ -20,23 +20,26 @@ _NAMESPACE_BEGIN_
         GEMetalCommandQueue *parentQueue = nullptr;
 
         GEMetalRenderPipelineState *renderPipelineState = nullptr;
-        GEMetalRenderPipelineState *computePipelineState = nullptr;
+        GEMetalComputePipelineState *computePipelineState = nullptr;
 
         friend class GEMetalCommandQueue;
+        unsigned getResourceLocalIndexFromGlobalIndex(unsigned _id,omegasl_shader & shader);
         void _present_drawable(NSSmartPtr & drawable);
         void _commit();
     public:
         NSSmartPtr buffer;
         void startBlitPass() override;
+        void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) override;
+        void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest, const TextureRegion &region, const GPoint3D &destCoord) override;
         void finishBlitPass() override;
         
         void startRenderPass(const GERenderPassDescriptor &desc) override;
         void setVertexBuffer(SharedHandle<GEBuffer> &buffer) override;
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState) override;
-        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned index) override;
-        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned index) override;
-        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned index) override;
-        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned index) override;
+        void bindResourceAtVertexShader(SharedHandle<GEBuffer> &buffer, unsigned id) override;
+        void bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned id) override;
+        void bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned id) override;
+        void bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned id) override;
         void setViewports(std::vector<GEViewport> viewports) override;
         void setScissorRects(std::vector<GEScissorRect> scissorRects) override;
         void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx) override;
@@ -44,9 +47,13 @@ _NAMESPACE_BEGIN_
         
         void startComputePass(const GEComputePassDescriptor &desc) override;
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
-//        void setResourceConstAtComputeFunc(SharedHandle<GEBuffer> &buffer, unsigned index) override;
-//        void setResourceConstAtComputeFunc(SharedHandle<GETexture> &texture, unsigned index) override;
+        void bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned id) override;
+        void bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned id) override;
+        void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
+
+        void waitForFence(SharedHandle<GEFence> &fence, unsigned int val) override;
+        void signalFence(SharedHandle<GEFence> &fence, unsigned int val) override;
 
         GEMetalCommandBuffer(GEMetalCommandQueue *parentQueue);
         ~GEMetalCommandBuffer();

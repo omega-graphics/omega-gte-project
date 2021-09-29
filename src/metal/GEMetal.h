@@ -32,15 +32,16 @@ public:
 class GEMetalBuffer : public GEBuffer {
 public:
     NSSmartPtr metalBuffer;
+    NSSmartPtr layoutDesc;
     size_t size();
-    GEMetalBuffer(NSSmartPtr & buffer);
+    GEMetalBuffer(NSSmartPtr & buffer,NSSmartPtr & layoutDesc);
     ~GEMetalBuffer();
 };
 
 class GEMetalFence : public GEFence {
 public:
-    NSSmartPtr metalFence;
-    GEMetalFence(NSSmartPtr & fence);
+    NSSmartPtr metalEvent;
+    GEMetalFence(NSSmartPtr & event);
 };
 
 struct GEMetalSamplerState : public GESamplerState {
@@ -50,7 +51,7 @@ struct GEMetalSamplerState : public GESamplerState {
 
 #endif
 
-SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(void *device);
+SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(SharedHandle<GTEDevice> & device);
 _NAMESPACE_END_
 
 #endif

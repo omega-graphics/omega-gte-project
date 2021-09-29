@@ -14,14 +14,36 @@
 
 _NAMESPACE_BEGIN_
 
+struct GTEDeviceFeatures {
+    bool raytracing;
+};
+
+struct GTEDevice {
+    typedef enum : int {
+        Integrated,
+        Discrete
+    } Type;
+    const Type type;
+    const OmegaCommon::String name;
+    const GTEDeviceFeatures features;
+protected:
+    GTEDevice(Type type,const char *name,GTEDeviceFeatures & features):type(type),name(name),features(features){
+
+    };
+};
+
+OMEGAGTE_EXPORT OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices();
+
 struct OMEGAGTE_EXPORT GTE {
     SharedHandle<OmegaGraphicsEngine> graphicsEngine;
     SharedHandle<OmegaTessalationEngine> tessalationEngine;
 };
 
 
+OMEGAGTE_EXPORT GTE Init(SharedHandle<GTEDevice> & device);
 
-OMEGAGTE_EXPORT GTE Init(void *device);
+OMEGAGTE_EXPORT GTE InitWithDefaultDevice();
+
 OMEGAGTE_EXPORT void Close(GTE &gte);
 
 _NAMESPACE_END_

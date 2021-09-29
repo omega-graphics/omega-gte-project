@@ -36,8 +36,20 @@ void GERenderTarget::CommandBuffer::setRenderPipelineState(SharedHandle<GERender
     commandBuffer->setRenderPipelineState(pipelineState);
 };
 
-void GERenderTarget::CommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> & buffer,unsigned idx){
-    commandBuffer->setResourceConstAtVertexFunc(buffer,idx);
+void GERenderTarget::CommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned id){
+    commandBuffer->bindResourceAtVertexShader(buffer,id);
+};
+
+void GERenderTarget::CommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned id){
+    commandBuffer->bindResourceAtVertexShader(texture,id);
+};
+
+void GERenderTarget::CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned id){
+    commandBuffer->bindResourceAtFragmentShader(buffer,id);
+};
+
+void GERenderTarget::CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned id){
+    commandBuffer->bindResourceAtFragmentShader(texture,id);
 };
 
 void GERenderTarget::CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t start){

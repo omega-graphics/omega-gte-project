@@ -33,6 +33,7 @@ _NAMESPACE_BEGIN_
 
     struct GTEShader;
     struct GTEShaderLibrary;
+    struct GTEDevice;
     class GETexture;
     typedef class __GEComputePipelineState GEComputePipelineState;
     typedef class __GERenderPipelineState  GERenderPipelineState;
@@ -47,6 +48,8 @@ _NAMESPACE_BEGIN_
 
     struct NativeRenderTargetDescriptor;
     struct TextureRenderTargetDescriptor {
+        bool renderToExistingTexture = false;
+        SharedHandle<GETexture> texture = nullptr;
         GRect rect;
     };
 
@@ -150,7 +153,7 @@ _NAMESPACE_BEGIN_
         (NEVER CALL THIS FUNCTION! Please invoke GTE::Init())
         @returns SharedHandle<OmegaGraphicsEngine>
         */
-        static SharedHandle<OmegaGraphicsEngine> Create(void *device);
+        static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
          /**
           @brief Loads an OmegaSL Shader Library,
           @param path Path to an `omegasllib` file.

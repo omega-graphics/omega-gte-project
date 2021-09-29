@@ -24,7 +24,7 @@ namespace omegasl {
 
     inline bool isValidAttributeInContext(OmegaCommon::StrRef subject,AttributeContext context){
         if(context == AttributeContext::StructField){
-            return (subject == ATTRIBUTE_COLOR) || (subject == ATTRIBUTE_POSITION);
+            return (subject == ATTRIBUTE_COLOR) || (subject == ATTRIBUTE_POSITION) || (subject == ATTRIBUTE_TEXCOORD);
         }
         else if(context == AttributeContext::VertexShaderArgument){
             return (subject == ATTRIBUTE_VERTEX_ID);
@@ -74,15 +74,15 @@ namespace omegasl {
 
             ast::builtins::buffer_type,
             ast::builtins::texture1d_type,
-            ast::builtins::texture2d_type
+            ast::builtins::texture2d_type,
+            ast::builtins::sampler2d_type,
+            ast::builtins::sampler3d_type
             }),
             builtinFunctionMap({
 
                 ast::builtins::make_float2,
                 ast::builtins::make_float3,
                 ast::builtins::make_float4,
-
-                ast::builtins::read,
                 ast::builtins::dot,
                 ast::builtins::cross,
                 ast::builtins::sample,
@@ -626,8 +626,80 @@ namespace omegasl {
                         }
                     }
                 }
-                else {
+                    /// @brief write(texture texture,texcoord coord,float4 data) function
+                else if(func_found == ast::builtins::write){
 
+                    if(_expr->args.size() != 3){
+                        std::cout << BUILTIN_WRITE << " expects 3 arguments." << std::endl;
+                        return nullptr;
+                    }
+
+                    auto first_t_e = performSemForExpr(_expr->args[0],funcContext);
+                    auto second_t_e = performSemForExpr(_expr->args[1],funcContext);
+                    auto third_t_e = performSemForExpr(_expr->args[2],funcContext);
+
+                    if(first_t_e == nullptr || second_t_e == nullptr || third_t_e == nullptr){
+                        return nullptr;
+                    }
+
+                    auto _t = resolveTypeWithExpr(first_t_e);
+                    if(_t == nullptr){
+                        return nullptr;
+                    }
+
+                    if(_t == ast::builtins::texture1d_type){
+
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(_t == nullptr){
+                            return nullptr;
+                        }
+
+                        if(_t != ast::builtins::float_type){
+                            std::cout << "2nd param of function " << BUILTIN_WRITE << "must be a float" << std::endl;
+                            return nullptr;
+                        }
+
+                    }
+                    else if(_t == ast::builtins::texture2d_type){
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(_t == nullptr){
+                            return nullptr;
+                        }
+
+                        if(_t != ast::builtins::float2_type){
+                            std::cout << "2nd param of function " << BUILTIN_WRITE << "must be a float2" << std::endl;
+                            return nullptr;
+                        }
+                    }
+                    else if(_t == ast::builtins::texture3d_type){
+                        _t = resolveTypeWithExpr(second_t_e);
+                        if(_t == nullptr){
+                            return nullptr;
+                        }
+
+                        if(_t != ast::builtins::float3_type){
+                            std::cout << "2nd param of function " << BUILTIN_WRITE << "must be a float3" << std::endl;
+                            return nullptr;
+                        }
+                    }
+                    else {
+                        std::cout << BUILTIN_WRITE << " expects a texture-type for the first argument." << std::endl;
+                        return nullptr;
+                    }
+
+                    _t = resolveTypeWithExpr(third_t_e);
+                    if(_t == nullptr){
+                        return nullptr;
+                    }
+
+                    if(_t != ast::builtins::float4_type){
+                        std::cout << "3rd param of function " << BUILTIN_WRITE << "must be a float4" << std::endl;
+                        return nullptr;
+                    }
+
+                }
+                else {
+                    /// TODO: Typecheck function.
                     /// Check Params of Function
                     for(unsigned i = 0;i < _expr->args.size();i++){
                         auto _ty_expr = performSemForExpr(_expr,funcContext);
@@ -638,6 +710,7 @@ namespace omegasl {
                 return func_found->returnType;
 
             }
+
             return ret;
         }
 
@@ -718,12 +791,12 @@ namespace omegasl {
 
                         if(f.attributeName.has_value()){
                             if(!isInternal){
-                                std::cout << "In struct" << f.name << std::endl << "Cannot use attributes on fields in public structs" << std::endl;
+                                std::cout << "In struct " << _decl->name << std::endl << "Cannot use attributes on fields in public structs" << std::endl;
                                 return false;
                             }
 
                             if(!isValidAttributeInContext(f.attributeName.value(),AttributeContext::StructField)){
-                                std::cout << "In struct" << f.name << std::endl << "Invalid attribute name `" << f.attributeName.value() << "` " << std::endl;
+                                std::cout << "In struct " << _decl->name << std::endl << "Invalid attribute name `" << f.attributeName.value() << "` " << std::endl;
                                 return false;
                             }
                         }
@@ -751,6 +824,7 @@ namespace omegasl {
 
                     /// 2. Check resource type.
                     auto ty = resolveTypeWithExpr(_decl->typeExpr);
+
                     if(ty != ast::builtins::buffer_type
                     && ty != ast::builtins::texture1d_type
                     && ty != ast::builtins::texture2d_type
@@ -917,6 +991,11 @@ namespace omegasl {
             _n->type = SHADER_DECL;
 
             while((t = lexer->nextTok()).type != TOK_RBRACKET){
+
+                if(t.type == TOK_COMMA){
+                    t = lexer->nextTok();
+                }
+
                 if(t.type != TOK_KW){
                     // error
                     std::cout << "Expected KW" << std::endl;
@@ -1047,14 +1126,8 @@ namespace omegasl {
                 std::cout << "Struct cannot have a resource map!" << std::endl;
                 return nullptr;
             }
-            else if(t.str == KW_STATIC) {
-                node = (ast::Decl *)new ast::ResourceDecl();
-                node->type = RESOURCE_DECL;
-                ((ast::ResourceDecl *)node)->isStatic = true;
-                staticResourceDecl = true;
-            }
 
-            if(node == nullptr){
+            if(node == nullptr && t.str != KW_STATIC){
                 node = (ast::Decl *)new ast::ShaderDecl();
                 node->type = SHADER_DECL;
             }
@@ -1070,6 +1143,118 @@ namespace omegasl {
             else if(t.str == KW_COMPUTE){
                 auto _s = (ast::ShaderDecl *)node;
                 _s->shaderType = ast::ShaderDecl::Compute;
+                /// Parse ThreadGroup Desc for Compute Shader.
+                /// @example [...]compute(x=1,y=1,z=1) computeShader(){...}
+                t = lexer->nextTok();
+
+                if(t.type != TOK_LPAREN){
+                    delete _s;
+                    std::cout << "Expected LParen" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+                if(t.type != TOK_ID && t.str != "x"){
+                    delete _s;
+                    std::cout << "Expected ID with value of x" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+
+                if(t.type != TOK_OP && t.str != "="){
+                    delete _s;
+                    std::cout << "Expected =" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+                if(t.type != TOK_NUM_LITERAL){
+                    delete _s;
+                    std::cout << "Expected Num Literal" << std::endl;
+                    return nullptr;
+                }
+
+                _s->threadgroupDesc.x = std::stoi(t.str);
+
+                t = lexer->nextTok();
+                if(t.type != TOK_COMMA){
+                    delete _s;
+                    std::cout << "Expected Comma" << std::endl;
+                    return nullptr;
+                }
+
+
+                t = lexer->nextTok();
+                if(t.type != TOK_ID && t.str != "y"){
+                    delete _s;
+                    std::cout << "Expected ID with value of y" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+
+                if(t.type != TOK_OP && t.str != "="){
+                    delete _s;
+                    std::cout << "Expected =" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+                if(t.type != TOK_NUM_LITERAL){
+                    delete _s;
+                    std::cout << "Expected Num Literal" << std::endl;
+                    return nullptr;
+                }
+
+                _s->threadgroupDesc.y = std::stoi(t.str);
+
+                t = lexer->nextTok();
+                if(t.type != TOK_COMMA){
+                    delete _s;
+                    std::cout << "Expected Comma" << std::endl;
+                    return nullptr;
+                }
+
+
+
+                t = lexer->nextTok();
+                if(t.type != TOK_ID && t.str != "z"){
+                    delete _s;
+                    std::cout << "Expected ID with value of z" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+
+                if(t.type != TOK_OP && t.str != "="){
+                    delete _s;
+                    std::cout << "Expected =" << std::endl;
+                    return nullptr;
+                }
+
+                t = lexer->nextTok();
+                if(t.type != TOK_NUM_LITERAL){
+                    delete _s;
+                    std::cout << "Expected Num Literal" << std::endl;
+                    return nullptr;
+                }
+
+                _s->threadgroupDesc.z = std::stoi(t.str);
+
+                t = lexer->nextTok();
+                if(t.type != TOK_RPAREN){
+                    delete _s;
+                    std::cout << "Expected RParen" << std::endl;
+                    return nullptr;
+                }
+
+            }
+            else if(t.str == KW_STATIC) {
+                node = (ast::Decl *)new ast::ResourceDecl();
+                node->type = RESOURCE_DECL;
+                ((ast::ResourceDecl *)node)->isStatic = true;
+                staticResourceDecl = true;
             }
             else {
                 /// TODO: Error! Unexpected Keyword!
@@ -1114,85 +1299,182 @@ namespace omegasl {
         auto id_for_decl = t.str;
         t = lexer->nextTok();
 
-        /// Parse FuncDecl/ShaderDecl
+
         if(t.type == TOK_LPAREN){
-            ast::FuncDecl *funcDecl;
-            if(node == nullptr){
-                funcDecl = new ast::FuncDecl();
-                funcDecl->type = FUNC_DECL;
-            }
-            else {
-                /// ShaderDecl is a FuncDecl!
-                funcDecl = (ast::FuncDecl *)node;
-            }
-
-            funcDecl->name = id_for_decl;
-            funcDecl->returnType = ty_for_decl;
-            t = lexer->nextTok();
-
-            while(t.type != TOK_RPAREN){
-                auto _tok = t;
+            /// Parse ResourceDecl (For Static Samplers)
+            if(staticResourceDecl){
+                auto res_decl = (ast::ResourceDecl *)node;
+                res_decl->typeExpr = ty_for_decl;
+                res_decl->name = id_for_decl;
+                ast::ResourceDecl::StaticSamplerDesc samplerDesc {};
                 t = lexer->nextTok();
-                bool type_is_pointer = false;
+                while(true){
 
-                if(t.type == TOK_ASTERISK){
-                    type_is_pointer = true;
+                    OmegaCommon::String sampler_prop_name;
+                    OmegaCommon::String sampler_prop_value;
+                    unsigned sampler_prop_value_i = 0;
+
+                    if(t.type != TOK_ID){
+                        delete res_decl;
+                        std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                        return nullptr;
+                    }
+
+                    sampler_prop_name = t.str;
+
                     t = lexer->nextTok();
+                    if(t.type != TOK_OP && t.str != OP_EQUAL){
+                        delete res_decl;
+                        std::cout << "Expected =" << std::endl;
+                        return nullptr;
+                    }
+
+                    t = lexer->nextTok();
+                    if(t.type == TOK_ID){
+                        sampler_prop_value = t.str;
+                    }
+                    else if(t.type == TOK_NUM_LITERAL){
+                       sampler_prop_value_i = std::stoi(t.str);
+                    }
+                    else {
+                        delete res_decl;
+                        std::cout << "Expected ID or Num Literal. Instead got:" << t.str << std::endl;
+                        return nullptr;
+                    }
+
+                    if(sampler_prop_name == SAMPLER_PROP_FILTER){
+                        if(sampler_prop_value == SAMPLER_FILTER_LINEAR){
+                            samplerDesc.filter = OMEGASL_SHADER_SAMPLER_LINEAR_FILTER;
+                        }
+                        else if(sampler_prop_value == SAMPLER_FILTER_POINT){
+                            samplerDesc.filter = OMEGASL_SHADER_SAMPLER_POINT_FILTER;
+                        }
+                        else if(sampler_prop_value == SAMPLER_FILTER_ANISOTROPIC){
+                            samplerDesc.filter = OMEGASL_SHADER_SAMPLER_MAX_ANISOTROPY_FILTER;
+                        }
+                    }
+                    else if(sampler_prop_name == SAMPLER_PROP_ADDRESS_MODE){
+                        omegasl_shader_static_sampler_address_mode addressMode;
+                        if(sampler_prop_value == SAMPLER_ADDRESS_MODE_WRAP){
+                            addressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP;
+                        }
+                        else if(sampler_prop_value == SAMPLER_ADDRESS_MODE_MIRROR){
+                            addressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRROR;
+                        }
+                        else if(sampler_prop_value == SAMPLER_ADDRESS_MODE_MIRRORWRAP){
+                            addressMode = OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRRORWRAP;
+                        }
+                        samplerDesc.uAddressMode = samplerDesc.vAddressMode = samplerDesc.wAddressMode = addressMode;
+                    }
+                    else if(sampler_prop_name == SAMPLER_PROP_MAX_ANISOTROPY){
+                        samplerDesc.maxAnisotropy = sampler_prop_value_i;
+                    }
+
+                    t = lexer->nextTok();
+
+                    if(t.type == TOK_COMMA){
+                        t = lexer->nextTok();
+                    }
+                    else if(t.type == TOK_RPAREN){
+                        break;
+                    }
+                    else {
+                        delete res_decl;
+                        std::cout << "Unexpected TOK:" << t.str << std::endl;
+                        return nullptr;
+                    }
+
                 }
 
-                auto var_ty = buildTypeRef(_tok,type_is_pointer);
-
-                if(t.type != TOK_ID){
-                    /// ERROR!
-                    delete node;
-                    std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                t = lexer->nextTok();
+                if(t.type != TOK_SEMICOLON){
+                    delete res_decl;
+                    std::cout << "Expected Semicolon. Instead got:" << t.str << std::endl;
                     return nullptr;
                 }
 
-                auto var_id = t.str;
+                auto pt = new ast::ResourceDecl::StaticSamplerDesc;
+                memcpy(pt,&samplerDesc,sizeof(samplerDesc));
+                res_decl->staticSamplerDesc.reset(pt);
 
+            }
+            else {
+                /// Parse FuncDecl/ShaderDecl
+                ast::FuncDecl *funcDecl;
+                if (node == nullptr) {
+                    funcDecl = new ast::FuncDecl();
+                    funcDecl->type = FUNC_DECL;
+                } else {
+                    /// ShaderDecl is a FuncDecl!
+                    funcDecl = (ast::FuncDecl *) node;
+                }
+
+                funcDecl->name = id_for_decl;
+                funcDecl->returnType = ty_for_decl;
                 t = lexer->nextTok();
-                if(t.type == TOK_COLON){
+
+                while (t.type != TOK_RPAREN) {
+                    auto _tok = t;
                     t = lexer->nextTok();
-                    if(t.type != TOK_ID){
-                        // Error!
+                    bool type_is_pointer = false;
+
+                    if (t.type == TOK_ASTERISK) {
+                        type_is_pointer = true;
+                        t = lexer->nextTok();
+                    }
+
+                    auto var_ty = buildTypeRef(_tok, type_is_pointer);
+
+                    if (t.type != TOK_ID) {
+                        /// ERROR!
                         delete node;
                         std::cout << "Expected ID. Instead got:" << t.str << std::endl;
                         return nullptr;
                     }
 
-                    funcDecl->params.push_back({var_ty,var_id,t.str});
-                    t = lexer->nextTok();
-                }
-                else {
-                    funcDecl->params.push_back({var_ty,var_id,{}});
-                }
+                    auto var_id = t.str;
 
-                if(t.type == TOK_COMMA){
                     t = lexer->nextTok();
-                    if(t.type == TOK_RPAREN){
-                        /// Error; Unexpected TOken.
-                        std::cout << "Expected RParen" << std::endl;
-                        return nullptr;
+                    if (t.type == TOK_COLON) {
+                        t = lexer->nextTok();
+                        if (t.type != TOK_ID) {
+                            // Error!
+                            delete node;
+                            std::cout << "Expected ID. Instead got:" << t.str << std::endl;
+                            return nullptr;
+                        }
+
+                        funcDecl->params.push_back({var_ty, var_id, t.str});
+                        t = lexer->nextTok();
+                    } else {
+                        funcDecl->params.push_back({var_ty, var_id, {}});
+                    }
+
+                    if (t.type == TOK_COMMA) {
+                        t = lexer->nextTok();
+                        if (t.type == TOK_RPAREN) {
+                            /// Error; Unexpected TOken.
+                            std::cout << "Expected RParen" << std::endl;
+                            return nullptr;
+                        }
                     }
                 }
+
+                t = lexer->nextTok();
+                if (t.type != TOK_LBRACE) {
+                    std::cout << "Expected Tok. Expected LBrace.";
+                    /// Error. Unexpected Token.
+                    return nullptr;
+                }
+
+                BlockParseContext blockParseContext{ast::builtins::global_scope, true};
+
+                funcDecl->block.reset(parseBlock(t, blockParseContext));
+
+                if (!funcDecl->block) {
+                    return nullptr;
+                }
             }
-
-            t = lexer->nextTok();
-            if(t.type != TOK_LBRACE){
-                std::cout << "Expected Tok. Expected LBrace.";
-                /// Error. Unexpected Token.
-                return nullptr;
-            }
-
-            BlockParseContext blockParseContext {ast::builtins::global_scope,true};
-
-            funcDecl->block.reset(parseBlock(t,blockParseContext));
-
-            if(!funcDecl->block){
-                return nullptr;
-            }
-
         }
         else if(t.type == TOK_COLON){
             ast::ResourceDecl *resourceDecl = nullptr;
@@ -1201,7 +1483,9 @@ namespace omegasl {
                 resourceDecl->type = RESOURCE_DECL;
             }
             else {
-                resourceDecl = (ast::ResourceDecl *)node;
+                delete node;
+                std::cout << "Expected LParen for Static Resource" << std::endl;
+                return nullptr;
             }
             resourceDecl->name = id_for_decl;
             resourceDecl->typeExpr = ty_for_decl;

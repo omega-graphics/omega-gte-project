@@ -6,11 +6,16 @@
 #ifndef OMEGAGTE_GEPIPELINE_H
 #define OMEGAGTE_GEPIPELINE_H
 
+#ifdef None 
+#undef None
+#endif
+
 #if defined(TARGET_METAL) && defined(__OBJC__)
 @protocol MTLLibrary;
 #endif
 
 _NAMESPACE_BEGIN_
+
     enum class RasterCullMode : int {
         None = 0x00,
         Front,

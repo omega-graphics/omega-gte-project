@@ -10,44 +10,44 @@ _NAMESPACE_BEGIN_
 
     class GEVulkanCommandBuffer : public GECommandBuffer {
         GEVulkanCommandQueue *parentQueue;
-        vk::CommandBuffer & commandBuffer;
+        VkCommandBuffer & commandBuffer;
         friend class GEVulkanCommandQueue;
     public:
-        void startRenderPass(const GERenderPassDescriptor &desc);
+        void startRenderPass(const GERenderPassDescriptor &desc) override;
 
-        void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState);
+        void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState) override;
 
-        void setScissorRects(std::vector<GEScissorRect> scissorRects);
+        void setScissorRects(std::vector<GEScissorRect> scissorRects) override;
 
-        void setViewports(std::vector<GEViewport> viewports);
+        void setViewports(std::vector<GEViewport> viewports) override;
 
-        void setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
+        void bindResourceAtVertexShader(SharedHandle<GEBuffer> &buffer, unsigned index) override;
 
-        void setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned index);
+        void bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned index) override;
 
-        void setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned index);
+        void bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned index) override;
 
-        void setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned  index);
+        void bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned  index) override;
 
-        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx);
+        void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx) override;
 
-        void finishRenderPass();
+        void finishRenderPass() override;
 
-        void startComputePass(const GEComputePassDescriptor &desc);
-        void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState);
-        void finishComputePass();
+        void startComputePass(const GEComputePassDescriptor &desc) override;
+        void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
+        void finishComputePass() override;
 
-        void startBlitPass();
-        void finishBlitPass();
-        void reset();
-        GEVulkanCommandBuffer(vk::CommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue);
+        void startBlitPass() override;
+        void finishBlitPass() override;
+        void reset() override;
+        GEVulkanCommandBuffer(VkCommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue);
     };
 
     class GEVulkanCommandQueue : public GECommandQueue {
         GEVulkanEngine *engine;
-        vk::CommandPool commandPool;
-        vk::Queue commandQueue;
-        std::vector<vk::CommandBuffer> commandBuffers;
+        VkCommandPool commandPool;
+        VkQueue commandQueue;
+        OmegaCommon::Vector<VkCommandBuffer> commandBuffers;
         unsigned currentBufferIndex;
         friend class GEVulkanCommandBuffer;
     public:

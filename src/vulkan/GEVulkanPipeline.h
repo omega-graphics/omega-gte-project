@@ -6,27 +6,28 @@
 
 _NAMESPACE_BEGIN_
 
-struct GEVulkanFunction : public __GEFunctionInternal {
-    vk::UniqueShaderModule shaderModule;
-    GEVulkanFunction(vk::UniqueShaderModule & shaderModule);
+struct GTEVulkanShader : public GTEShader {
+    VkShaderModule shaderModule;
+    GTEVulkanShader(VkShaderModule & shaderModule);
 };
 
 class GEVulkanRenderPipelineState : public __GERenderPipelineState {
 public:
-    vk::UniquePipelineCache cache;
 
-    vk::GraphicsPipelineCreateInfo pipelineInfo;
-    vk::UniquePipelineLayout layout;
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
 
-    GEVulkanRenderPipelineState(vk::GraphicsPipelineCreateInfo & pipelineInfo,vk::UniquePipelineLayout & layout,vk::UniquePipelineCache & cache);
+    OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
+
+    GEVulkanRenderPipelineState(VkPipeline pipeline,VkPipelineLayout & layout,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
 };
 
 class GEVulkanComputePipelineState : public __GEComputePipelineState {
 public:
-    vk::GraphicsPipelineCreateInfo pipeline;
-    vk::UniquePipelineLayout layout;
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
     
-    GEVulkanComputePipelineState(vk::UniquePipeline & pipeline,vk::UniquePipelineLayout & layout);
+    GEVulkanComputePipelineState(VkPipeline & pipeline,VkPipelineLayout & layout,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
 };
 
 _NAMESPACE_END_

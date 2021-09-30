@@ -1,7 +1,9 @@
+
+#include "vulkan/vulkan_core.h"
 #define VK_USE_PLATFORM_XLIB_KHR
 
 
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include "omegaGTE/GE.h"
 
@@ -9,65 +11,78 @@
 #define OMEGAGTE_VULKAN_GEVULKAN_H
 
 _NAMESPACE_BEGIN_
-    #define VK_RESULT_SUCCEEDED(val) (val == vk::Result::eSuccess)
+    struct GTEVulkanDevice;
+    #define VK_RESULT_SUCCEEDED(val) (val == VK_SUCCESS)
     class GEVulkanEngine : public OmegaGraphicsEngine {
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
+
+        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,const omegasl_shader *shaders,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
     public:
         VmaAllocator memAllocator;
-        vk::Instance instance;
-        vk::Device device;
-        vk::PhysicalDevice physicalDevice;
-        unsigned queueFamilyIndex;
+        unsigned resource_count;
+    
+        VkDevice device;
+        VkPhysicalDevice physicalDevice;
 
-        GEVulkanEngine();
+        OmegaCommon::Vector<VkQueueFamilyProperties> queueFamilyProps;
 
-        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount);
+        OmegaCommon::Vector<std::uint32_t> queueFamilyIndicies;
 
-        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc);
+        GEVulkanEngine(SharedHandle<GTEVulkanDevice> device);
 
-        SharedHandle<GEFence> makeFence();
+        SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override;
 
-        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc);
+        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
 
-        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc);
+        SharedHandle<GEFence> makeFence() override;
 
-        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc);
+        SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc) override;
 
-        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc);
+        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override;
 
-        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc);
+        SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override;
 
-        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc);
+        SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override;
 
-        SharedHandle<GEFunctionLibrary> loadShaderLibrary(FS::Path path);
+        SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc) override;
 
-        SharedHandle<GEFunctionLibrary> loadStdShaderLibrary();
+        SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override;
 
-        static SharedHandle<OmegaGraphicsEngine> Create();
+        SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override;
+
+        static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
+
+        ~GEVulkanEngine();
     };
 
     class GEVulkanBuffer : public GEBuffer {
+        GEVulkanEngine *engine;
     public: 
-        VmaAllocator allocator;
-        vk::UniqueBuffer buffer;
+        VkBuffer buffer;
+        VkBufferView bufferView;
+
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
-        void * data() override {
-            void *data_ptr;
-            vmaMapMemory(allocator,alloc,&data_ptr);
-            return data_ptr;
-        };
-        void unmap(){
-            vmaUnmapMemory(allocator,alloc);
-        };
+
+        VkDescriptorPool descPool;
+
         size_t size() override {
             return alloc_info.size;
         };
-        GEVulkanBuffer(vk::UniqueBuffer & buffer, VmaAllocator & allocator):buffer(std::move(buffer)){};
-    };
+        GEVulkanBuffer(GEVulkanEngine *engine,
+            VkBuffer & buffer,
+            VkBufferView &view,
+            VmaAllocation alloc, 
+            VmaAllocationInfo alloc_info,
+            VkDescriptorPool descPool):engine(engine),buffer(buffer),
+            bufferView(view),alloc(alloc),alloc_info(alloc_info),descPool(descPool){
 
-    class GEVulkanHeap : public GEHeap {
-        // public:
-        // GEVulkanHeap(vk::MemoryHeap & heap):heap(heap){};
+        };
+        ~GEVulkanBuffer(){
+            vmaDestroyBuffer(engine->memAllocator,buffer,alloc);
+            vkDestroyBufferView(engine->device,bufferView,nullptr);
+            vkDestroyDescriptorPool(engine->device,descPool,nullptr);
+        };
     };
     
 _NAMESPACE_END_

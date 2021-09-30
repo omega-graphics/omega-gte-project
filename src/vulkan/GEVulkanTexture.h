@@ -7,15 +7,21 @@
 _NAMESPACE_BEGIN_
 
 class GEVulkanTexture : public GETexture {
+    GEVulkanEngine *engine;
 public:
-    vk::UniqueImage img;
-    vk::UniqueImageView img_view;
+    VkImage img;
+    VkImageView img_view;
 
     VmaAllocationInfo alloc_info;
     VmaAllocation alloc;
 
+    VkDescriptorPool descPool;
 
-    GEVulkanTexture(vk::UniqueImage & img,vk::UniqueImageView & img_view,VmaAllocationInfo alloc_info,VmaAllocation alloc);
+    void copyBytes(void *bytes, size_t len) override;
+
+
+    GEVulkanTexture(GEVulkanEngine *engine,VkImage & img,VkImageView & img_view,VmaAllocationInfo alloc_info,VmaAllocation alloc,VkDescriptorPool descPool);
+    ~GEVulkanTexture();
 };
 
 _NAMESPACE_END_

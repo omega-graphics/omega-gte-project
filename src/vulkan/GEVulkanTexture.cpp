@@ -8,11 +8,11 @@ GEVulkanTexture::GEVulkanTexture(
     VkImage & img,
     VkImageView & img_view,
     VmaAllocationInfo alloc_info,
-    VmaAllocation alloc,VkDescriptorPool descPool):
+    VmaAllocation alloc,VkDescriptorPool descPool,VmaMemoryUsage memoryUsage):
 engine(engine),
 img(std::move(img)),
 img_view(std::move(img_view)),
-alloc_info(alloc_info),alloc(alloc),descPool(descPool)
+alloc_info(alloc_info),alloc(alloc),memoryUsage(memoryUsage)
 {
 
 };

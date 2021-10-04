@@ -72,7 +72,7 @@ _NAMESPACE_BEGIN_
 
         VkShaderModule module;
         vkCreateShaderModule(device,&shaderModuleDesc,nullptr,&module);
-        return SharedHandle<GTEShader>(new GTEVulkanShader(module));
+        return SharedHandle<GTEShader>(new GTEVulkanShader(*shaderDesc,module));
     }
 
 
@@ -188,24 +188,8 @@ _NAMESPACE_BEGIN_
 
         vkCreateBufferView(device,&bufferViewInfo,nullptr,&bufferView);
 
-        VkDescriptorPoolCreateInfo poolCreate {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-
-        poolCreate.poolSizeCount = 1;
-        VkDescriptorPoolSize poolSize {};
-        poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        poolSize.descriptorCount = 1;
-
-        poolCreate.pPoolSizes = &poolSize;
-        poolCreate.maxSets = 1;
-        poolCreate.pNext = nullptr;
-
-        VkDescriptorPool descPool;
-
-        vkCreateDescriptorPool(device,&poolCreate,nullptr,&descPool);
-
-               
        
-        return SharedHandle<GEBuffer>(new GEVulkanBuffer(this,buffer,bufferView,allocation,allocationInfo,descPool));
+        return SharedHandle<GEBuffer>(new GEVulkanBuffer(this,buffer,bufferView,allocation,allocationInfo));
     };
     SharedHandle<GEHeap> GEVulkanEngine::makeHeap(const HeapDescriptor &desc){
         return nullptr;
@@ -346,8 +330,10 @@ _NAMESPACE_BEGIN_
         return SharedHandle<GETexture>(new GEVulkanTexture(this,image,imageView,alloc_info,alloc,descPool));
     };
 
-    VkPipelineLayout GEVulkanEngine::createPipelineLayoutFromShaderDescs(unsigned shaderN,const omegasl_shader *shaders,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout){
+    VkPipelineLayout GEVulkanEngine::createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descsMap){
         VkPipelineLayoutCreateInfo layout_info {};
+
+        OmegaCommon::Vector<VkDescriptorSetLayout> descLayout;
 
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.pNext = nullptr;
@@ -358,7 +344,13 @@ _NAMESPACE_BEGIN_
 
         OmegaCommon::ArrayRef<omegasl_shader> shadersArr {shaders,shaders + shaderN};
 
-        OmegaCommon::Vector<VkDescriptorSetLayoutBinding> bindings;
+        VkDescriptorPoolCreateInfo poolCreateInfo {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+
+        std::uint32_t setCount = 0;
+
+        OmegaCommon::Vector<VkDescriptorPoolSize> poolSizes;
+
+        OmegaCommon::Vector<unsigned> resourceIDs;
 
         for(auto & s : shadersArr){
             VkShaderStageFlags shaderStageFlags;
@@ -403,16 +395,22 @@ _NAMESPACE_BEGIN_
                     }
                 }
                 b.binding = l.gpu_relative_loc;
+                resourceIDs.push_back(l.location);
                 b.stageFlags = shaderStageFlags;
-                bindings.push_back(b);
+                desc_layout_info.pNext = nullptr;
+                desc_layout_info.bindingCount = 1;
+                desc_layout_info.pBindings = &b;
+                desc_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+                vkCreateDescriptorSetLayout(device,&desc_layout_info,nullptr,&set_layout);
+                descLayout.push_back(set_layout);
+                setCount += 1;
+
+                VkDescriptorPoolSize poolSize {};
+                poolSize.descriptorCount = 1;
+                poolSize.type = b.descriptorType;
+                poolSizes.push_back(poolSize);
             }
-            desc_layout_info.pNext = nullptr;
-            desc_layout_info.bindingCount = bindings.size();
-            desc_layout_info.pBindings = bindings.data();
-            desc_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            vkCreateDescriptorSetLayout(device,&desc_layout_info,nullptr,&set_layout);
-            descLayout.push_back(set_layout);
-            bindings.clear();
+
         }
 
         layout_info.pSetLayouts = descLayout.data();
@@ -424,6 +422,26 @@ _NAMESPACE_BEGIN_
 
         vkCreatePipelineLayout(device,&layout_info,nullptr,&pipeline_layout);
 
+        poolCreateInfo.maxSets = setCount;
+        poolCreateInfo.pPoolSizes = poolSizes.data();
+        poolCreateInfo.poolSizeCount = poolSizes.size();
+
+        vkCreateDescriptorPool(device,&poolCreateInfo,nullptr,descriptorPool);
+
+        VkDescriptorSetAllocateInfo descSetAllocInfo {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+        descSetAllocInfo.descriptorSetCount = descLayout.size();
+        descSetAllocInfo.pSetLayouts = descLayout.data();
+        descSetAllocInfo.pNext = nullptr;
+        descSetAllocInfo.descriptorPool = *descriptorPool;
+
+        descs.resize(descLayout.size());
+
+        vkAllocateDescriptorSets(device,&descSetAllocInfo,descs.data());
+
+        for(unsigned i = 0;i < descs.size();i++){
+            descsMap.insert(std::make_pair(resourceIDs[i],descs[i]));
+        }
+
         return pipeline_layout;
 
     }
@@ -433,9 +451,9 @@ _NAMESPACE_BEGIN_
         
         omegasl_shader shaders[] = {desc.vertexFunc->internal,desc.fragmentFunc->internal};
         
-        OmegaCommon::Vector<VkDescriptorSetLayout> descLayout;
+        OmegaCommon::Vector<VkDescriptorSet> descs;
 
-        VkPipelineLayout layout = createPipelineLayoutFromShaderDescs(2,shaders,descLayout);        
+        VkPipelineLayout layout = createPipelineLayoutFromShaderDescs(2,shaders,descs);
 
         VkGraphicsPipelineCreateInfo createInfo {};
         createInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -488,7 +506,7 @@ _NAMESPACE_BEGIN_
 
         vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&createInfo,nullptr,&pipeline);
       
-        return SharedHandle<GERenderPipelineState>(new GEVulkanRenderPipelineState(pipeline,layout,descLayout));
+        return SharedHandle<GERenderPipelineState>(new GEVulkanRenderPipelineState(pipeline,layout,descs));
     };
     SharedHandle<GEComputePipelineState> GEVulkanEngine::makeComputePipelineState(ComputePipelineDescriptor &desc){
         OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;

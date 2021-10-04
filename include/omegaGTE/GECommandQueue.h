@@ -14,6 +14,7 @@ _NAMESPACE_BEGIN_
     struct GEScissorRect;
     struct GEViewport;
 
+    /// @brief Describes a Render Pass
     struct  OMEGAGTE_EXPORT GERenderPassDescriptor {
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
@@ -24,7 +25,7 @@ _NAMESPACE_BEGIN_
         MultisampleResolveDesc resolveDesc;
     };
 
-
+    /// @brief Describes a Compute Pass
     struct  OMEGAGTE_EXPORT GEComputePassDescriptor {
 
     };
@@ -35,15 +36,8 @@ _NAMESPACE_BEGIN_
     class  OMEGAGTE_EXPORT GECommandBuffer {
         friend class GERenderTarget::CommandBuffer;
     protected:
-        typedef GERenderTarget::CommandBuffer::RenderPassDrawPolygonType RenderPassDrawPolygonType;
+        typedef GERenderTarget::CommandBuffer::PolygonType RenderPassDrawPolygonType;
     private:
-        /**
-         Blit Pass
-         */
-        virtual void startBlitPass() = 0;
-        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest) = 0;
-        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) = 0;
-        virtual void finishBlitPass() = 0;
          /**
          Render Pass
          */
@@ -67,14 +61,55 @@ _NAMESPACE_BEGIN_
          Compute Pass
         */
     public:
+
+        /**
+        Blit Pass
+        */
+        virtual void startBlitPass() = 0;
+        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest) = 0;
+        virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) = 0;
+        virtual void finishBlitPass() = 0;
+
+        /// @brief Encode a wait command for a fence.
+        /// @param fence The GEFence to wait for
+        /// @param val The value to wait for
         virtual void waitForFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
+
+        /// @brief Encode a signal command for a fence.
+        /// @param fence The GEFence to signal
+        /// @param val The value to emit.
         virtual void signalFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
+
+        /// @brief Starts a Compute Pass.
+        /// @param desc A GEComputePassDescriptor describing the Compute Pass.
+        /// @paragraph This method must be called before dispatch commands can be encoded.
         virtual void startComputePass(const GEComputePassDescriptor & desc) = 0;
+
+        /// @brief Sets a Compute Pipeline State in a Compute Pass.
+        /// @param pipelineState A GEComputePipelineState
+        /// @paragraph This method can be called after startComputePass() has been called and must be invoked before a dispatch command is encoded.
         virtual void setComputePipelineState(SharedHandle<GEComputePipelineState> & pipelineState) = 0;
+
+        /// @brief Binds a Buffer Resource to a Descriptor in the scope of the Compute Shader.
+        /// @param buffer The Resource to bind.
+        /// @param id The OmegaSL Binding id.
         virtual void bindResourceAtComputeShader(SharedHandle<GEBuffer> & buffer,unsigned id) = 0;
+
+        /// @brief Binds a Texture Resource to a Descriptor in the scope of the Compute Shader.
+        /// @param texture The Resource to bind.
+        /// @param id The OmegaSL Binding id.
         virtual void bindResourceAtComputeShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
+
+        /// @brief Executes a Compute Pipeline (Encodes a dispatch command in the Compute Pass).
+        /// @param x The Number of ThreadGroups dispatched in the `x` direction.
+        /// @param y The Number of ThreadGroups dispatched in the `y` direction.
+        /// @param z The Number of ThreadGroups dispatched in the `z` direction.
         virtual void dispatchThreads(unsigned x,unsigned y,unsigned z) = 0;
+
+        /// @brief Finish encoding a Compute Pass.
+        /// @paragraph This method must be invoked when a dispatch command has been encoded.
         virtual void finishComputePass() = 0;
+
         virtual void reset() = 0;
         virtual ~GECommandBuffer(){};
     };

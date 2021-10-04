@@ -14,17 +14,28 @@
 
 _NAMESPACE_BEGIN_
 
+/**
+  @brief All the features that are supported on a GTEDevice.
+ * */
 struct GTEDeviceFeatures {
     bool raytracing;
 };
 
+/**
+  @brief A hardware (or software) device that is capable of performing graphical/matrix calculations.
+  @paragraph This class is an easy interface for selecting the most suitable device to create the GTE.
+ */
 struct GTEDevice {
+    /// @brief Defines the type of GPU device.
     typedef enum : int {
         Integrated,
         Discrete
     } Type;
+    /// @enum Type
     const Type type;
+    /// The Device name.
     const OmegaCommon::String name;
+    /// The Device's features.
     const GTEDeviceFeatures features;
 protected:
     GTEDevice(Type type,const char *name,GTEDeviceFeatures & features):type(type),name(name),features(features){
@@ -34,8 +45,12 @@ public:
     virtual ~GTEDevice() = default;
 };
 
+/** @brief Enumerate all GPU devices on this system.
+ * @return A Vector of all the existing GTEDevices on this system.
+ * */
 OMEGAGTE_EXPORT OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices();
 
+/// @brief The Graphics and Tessalation Engine!
 struct OMEGAGTE_EXPORT GTE {
     SharedHandle<OmegaGraphicsEngine> graphicsEngine;
     SharedHandle<OmegaTessalationEngine> tessalationEngine;

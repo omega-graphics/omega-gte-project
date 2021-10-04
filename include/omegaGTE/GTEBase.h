@@ -387,8 +387,8 @@ _NAMESPACE_BEGIN_
         };
 
         struct  Segment {
-            Pt_Ty ** pt_A;
-            Pt_Ty ** pt_B;
+            Pt_Ty * pt_A;
+            Pt_Ty * pt_B;
         };
 
         class  Path_Iterator {
@@ -396,14 +396,13 @@ _NAMESPACE_BEGIN_
             Node *pt_B;
             unsigned pos;
             public:
-            Path_Iterator(Node *_data):pt_A(_data),pt_B(pt_A->next),pos(0){
+            explicit Path_Iterator(Node *_data):pt_A(_data),pt_B(pt_A->next),pos(0){
                 
             };
-            Path_Iterator operator++(){
+            void operator++(){
                 pt_A = pt_A->next;
                 pt_B = pt_B->next;
                 ++pos;
-                return *this;
             };
             bool operator==(const Path_Iterator & r){
 //                    std::cout << "Self Pos:" << pos << ", Other Pos:" << r.pos << std::endl;
@@ -420,7 +419,7 @@ _NAMESPACE_BEGIN_
                 return *this;
             };
             Segment operator*(){
-                return {&(pt_A->pt),&(pt_B->pt)};
+                return {(pt_A->pt),(pt_B->pt)};
             };
 
         };
@@ -450,6 +449,23 @@ _NAMESPACE_BEGIN_
             ++len;
         };
         public:
+        Pt_Ty & firstPt(){
+            return *(first->pt);
+        };
+        Pt_Ty & lastPt(){
+            if(len > 0) {
+                auto it = begin();
+                auto prev_it = it;
+                while (it != end()) {
+                    prev_it = it;
+                    ++it;
+                }
+                return *(*prev_it).pt_B;
+            }
+            else {
+                return firstPt();
+            }
+        };
         void append(const Pt_Ty &pt){
             return _push_pt(pt);
         };

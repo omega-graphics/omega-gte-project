@@ -32,6 +32,19 @@ elseif(APPLE)
 else()
 	set(TARGET_VULKAN TRUE)
 
+	find_package(PkgConfig)
+
+	pkg_check_modules(PKG_WAYLAND wayland-client wayland-server wayland-egl wayland-cursor)
+
+
+	if(PKG_WAYLAND_FOUND)
+		add_compile_definitions("VULKAN_TARGET_WAYLAND")
+	elseif(ANDROID)
+		add_compile_definitions("VULKAN_TARGET_ANDROID")
+	else()
+		add_compile_definitions("VULKAN_TARGET_X11")
+	endif()
+
 	add_compile_definitions("TARGET_VULKAN")
 
 	file(GLOB RHI_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/*.cpp")

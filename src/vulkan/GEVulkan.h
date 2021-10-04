@@ -1,4 +1,16 @@
-#define VK_USE_PLATFORM_XLIB_KHR
+
+#ifdef VULKAN_TARGET_X11
+#define VK_USE_PLATFORM_XLIB_KHR 1
+#endif
+
+#ifdef VULKAN_TARGET_WAYLAND
+#define VK_USE_PLATFORM_WAYLAND_KHR 1
+#endif
+
+#ifdef VULKAN_TARGET_ANDROID
+#define VK_USE_PLATFORM_ANDROID_KHR 1
+#endif
+
 
 
 #include <vulkan/vulkan.h>
@@ -14,13 +26,15 @@ _NAMESPACE_BEGIN_
     class GEVulkanEngine : public OmegaGraphicsEngine {
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
 
-        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descs);
+        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
     public:
         VmaAllocator memAllocator;
         unsigned resource_count;
     
         VkDevice device;
         VkPhysicalDevice physicalDevice;
+
+        VkSurfaceCapabilitiesKHR capabilitiesKhr;
 
         OmegaCommon::Vector<VkQueueFamilyProperties> queueFamilyProps;
 
@@ -54,8 +68,9 @@ _NAMESPACE_BEGIN_
     };
 
     class GEVulkanBuffer : public GEBuffer {
+    public:
         GEVulkanEngine *engine;
-    public: 
+
         VkBuffer buffer;
         VkBufferView bufferView;
 

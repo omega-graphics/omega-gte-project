@@ -18,6 +18,9 @@ _NAMESPACE_BEGIN_
 
         friend class GEVulkanCommandQueue;
 
+        bool inBlitPass = false;
+        bool inComputePass = false;
+
         unsigned getBindingForResourceID(unsigned & id,omegasl_shader & shader);
         unsigned getDescriptorSetIndexForResourceID(unsigned & id);
     public:

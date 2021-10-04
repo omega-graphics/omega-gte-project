@@ -23,7 +23,7 @@ public:
     void copyBytes(void *bytes, size_t len) override;
 
 
-    GEVulkanTexture(GEVulkanEngine *engine,VkImage & img,VkImageView & img_view,VmaAllocationInfo alloc_info,VmaAllocation alloc,VkDescriptorPool descPool,VmaMemoryUsage memoryUsage);
+    GEVulkanTexture(GEVulkanEngine *engine,VkImage & img,VkImageView & img_view,VkImageLayout & layout,VmaAllocationInfo alloc_info,VmaAllocation alloc, const TextureDescriptor & descriptor,VmaMemoryUsage memoryUsage);
     ~GEVulkanTexture();
 };
 

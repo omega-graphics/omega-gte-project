@@ -9,7 +9,7 @@ _NAMESPACE_BEGIN_
 struct GTEVulkanShader : public GTEShader {
     GEVulkanEngine *parentEngine;
     VkShaderModule shaderModule;
-    GTEVulkanShader(omegasl_shader & shader,VkShaderModule & shaderModule);
+    GTEVulkanShader(GEVulkanEngine *parentEngine,omegasl_shader & shader,VkShaderModule & shaderModule);
     ~GTEVulkanShader();
 };
 
@@ -28,7 +28,15 @@ public:
 
     OmegaCommon::Vector<VkDescriptorSet> descs;
 
-    GEVulkanRenderPipelineState(VkPipeline & pipeline,VkPipelineLayout & layout,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSet> descs);
+    GEVulkanRenderPipelineState(SharedHandle<GTEShader> & vertexShader,
+                                SharedHandle<GTEShader> & fragmentShader,
+                                GEVulkanEngine *parentEngine,
+                                VkPipeline & pipeline,
+                                VkPipelineLayout & layout,
+                                VkDescriptorPool & descriptorPool,
+                                OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
+                                OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
     ~GEVulkanRenderPipelineState();
 };
 
@@ -46,7 +54,14 @@ public:
 
     OmegaCommon::Vector<VkDescriptorSet> descs;
     
-    GEVulkanComputePipelineState(VkPipeline & pipeline,VkPipelineLayout & layout,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSet> descs);
+    GEVulkanComputePipelineState(SharedHandle<GTEShader> & computeShader,
+                                 GEVulkanEngine *parentEngine,
+                                 VkPipeline & pipeline,
+                                 VkPipelineLayout & layout,
+                                 VkDescriptorPool & descriptorPool,
+                                 OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
+                                 OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                 OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
     ~GEVulkanComputePipelineState();
 };
 

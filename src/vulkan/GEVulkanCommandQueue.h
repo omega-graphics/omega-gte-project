@@ -1,5 +1,6 @@
 #include "GEVulkan.h"
 #include "omegaGTE/GECommandQueue.h"
+#include "GEVulkanPipeline.h"
 
 #ifndef OMEGAGTE_VULKAN_GEVULKANCOMMANDQUEUE_H
 #define OMEGAGTE_VULKAN_GEVULKANCOMMANDQUEUE_H
@@ -11,7 +12,17 @@ _NAMESPACE_BEGIN_
     class GEVulkanCommandBuffer : public GECommandBuffer {
         GEVulkanCommandQueue *parentQueue;
         VkCommandBuffer & commandBuffer;
+
+        GEVulkanRenderPipelineState *renderPipelineState = nullptr;
+        GEVulkanComputePipelineState *computePipelineState = nullptr;
+
         friend class GEVulkanCommandQueue;
+
+        bool inBlitPass = false;
+        bool inComputePass = false;
+
+        unsigned getBindingForResourceID(unsigned & id,omegasl_shader & shader);
+        unsigned getDescriptorSetIndexForResourceID(unsigned & id);
     public:
         void startRenderPass(const GERenderPassDescriptor &desc) override;
 
@@ -35,12 +46,16 @@ _NAMESPACE_BEGIN_
 
         void startComputePass(const GEComputePassDescriptor &desc) override;
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
+        void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
 
         void startBlitPass() override;
+        void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) override;
+        void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest, const TextureRegion &region, const GPoint3D &destCoord) override;
         void finishBlitPass() override;
         void reset() override;
         GEVulkanCommandBuffer(VkCommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue);
+        ~GEVulkanCommandBuffer() = default;
     };
 
     class GEVulkanCommandQueue : public GECommandQueue {
@@ -56,6 +71,7 @@ _NAMESPACE_BEGIN_
         void present();
         SharedHandle<GECommandBuffer> getAvailableBuffer();
         GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size);
+        ~GEVulkanCommandQueue();
     };
 _NAMESPACE_END_
 

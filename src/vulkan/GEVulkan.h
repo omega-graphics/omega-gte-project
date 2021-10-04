@@ -1,6 +1,16 @@
 
-#include "vulkan/vulkan_core.h"
-#define VK_USE_PLATFORM_XLIB_KHR
+#ifdef VULKAN_TARGET_X11
+#define VK_USE_PLATFORM_XLIB_KHR 1
+#endif
+
+#ifdef VULKAN_TARGET_WAYLAND
+#define VK_USE_PLATFORM_WAYLAND_KHR 1
+#endif
+
+#ifdef VULKAN_TARGET_ANDROID
+#define VK_USE_PLATFORM_ANDROID_KHR 1
+#endif
+
 
 
 #include <vulkan/vulkan.h>
@@ -16,13 +26,15 @@ _NAMESPACE_BEGIN_
     class GEVulkanEngine : public OmegaGraphicsEngine {
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
 
-        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,const omegasl_shader *shaders,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
+        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
     public:
         VmaAllocator memAllocator;
         unsigned resource_count;
     
         VkDevice device;
         VkPhysicalDevice physicalDevice;
+
+        VkSurfaceCapabilitiesKHR capabilitiesKhr;
 
         OmegaCommon::Vector<VkQueueFamilyProperties> queueFamilyProps;
 
@@ -56,15 +68,14 @@ _NAMESPACE_BEGIN_
     };
 
     class GEVulkanBuffer : public GEBuffer {
+    public:
         GEVulkanEngine *engine;
-    public: 
+
         VkBuffer buffer;
         VkBufferView bufferView;
 
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
-
-        VkDescriptorPool descPool;
 
         size_t size() override {
             return alloc_info.size;
@@ -73,15 +84,13 @@ _NAMESPACE_BEGIN_
             VkBuffer & buffer,
             VkBufferView &view,
             VmaAllocation alloc, 
-            VmaAllocationInfo alloc_info,
-            VkDescriptorPool descPool):engine(engine),buffer(buffer),
-            bufferView(view),alloc(alloc),alloc_info(alloc_info),descPool(descPool){
+            VmaAllocationInfo alloc_info):engine(engine),buffer(buffer),
+            bufferView(view),alloc(alloc),alloc_info(alloc_info){
 
         };
         ~GEVulkanBuffer(){
             vmaDestroyBuffer(engine->memAllocator,buffer,alloc);
             vkDestroyBufferView(engine->device,bufferView,nullptr);
-            vkDestroyDescriptorPool(engine->device,descPool,nullptr);
         };
     };
     

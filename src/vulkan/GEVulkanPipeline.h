@@ -7,27 +7,62 @@
 _NAMESPACE_BEGIN_
 
 struct GTEVulkanShader : public GTEShader {
+    GEVulkanEngine *parentEngine;
     VkShaderModule shaderModule;
-    GTEVulkanShader(VkShaderModule & shaderModule);
+    GTEVulkanShader(GEVulkanEngine *parentEngine,omegasl_shader & shader,VkShaderModule & shaderModule);
+    ~GTEVulkanShader();
 };
 
 class GEVulkanRenderPipelineState : public __GERenderPipelineState {
+    GEVulkanEngine *parentEngine;
 public:
 
     VkPipeline pipeline;
     VkPipelineLayout layout;
+
+    VkDescriptorPool descriptorPool;
 
     OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
 
-    GEVulkanRenderPipelineState(VkPipeline pipeline,VkPipelineLayout & layout,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
+    OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
+
+    OmegaCommon::Vector<VkDescriptorSet> descs;
+
+    GEVulkanRenderPipelineState(SharedHandle<GTEShader> & vertexShader,
+                                SharedHandle<GTEShader> & fragmentShader,
+                                GEVulkanEngine *parentEngine,
+                                VkPipeline & pipeline,
+                                VkPipelineLayout & layout,
+                                VkDescriptorPool & descriptorPool,
+                                OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
+                                OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
+    ~GEVulkanRenderPipelineState();
 };
 
 class GEVulkanComputePipelineState : public __GEComputePipelineState {
+    GEVulkanEngine *parentEngine;
 public:
     VkPipeline pipeline;
     VkPipelineLayout layout;
+
+    VkDescriptorPool descriptorPool;
+
+    OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
+
+    OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
+
+    OmegaCommon::Vector<VkDescriptorSet> descs;
     
-    GEVulkanComputePipelineState(VkPipeline & pipeline,VkPipelineLayout & layout,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
+    GEVulkanComputePipelineState(SharedHandle<GTEShader> & computeShader,
+                                 GEVulkanEngine *parentEngine,
+                                 VkPipeline & pipeline,
+                                 VkPipelineLayout & layout,
+                                 VkDescriptorPool & descriptorPool,
+                                 OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
+                                 OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                 OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
+    ~GEVulkanComputePipelineState();
 };
 
 _NAMESPACE_END_

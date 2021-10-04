@@ -13,7 +13,14 @@
 #endif
 
 #if defined(TARGET_VULKAN)
+
+#ifdef VULKAN_TARGET_WAYLAND
+#include <wayland-client.h>
+#endif
+
+#ifdef VULKAN_TARGET_X11
 #include <X11/Xlib.h>
+#endif
 #define DEBUG_ENGINE_PREFIX "GEVulkanEngine_Internal"
 #endif
 
@@ -249,7 +256,16 @@ _NAMESPACE_BEGIN_
 
     #if defined(TARGET_VULKAN)
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
+    #ifdef VULKAN_TARGET_X11
         Window w;
+        Display display;
+    #endif
+    #ifdef VULKAN_TARGET_WAYLAND
+        wl_surface *surface;
+        wl_display *display;
+        unsigned width;
+        unsigned height;
+    #endif
     };
     #endif
 

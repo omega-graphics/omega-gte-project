@@ -5,85 +5,193 @@
 #include "GEVulkanTexture.h"
 
 _NAMESPACE_BEGIN_
-    GEVulkanCommandBuffer::GEVulkanCommandBuffer(vk::CommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue):commandBuffer(commandBuffer),parentQueue(parentQueue){
-        vk::CommandBufferBeginInfo beginInfo;
+    unsigned int GEVulkanCommandBuffer::getBindingForResourceID(unsigned int &id, omegasl_shader &shader) {\
+        ArrayRef<omegasl_shader_layout_desc> layoutDesc {shader.pLayout,shader.pLayout + shader.nLayout};
+        for(auto & l : layoutDesc){
+            if(l.location == id){
+                return l.gpu_relative_loc;
+            }
+        }
+        return 0;
+    }
+
+    unsigned int GEVulkanCommandBuffer::getDescriptorSetIndexForResourceID(unsigned int &id) {
+        if(renderPipelineState != nullptr){
+            auto desc = renderPipelineState->descMap[id];
+            unsigned idx = 0;
+            for(;idx != renderPipelineState->descs.size();idx++){
+                if(renderPipelineState->descs[idx] == desc){
+                    break;
+                }
+            }
+            return idx;
+        }
+        else {
+
+        }
+    }
+
+    GEVulkanCommandBuffer::GEVulkanCommandBuffer(VkCommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue):commandBuffer(commandBuffer),parentQueue(parentQueue){
+        VkCommandBufferBeginInfo beginInfo {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
         // vk::CommandBufferInheritanceInfo inheritanceInfo;
         beginInfo.pInheritanceInfo = nullptr;
-        beginInfo.flags = {};
-        commandBuffer.begin(beginInfo);
+        beginInfo.flags = 0;
+        vkBeginCommandBuffer(commandBuffer,&beginInfo);
     };
 
     void GEVulkanCommandBuffer::startRenderPass(const GERenderPassDescriptor &desc){
         auto nativeTarget = (GEVulkanNativeRenderTarget *)desc.nRenderTarget;
-        vk::RenderPassBeginInfo beginInfo;
-        beginInfo.framebuffer = nativeTarget->frameBuffer.get();
+        VkRenderPassBeginInfo beginInfo {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        beginInfo.framebuffer = nativeTarget->frameBuffer;
 
-        vk::ClearValue val;
-        val.color.setFloat32({desc.colorAttachment->clearColor.r,desc.colorAttachment->clearColor.g,desc.colorAttachment->clearColor.b,desc.colorAttachment->clearColor.a});
+        VkClearValue val;
+        val.color.float32[0] = desc.colorAttachment->clearColor.r;
+        val.color.float32[1] = desc.colorAttachment->clearColor.g;
+        val.color.float32[2] = desc.colorAttachment->clearColor.b;
+        val.color.float32[3] = desc.colorAttachment->clearColor.a;
+
         beginInfo.clearValueCount = 1;
         beginInfo.pClearValues = &val;
-        
-        commandBuffer.beginRenderPass(&beginInfo,vk::SubpassContents::eInline);
+
+        vkCmdBeginRenderPass(commandBuffer,&beginInfo,VK_SUBPASS_CONTENTS_INLINE);
     };
 
     void GEVulkanCommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState){
         auto vulkanPipeline = (GEVulkanRenderPipelineState *)pipelineState.get();
-        auto state = vulkanPipeline->pipelineInfo;
-        
-        auto res = parentQueue->engine->device.createGraphicsPipeline(vulkanPipeline->cache.get(),state);
+        VkPipeline state = vulkanPipeline->pipeline;
 
-        if(!VK_RESULT_SUCCEEDED(res.result)){
-            printf("Failed to Create Graphics Pipeline");
-            exit(1);
-        };
-
-        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics,res.value);
+        vkCmdBindPipeline(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,state);
+        renderPipelineState = vulkanPipeline;
+        vkCmdBindDescriptorSets(commandBuffer,
+                                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                vulkanPipeline->layout,
+                                0,
+                                vulkanPipeline->descs.size(),
+                                vulkanPipeline->descs.data(),
+                                0,nullptr);
     };
 
-    void GEVulkanCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GEBuffer> &buffer, unsigned index){
+    void GEVulkanCommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> &buffer, unsigned id){
         auto vk_buffer = (GEVulkanBuffer *)buffer.get();
-        commandBuffer.bindIndexBuffer(vk_buffer->buffer.get(),index,vk::IndexType::eUint32);
-        /// TODO!
+
+        VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->vertexShader->internal);
+        writeInfo.descriptorCount = 1;
+        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        writeInfo.pNext = nullptr;
+        writeInfo.dstArrayElement = 0;
+        writeInfo.pBufferInfo = nullptr;
+        writeInfo.pImageInfo = nullptr;
+        writeInfo.pTexelBufferView = &vk_buffer->bufferView;
+
+        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
     };
 
-    void GEVulkanCommandBuffer::setResourceConstAtVertexFunc(SharedHandle<GETexture> &texture, unsigned index){
+    void GEVulkanCommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned id){
         auto vk_texture = (GEVulkanTexture *)texture.get();
         /// TODO!
+
+        VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->vertexShader->internal);
+        writeInfo.descriptorCount = 1;
+
+        VkDescriptorImageInfo imgInfo {};
+        imgInfo.sampler = VK_NULL_HANDLE;
+        imgInfo.imageView = vk_texture->img_view;
+
+        VkDescriptorType t;
+
+        if(vk_texture->memoryUsage == VMA_MEMORY_USAGE_CPU_TO_GPU){
+            t = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        }
+        else {
+            t = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        }
+
+        writeInfo.descriptorType = t;
+        writeInfo.pNext = nullptr;
+        writeInfo.dstArrayElement = 0;
+        writeInfo.pBufferInfo = nullptr;
+        writeInfo.pImageInfo = &imgInfo;
+
+        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
     };
 
-    void GEVulkanCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GEBuffer> &buffer, unsigned index){
+    void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned id){
         auto vk_buffer = (GEVulkanBuffer *)buffer.get();
-        commandBuffer.bindIndexBuffer(vk_buffer->buffer.get(),index,vk::IndexType::eUint32);
-        /// TODO!
+
+        VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->fragmentShader->internal);
+        writeInfo.descriptorCount = 1;
+        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        writeInfo.pNext = nullptr;
+        writeInfo.dstArrayElement = 0;
+        writeInfo.pBufferInfo = nullptr;
+        writeInfo.pImageInfo = nullptr;
+        writeInfo.pTexelBufferView = &vk_buffer->bufferView;
+
+        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
     };
 
-    void GEVulkanCommandBuffer::setResourceConstAtFragmentFunc(SharedHandle<GETexture> &texture, unsigned index){
+    void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned id){
         /// TODO!
+
+        auto vk_texture = (GEVulkanTexture *)texture.get();
+        /// TODO!
+
+        VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+        writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->fragmentShader->internal);
+        writeInfo.descriptorCount = 1;
+
+        VkDescriptorImageInfo imgInfo {};
+        imgInfo.sampler = VK_NULL_HANDLE;
+        imgInfo.imageView = vk_texture->img_view;
+
+        VkDescriptorType t;
+
+        if(vk_texture->memoryUsage == VMA_MEMORY_USAGE_CPU_TO_GPU){
+            t = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        }
+        else {
+            t = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        }
+
+        writeInfo.descriptorType = t;
+        writeInfo.pNext = nullptr;
+        writeInfo.dstArrayElement = 0;
+        writeInfo.pBufferInfo = nullptr;
+        writeInfo.pImageInfo = &imgInfo;
+
+        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
     };
 
 
 
     void GEVulkanCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx){
-        vk::PrimitiveTopology topology;
+        VkPrimitiveTopology topology;
 
         switch (polygonType) {
             case GERenderTarget::CommandBuffer::Triangle : 
-                topology = vk::PrimitiveTopology::eTriangleList;
+                topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
                 break;
             case GERenderTarget::CommandBuffer::TriangleStrip : {
-                topology = vk::PrimitiveTopology::eTriangleStrip;
+                topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
                 break;
             }
         }
 
-        commandBuffer.setPrimitiveTopologyEXT(topology);
-        commandBuffer.drawIndexed(vertexCount,1,startIdx,0,0);
+        vkCmdSetPrimitiveTopologyEXT(commandBuffer,topology);
+        vkCmdDraw(commandBuffer,vertexCount,1,startIdx,0);
     };
 
     void GEVulkanCommandBuffer::setScissorRects(std::vector<GEScissorRect> scissorRects){
-        std::vector<vk::Rect2D> vk_rects;
+        std::vector<VkRect2D> vk_rects;
         for(auto & r : scissorRects){
-            vk::Rect2D rect;
+            VkRect2D rect {};
             rect.offset.x = r.x;
             rect.offset.y = r.y;
             rect.extent.width = r.width;
@@ -91,14 +199,13 @@ _NAMESPACE_BEGIN_
             vk_rects.push_back(rect);
         };
 
-
-        commandBuffer.setScissor(0,vk_rects);
+        vkCmdSetScissor(commandBuffer,0,vk_rects.size(),vk_rects.data());
     };
 
     void GEVulkanCommandBuffer::setViewports(std::vector<GEViewport> viewports){
-        std::vector<vk::Viewport> vk_viewports;
+        std::vector<VkViewport> vk_viewports;
         for(auto & v : viewports){
-            vk::Viewport viewport;
+            VkViewport viewport {};
             viewport.x = v.x;
             viewport.y = v.y;
             viewport.width = v.width;
@@ -108,20 +215,56 @@ _NAMESPACE_BEGIN_
             vk_viewports.push_back(viewport);
         };
 
-        commandBuffer.setViewport(0,vk_viewports);
+        vkCmdSetViewport(commandBuffer,0,vk_viewports.size(),vk_viewports.data());
     };
 
     void GEVulkanCommandBuffer::finishRenderPass(){
-        commandBuffer.endRenderPass();
+        vkCmdEndRenderPass(commandBuffer);
+        renderPipelineState = nullptr;
     };
 
+    void GEVulkanCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
+        auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
+        VkImageCopy imgCopy {};
+        imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imgCopy.srcSubresource.baseArrayLayer = 0;
+        imgCopy.srcSubresource.layerCount = 1;
+        imgCopy.srcSubresource.mipLevel = src_img->descriptor.mipLevels;
+        imgCopy.srcOffset = {0,0,0};
+        imgCopy.dstOffset = {0,0,0};
+        imgCopy.dstSubresource.mipLevel = dest_img->descriptor.mipLevels;
+        imgCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imgCopy.dstSubresource.layerCount = 1;
+        imgCopy.dstSubresource.baseArrayLayer = 0;
+        imgCopy.extent = {src_img->descriptor.width,src_img->descriptor.height,src_img->descriptor.depth};
+        vkCmdCopyImage(commandBuffer,src_img->img,src_img->layout,dest_img->img,dest_img->layout,1,&imgCopy);
+    }
+
+    void GEVulkanCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,
+                                                     const TextureRegion &region, const GPoint3D &destCoord) {
+        auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
+        VkImageCopy imgCopy {};
+        imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imgCopy.srcSubresource.baseArrayLayer = 0;
+        imgCopy.srcSubresource.layerCount = 1;
+        imgCopy.srcSubresource.mipLevel = src_img->descriptor.mipLevels;
+        imgCopy.srcOffset = {int32_t(region.x),int32_t(region.y),int32_t(region.z)};
+        imgCopy.dstOffset = {int32_t(destCoord.x),int32_t(destCoord.y),int32_t(destCoord.z)};
+        imgCopy.dstSubresource.mipLevel = dest_img->descriptor.mipLevels;
+        imgCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imgCopy.dstSubresource.layerCount = 1;
+        imgCopy.dstSubresource.baseArrayLayer = 0;
+        imgCopy.extent = {region.w,region.h,region.d};
+        vkCmdCopyImage(commandBuffer,src_img->img,src_img->layout,dest_img->img,dest_img->layout,1,&imgCopy);
+    }
+
     void GEVulkanCommandBuffer::reset(){
-        commandBuffer.reset();
+        vkResetCommandBuffer(commandBuffer,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     };
 
     void GEVulkanCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         auto buffer = (GEVulkanCommandBuffer *)commandBuffer.get();
-        buffer->commandBuffer.end();
+        vkEndCommandBuffer(buffer->commandBuffer);
     };
 
    SharedHandle<GECommandBuffer> GEVulkanCommandQueue::getAvailableBuffer(){
@@ -131,10 +274,12 @@ _NAMESPACE_BEGIN_
    };
 
    void GEVulkanCommandQueue::commitToGPU(){
-       vk::SubmitInfo submission;
+       VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
        submission.commandBufferCount = commandBuffers.size();
        submission.pCommandBuffers = commandBuffers.data();
-       auto res = commandQueue.submit(1,&submission,VK_NULL_HANDLE);
+       submission.pNext = nullptr;
+       VkFence fence;
+       auto res = vkQueueSubmit(commandQueue,1,&submission,fence);
        if(!VK_RESULT_SUCCEEDED(res)){
            printf("Failed to Submit Command Buffers to GPU");
            exit(1);
@@ -142,26 +287,54 @@ _NAMESPACE_BEGIN_
    };
    
    GEVulkanCommandQueue::GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size):GECommandQueue(size){
-       vk::Result res;
-       vk::CommandPoolCreateInfo poolCreateInfo;
-       poolCreateInfo.queueFamilyIndex = engine->queueFamilyIndex;
-       poolCreateInfo.flags = {};
-       commandPool = engine->device.createCommandPool(poolCreateInfo);
-       vk::CommandBufferAllocateInfo commandBufferCreateInfo;
+       VkResult res;
+       VkCommandPoolCreateInfo poolCreateInfo {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+
+       unsigned queueFamilyIndex = 0;
+       bool foundQueueFamily = false;
+       for(auto & qf : engine->queueFamilyProps){
+           if(qf.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)){
+               foundQueueFamily = true;
+               break;
+           }
+           ++queueFamilyIndex;
+       }
+
+       if(!foundQueueFamily){
+           std::cout << "Failed to find queue family" << std::endl;
+           exit(1);
+       }
+
+       poolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+       poolCreateInfo.pNext = nullptr;
+       poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+       res = vkCreateCommandPool(engine->device,&poolCreateInfo,nullptr,&commandPool);
+
+       if(!VK_RESULT_SUCCEEDED(res)){
+           exit(1);
+       };
+
+       VkCommandBufferAllocateInfo commandBufferCreateInfo {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
        commandBufferCreateInfo.commandBufferCount = size;
        commandBufferCreateInfo.commandPool = commandPool;
-       commandBufferCreateInfo.level = vk::CommandBufferLevel::ePrimary;
+       commandBufferCreateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+       commandBufferCreateInfo.pNext = nullptr;
        commandBuffers.reserve(size);
-       res = engine->device.allocateCommandBuffers(&commandBufferCreateInfo,commandBuffers.data());
+
+       res = vkAllocateCommandBuffers(engine->device,&commandBufferCreateInfo,commandBuffers.data());
+
        if(!VK_RESULT_SUCCEEDED(res)){
            exit(1);
        };
        
        currentBufferIndex = 0;
-       vk::DeviceQueueInfo2 queueInfo;
-        queueInfo.queueFamilyIndex = engine->queueFamilyIndex;
-        queueInfo.queueIndex = 0;
-        engine->device.getQueue2(&queueInfo,&commandQueue);
 
    };
+
+   GEVulkanCommandQueue::~GEVulkanCommandQueue() {
+       vkFreeCommandBuffers(engine->device,commandPool,commandBuffers.size(),commandBuffers.data());
+       commandBuffers.resize(0);
+       vkDestroyCommandPool(engine->device,commandPool,nullptr);
+   }
 _NAMESPACE_END_

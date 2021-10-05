@@ -47,117 +47,118 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 }
 
 
-SharedHandle<GEBuffer> GED3D12Heap::makeBuffer(const BufferDescriptor &desc){
-    HRESULT hr;
-    D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
-    ID3D12Resource *buffer;
-    hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_GENERIC_READ,NULL,IID_PPV_ARGS(&buffer));
-    if(FAILED(hr)){
-        exit(1);
-    };
+//SharedHandle<GEBuffer> GED3D12Heap::makeBuffer(const BufferDescriptor &desc){
+//    HRESULT hr;
+//    D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len);
+//    ID3D12Resource *buffer;
+//    hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_GENERIC_READ,NULL,IID_PPV_ARGS(&buffer));
+//    if(FAILED(hr)){
+//        exit(1);
+//    };
+//
+//    D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
+//    descHeapDesc.NumDescriptors = 1;
+//    descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+//    descHeapDesc.NodeMask = engine->d3d12_device->GetNodeCount();
+//    descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+//    ID3D12DescriptorHeap *descHeap;
+//    hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
+//    if(FAILED(hr)){
+//
+//    };
+//
+//    D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
+//    res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+//    res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+//    res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+//    res_view_desc.Buffer.StructureByteStride = desc.objectStride;
+//    res_view_desc.Buffer.FirstElement = 0;
+//    res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+//    res_view_desc.Buffer.NumElements = desc.len/desc.objectStride;
+//
+//    engine->d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+//
+//    D3D12_RESOURCE_STATES state;
+//
+//    auto alloc_info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
+//    currentOffset += alloc_info.SizeInBytes;
+//    return SharedHandle<GEBuffer>(new GED3D12Buffer(desc.usage,buffer,descHeap,state));
+//};
 
-    D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
-    descHeapDesc.NumDescriptors = 1;
-    descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    descHeapDesc.NodeMask = engine->d3d12_device->GetNodeCount();
-    descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    ID3D12DescriptorHeap *descHeap;
-    hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
-    if(FAILED(hr)){
-
-    };
-
-    D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
-    res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-    res_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    res_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-    res_view_desc.Buffer.StructureByteStride = desc.objectStride;
-    res_view_desc.Buffer.FirstElement = 0;
-    res_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-    res_view_desc.Buffer.NumElements = desc.len/desc.objectStride;
-
-    engine->d3d12_device->CreateShaderResourceView(buffer,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
-
-
-    auto alloc_info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
-    currentOffset += alloc_info.SizeInBytes;
-    return std::make_shared<GED3D12Buffer>(buffer,descHeap);
-};
-
-SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
-    HRESULT hr;
-    D3D12_RESOURCE_DESC d3d12_desc;
-    D3D12_RESOURCE_STATES res_states;
-
-    D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
-
-    if(desc.usage & GETexture::RenderTarget){
-        res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
-    }
-    else if(desc.usage & GETexture::GPURead){
-        res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
-    }   
-    else if(desc.usage & GETexture::GPUWrite){
-        res_states |= D3D12_RESOURCE_STATE_COPY_DEST;
-    };
-
-        res_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        
-
-    D3D12_RENDER_TARGET_VIEW_DESC view_desc;
-
-    view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    if(desc.type == GETexture::Texture2D){
-        d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height);
-        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            if(desc.usage & GETexture::RenderTarget){
-                view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-                
-            }
-    }
-    else if(desc.type == GETexture::Texture3D){
-        d3d12_desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,desc.depth);
-        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-        if(desc.usage & GETexture::RenderTarget){
-                view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
-        }
-    };
-
-    ID3D12Resource *texture;
-    hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,res_states,nullptr,IID_PPV_ARGS(&texture));
-    auto info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
-    currentOffset += info.SizeInBytes;
-    if(FAILED(hr)){
-
-    };
-    D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
-    descHeapDesc.NumDescriptors = 1;
-    descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    descHeapDesc.NodeMask = engine->d3d12_device->GetNodeCount();
-    descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    ID3D12DescriptorHeap *descHeap, *rtvDescHeap = nullptr;
-    hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
-    if(FAILED(hr)){
-
-    };
-
-    engine->d3d12_device->CreateShaderResourceView(texture,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
-
-    if(desc.usage & GETexture::RenderTarget){
-        descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    
-        hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&rtvDescHeap));
-        if(FAILED(hr)){
-
-        };
-
-        engine->d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
-    };
-
-    return std::make_shared<GED3D12Texture>(texture,descHeap,rtvDescHeap);
-
-};
+//SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
+//    HRESULT hr;
+//    D3D12_RESOURCE_DESC d3d12_desc;
+//    D3D12_RESOURCE_STATES res_states;
+//
+//    D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
+//
+//    if(desc.usage & GETexture::RenderTarget){
+//        res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+//    }
+//    else if(desc.usage & GETexture::ToGPU){
+//        res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
+//    }
+//    else if(desc.usage & GETexture::FromGPU){
+//        res_states |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+//    };
+//
+//        res_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//
+//
+//    D3D12_RENDER_TARGET_VIEW_DESC view_desc;
+//
+//    view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//
+//    if(desc.type == GETexture::Texture2D){
+//        d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height);
+//        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+//            if(desc.usage & GETexture::RenderTarget){
+//                view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+//
+//            }
+//    }
+//    else if(desc.type == GETexture::Texture3D){
+//        d3d12_desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM,desc.width,desc.height,desc.depth);
+//        res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+//        if(desc.usage & GETexture::RenderTarget){
+//                view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
+//        }
+//    };
+//
+//    ID3D12Resource *texture;
+//    hr = engine->d3d12_device->CreatePlacedResource(heap.Get(),currentOffset,&d3d12_desc,res_states,nullptr,IID_PPV_ARGS(&texture));
+//    auto info = engine->d3d12_device->GetResourceAllocationInfo(engine->d3d12_device->GetNodeCount(),1,&d3d12_desc);
+//    currentOffset += info.SizeInBytes;
+//    if(FAILED(hr)){
+//
+//    };
+//    D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
+//    descHeapDesc.NumDescriptors = 1;
+//    descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+//    descHeapDesc.NodeMask = engine->d3d12_device->GetNodeCount();
+//    descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+//    ID3D12DescriptorHeap *descHeap, *rtvDescHeap = nullptr;
+//    hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&descHeap));
+//    if(FAILED(hr)){
+//
+//    };
+//
+//    engine->d3d12_device->CreateShaderResourceView(texture,&res_view_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
+//
+//    if(desc.usage & GETexture::RenderTarget){
+//        descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+//
+//        hr = engine->d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&rtvDescHeap));
+//        if(FAILED(hr)){
+//
+//        };
+//
+//        engine->d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+//    };
+//
+//    return std::make_shared<GED3D12Texture>(texture,descHeap,rtvDescHeap);
+//
+//};
 
     // void GED3D12Engine::getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,
     //                                        __out IDXGIAdapter1 **adapter){
@@ -323,10 +324,10 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         }
         void finish() override {
-            _buffer = nullptr;
             _data_buffer = nullptr;
             currentOffset = 0;
             _buffer->buffer->Unmap(0,nullptr);
+            _buffer = nullptr;
         }
     };
 
@@ -374,7 +375,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
     SharedHandle<GEFence> GED3D12Engine::makeFence(){
         ID3D12Fence *f;
         d3d12_device->CreateFence(0,D3D12_FENCE_FLAG_SHARED,IID_PPV_ARGS(&f));
-        return std::make_shared<GED3D12Fence>(f);
+        return SharedHandle<GEFence>(new GED3D12Fence(f));
     };
 
     SharedHandle<GEHeap> GED3D12Engine::makeHeap(const HeapDescriptor &desc){
@@ -534,6 +535,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
 
         d.NodeMask = d3d12_device->GetNodeCount();
         d.CS = computeShader->shaderBytecode;
+        d.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
         omegasl_shader shaders[] = {desc.computeFunc->internal};
 
         ID3D12RootSignature *signature;
@@ -548,6 +550,9 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         }
 
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
+        if(FAILED(hr)){
+            DEBUG_STREAM("Failed to Create Compute Pipeline State");
+        }
         return SharedHandle<GEComputePipelineState>(new GED3D12ComputePipelineState(desc.computeFunc,state,signature,rootSignatureDesc1));
     };
 
@@ -625,8 +630,8 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_view_desc;
 
-        bool isUAV = bool(desc.usage == GETexture::GPUWrite);
-        bool isSRV = bool(desc.usage == GETexture::GPURead);
+        bool isUAV = bool(desc.usage == GETexture::FromGPU || desc.usage == GETexture::GPUAccessOnly);
+        bool isSRV = bool(desc.usage == GETexture::ToGPU || desc.usage == GETexture::GPUAccessOnly);
 
         DXGI_FORMAT dxgiFormat;
         switch (desc.pixelFormat) {
@@ -647,11 +652,11 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         if(desc.usage & GETexture::RenderTarget){
             res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
         }
-        else if(desc.usage & GETexture::GPURead){
+        else if(desc.usage & GETexture::ToGPU){
             res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
         }   
-        else if(desc.usage & GETexture::GPUWrite){
-            res_states |= D3D12_RESOURCE_STATE_COPY_DEST;
+        else if(desc.usage & GETexture::FromGPU){
+            res_states |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         }
         else {
             res_states = D3D12_RESOURCE_STATE_COMMON;
@@ -751,15 +756,15 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         CD3DX12_HEAP_PROPERTIES heap_prop;
 
 
-        if(isUAV) {
+        if(desc.usage == GETexture::FromGPU) {
             heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
-        else if(desc.usage & GETexture::MSResolveDest){
+        else if(desc.usage == GETexture::MSResolveDest || desc.usage == GETexture::GPUAccessOnly){
             heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         }
-        else {
+        else if(desc.usage == GETexture::ToGPU) {
             heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         }
@@ -777,7 +782,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
         descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
 
-        if(desc.usage & GETexture::GPURead || desc.usage & GETexture::GPUWrite) {
+        if(desc.usage & GETexture::ToGPU || desc.usage & GETexture::FromGPU) {
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
             hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&descHeap));
@@ -814,7 +819,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
         };
 
-        return std::make_shared<GED3D12Texture>(texture,descHeap,rtvDescHeap);
+        return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,descHeap,rtvDescHeap,res_states));
     };
 
     SharedHandle<GEBuffer> GED3D12Engine::makeBuffer(const BufferDescriptor &desc){
@@ -834,8 +839,13 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             case BufferDescriptor::Readback : {
                 heap_type = D3D12_HEAP_TYPE_READBACK;
                 flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-                state = D3D12_RESOURCE_STATE_COPY_DEST;
+                state = D3D12_RESOURCE_STATE_COPY_DEST | D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
                 break;
+            }
+            case BufferDescriptor::GPUOnly : {
+                heap_type = D3D12_HEAP_TYPE_DEFAULT;
+                flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+                state = D3D12_RESOURCE_STATE_COPY_DEST;
             }
         }
         D3D12_RESOURCE_DESC d3d12_desc = CD3DX12_RESOURCE_DESC::Buffer(desc.len,flags);
@@ -889,7 +899,7 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
             d3d12_device->CreateUnorderedAccessView(buffer,nullptr,&uav_desc,descHeap->GetCPUDescriptorHandleForHeapStart());
         }
 
-        return SharedHandle<GEBuffer>(new GED3D12Buffer(buffer,descHeap));
+        return SharedHandle<GEBuffer>(new GED3D12Buffer(desc.usage,buffer,descHeap,state));
     }
 
     inline D3D12_TEXTURE_ADDRESS_MODE convertAddressMode(const omegasl_shader_static_sampler_address_mode & addressMode){
@@ -975,7 +985,12 @@ SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
                     continue;
                 }
                 else {
-                    parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
+                    if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN) {
+                        parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
+                    }
+                    else {
+                        parameter1.InitAsUnorderedAccessView(l.gpu_relative_loc);
+                    }
                 }
                 params.push_back(parameter1);
             }

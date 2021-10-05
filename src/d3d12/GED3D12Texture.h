@@ -9,10 +9,21 @@ _NAMESPACE_BEGIN_
 class GED3D12Texture : public GETexture {
 public:
     void copyBytes(void *bytes, size_t len) override;
+
     ComPtr<ID3D12Resource> resource;
     ComPtr<ID3D12DescriptorHeap> srvDescHeap;
     ComPtr<ID3D12DescriptorHeap> rtvDescHeap;
-    GED3D12Texture(ID3D12Resource *res,ID3D12DescriptorHeap *descHeap,ID3D12DescriptorHeap *rtvDescHeap);
+
+    D3D12_RESOURCE_STATES currentState;
+
+    explicit GED3D12Texture(
+            const GETextureType & type,
+            const GETextureUsage & usage,
+            const TexturePixelFormat & pixelFormat,
+            ID3D12Resource *res,
+            ID3D12DescriptorHeap *descHeap,
+            ID3D12DescriptorHeap *rtvDescHeap,
+            D3D12_RESOURCE_STATES & currentState);
 };
 
 _NAMESPACE_END_

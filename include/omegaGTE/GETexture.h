@@ -20,17 +20,24 @@ _NAMESPACE_BEGIN_
             Texture3D,
         } GETextureType;
         typedef enum : unsigned char {
-            GPURead = 0x00,
-            GPUWrite = 0x01,
-            RenderTarget = 0x02,
-            MSResolveDest = 0x03
+            ToGPU = 0x00,
+            FromGPU = 0x01,
+            GPUAccessOnly = 0x02,
+            RenderTarget = 0x03,
+            MSResolveDest = 0x04
         } GETextureUsage;
     protected:
         GETextureType type;
         GETextureUsage usage;
         TexturePixelFormat pixelFormat;
+        bool checkIfCanWrite();
+        explicit GETexture(
+                const GETextureType & type,
+                  const GETextureUsage & usage,
+                  const TexturePixelFormat & pixelFormat);
     public:
         virtual void copyBytes(void *bytes,size_t len) = 0;
+        virtual ~GETexture() = default;
     };
 
     struct OMEGAGTE_EXPORT TextureRegion {
@@ -42,7 +49,7 @@ _NAMESPACE_BEGIN_
     struct  OMEGAGTE_EXPORT TextureDescriptor {
         GETexture::GETextureType type;
         StorageOpts storage_opts;
-        GETexture::GETextureUsage usage = GETexture::GPURead;
+        GETexture::GETextureUsage usage = GETexture::ToGPU;
         TexturePixelFormat pixelFormat = TexturePixelFormat::RGBA8Unorm;
         unsigned width;
         unsigned height;

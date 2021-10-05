@@ -93,8 +93,13 @@ _NAMESPACE_BEGIN_
         /// The storage options of the resource.
         StorageOpts opts;
     };
-
+    /// @brief A GPU Buffer Resource
     class  OMEGAGTE_EXPORT GEBuffer {
+    protected:
+        BufferDescriptor::Usage usage;
+        bool checkCanWrite();
+        bool checkCanRead();
+        explicit GEBuffer(const BufferDescriptor::Usage & usage);
     public:
         virtual size_t size() = 0;
         virtual ~GEBuffer() = default;
@@ -127,8 +132,10 @@ _NAMESPACE_BEGIN_
         virtual SharedHandle<GETexture> makeTexture(const TextureDescriptor & desc) = 0;
     };
 
+    /// @brief Provides command synchronization across multiple command queues.
     class  OMEGAGTE_EXPORT GEFence {};
 
+    /// @brief Describes a Texture Sampler
     struct OMEGAGTE_EXPORT SamplerDescriptor {
         enum class AddressMode  : int {
             Wrap,
@@ -183,6 +190,7 @@ _NAMESPACE_BEGIN_
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>
+         @see GEFence
         */
         virtual SharedHandle<GEFence> makeFence() = 0;
 

@@ -27,10 +27,15 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12Resource> buffer;
         ComPtr<ID3D12DescriptorHeap> bufferDescHeap;
 
+        D3D12_RESOURCE_STATES currentState;
+
         size_t size() override{
             return buffer->GetDesc().Width;
         };
-        GED3D12Buffer(ID3D12Resource *buffer,ID3D12DescriptorHeap *bufferDescHeap):buffer(buffer),bufferDescHeap(bufferDescHeap){
+        GED3D12Buffer(const BufferDescriptor::Usage & usage,ID3D12Resource *buffer,ID3D12DescriptorHeap *bufferDescHeap, D3D12_RESOURCE_STATES currentState):
+        GEBuffer(usage),buffer(buffer),
+        bufferDescHeap(bufferDescHeap),
+        currentState(currentState){
             
         };
     };
@@ -53,29 +58,28 @@ _NAMESPACE_BEGIN_
     class GED3D12Engine;
     class GTED3D12Device;
 
-    class GED3D12Heap : public GEHeap {
-        GED3D12Engine *engine;
-        ComPtr<ID3D12Heap> heap;
-        size_t currentOffset;
-    public:
-        GED3D12Heap(GED3D12Engine *engine,ID3D12Heap * heap):engine(engine),heap(heap),currentOffset(0){};
-        size_t currentSize() override{
-            return heap->GetDesc().SizeInBytes;
-        };
-        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
-        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override;
-    };
+//    class GED3D12Heap : public GEHeap {
+//        GED3D12Engine *engine;
+//        ComPtr<ID3D12Heap> heap;
+//        size_t currentOffset;
+//    public:
+//        GED3D12Heap(GED3D12Engine *engine,ID3D12Heap * heap):engine(engine),heap(heap),currentOffset(0){};
+//        size_t currentSize() override{
+//            return heap->GetDesc().SizeInBytes;
+//        };
+//        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
+//        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override;
+//    };
 
     class GED3D12Engine : public OmegaGraphicsEngine {
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
     public:
         ComPtr<IDXGIFactory6> dxgi_factory;
-        GED3D12Engine(SharedHandle<GTED3D12Device> device);
+        explicit GED3D12Engine(SharedHandle<GTED3D12Device> device);
         ComPtr<ID3D12Debug1> debug_interface;
         ComPtr<ID3D12Device8> d3d12_device;
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
-        void getHardwareAdapter(__in IDXGIFactory4 * dxgi_factory,__out IDXGIAdapter1 **adapter);
         // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);
         // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
         bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,D3D12_ROOT_SIGNATURE_DESC1 * rootSignatureDesc,ID3D12RootSignature **pRootSignature);

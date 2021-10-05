@@ -70,16 +70,6 @@ _NAMESPACE_BEGIN_
         virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) = 0;
         virtual void finishBlitPass() = 0;
 
-        /// @brief Encode a wait command for a fence.
-        /// @param fence The GEFence to wait for
-        /// @param val The value to wait for
-        virtual void waitForFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
-
-        /// @brief Encode a signal command for a fence.
-        /// @param fence The GEFence to signal
-        /// @param val The value to emit.
-        virtual void signalFence(SharedHandle<GEFence> & fence,unsigned val) = 0;
-
         /// @brief Starts a Compute Pass.
         /// @param desc A GEComputePassDescriptor describing the Compute Pass.
         /// @paragraph This method must be called before dispatch commands can be encoded.
@@ -121,8 +111,25 @@ _NAMESPACE_BEGIN_
     public:
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;
         unsigned getSize();
+
+        /// @brief Encodes a wait on command buffer using fence.
+        /// @param commandBuffer The GECommandBuffer to encode the wait on.
+        /// @param waitFence The GEFence to wait for.
+        /// @paragraph Allows sync between command buffers in different queues.
+        virtual void notifyCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer,SharedHandle<GEFence> & waitFence) = 0;
+
+        /// @brief Submits command buffer to Queue.
+        /// @param commandBuffer The GECommandBuffer to submit
+        /// @paragraph Does not sync between commandBuffers
         virtual void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer) = 0;
+
+        /// @brief Submits command buffer to Queue and encodes a signal event on completion.
+        /// @param commandBuffer The GECommandBuffer to submit
+        /// @param signalFence The GEFence to signal.
+        /// @paragraph Allows sync between command buffers in different queues.
+        virtual void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer,SharedHandle<GEFence> & signalFence) = 0;
         virtual void commitToGPU() = 0;
+        virtual void commitToGPUAndWait() = 0;
         virtual ~GECommandQueue(){};
     };
 _NAMESPACE_END_

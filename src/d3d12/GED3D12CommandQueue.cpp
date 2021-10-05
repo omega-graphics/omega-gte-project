@@ -8,6 +8,17 @@ _NAMESPACE_BEGIN_
     // void GED3D12CommandBuffer::commitToBuffer(){};
     GED3D12CommandQueue::GED3D12CommandQueue(GED3D12Engine *engine,unsigned size):GECommandQueue(size),engine(engine),currentCount(0){
         HRESULT hr;
+
+        hr = engine->d3d12_device->CreateFence(0,D3D12_FENCE_FLAG_NONE,IID_PPV_ARGS(&fence));
+
+        if(FAILED(hr)){
+            exit(1);
+        };
+
+        cpuEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
+
+        fence->SetEventOnCompletion(1,cpuEvent);
+
         hr = engine->d3d12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,IID_PPV_ARGS(bufferAllocator.GetAddressOf()));
 
         if(FAILED(hr)){
@@ -75,6 +86,43 @@ _NAMESPACE_BEGIN_
         return idx;
     }
 
+    D3D12_RESOURCE_STATES
+    GED3D12CommandBuffer::getRequiredResourceStateForResourceID(unsigned int &id, omegasl_shader &shader) {
+        OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layoutArr {shader.pLayout,shader.pLayout + shader.nLayout};
+        for(auto & l : layoutArr){
+            if(l.location == id){
+                D3D12_RESOURCE_STATES state;
+                if(l.type == OMEGASL_SHADER_TEXTURE1D_DESC || l.type == OMEGASL_SHADER_TEXTURE2D_DESC || l.type == OMEGASL_SHADER_TEXTURE3D_DESC){
+                    if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
+                        if(shader.type == OMEGASL_SHADER_FRAGMENT){
+                            state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                        }
+                        else {
+                            state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+                        }
+                    }
+                    else {
+                        state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    }
+                }
+                else if(l.type == OMEGASL_SHADER_BUFFER_DESC){
+                    if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
+                        state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+                    }
+                    else {
+                        state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    }
+                }
+                else {
+                    DEBUG_STREAM("This resource cannot be transitioned");
+                    exit(1);
+                }
+                return state;
+            }
+        }
+        return D3D12_RESOURCE_STATE_COMMON;
+    }
+
     void GED3D12CommandBuffer::startBlitPass(){
         inBlitPass = true;
     };
@@ -82,12 +130,57 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
         assert(inBlitPass && "Not in Blit Pass! Exiting...");
         auto *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+        /// Resource Synchronization Checks
+        OmegaCommon::Vector<D3D12_RESOURCE_BARRIER> resourceBarriers;
+        if(srcText->currentState != D3D12_RESOURCE_STATE_COPY_SOURCE){
+            if(srcText->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+                resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::UAV(srcText->resource.Get()));
+            }
+
+            resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(srcText->resource.Get(),srcText->currentState,D3D12_RESOURCE_STATE_COPY_SOURCE));
+            srcText->currentState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        }
+
+        if(destText->currentState != D3D12_RESOURCE_STATE_COPY_DEST){
+            resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(destText->resource.Get(),destText->currentState,D3D12_RESOURCE_STATE_COPY_DEST));
+            srcText->currentState = D3D12_RESOURCE_STATE_COPY_DEST;
+        }
+
+        if(!resourceBarriers.empty()){
+            commandList->ResourceBarrier(resourceBarriers.size(),resourceBarriers.data());
+        }
         commandList->CopyResource(destText->resource.Get(),srcText->resource.Get());
     }
 
     void GED3D12CommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,const TextureRegion & region,const GPoint3D & destCoord) {
         assert(inBlitPass && "Not in Blit Pass! Exiting...");
         auto *srcText = (GED3D12Texture *)src.get(),*destText = (GED3D12Texture *)dest.get();
+
+        /// Resource Synchronization Checks
+        OmegaCommon::Vector<D3D12_RESOURCE_BARRIER> resourceBarriers;
+        if(srcText->currentState != D3D12_RESOURCE_STATE_COPY_SOURCE){
+            if(srcText->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+                resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::UAV(srcText->resource.Get()));
+            }
+
+            resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(srcText->resource.Get(),srcText->currentState,D3D12_RESOURCE_STATE_COPY_SOURCE));
+            srcText->currentState = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        }
+
+        if(destText->currentState != D3D12_RESOURCE_STATE_COPY_DEST){
+            if(destText->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+                resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::UAV(destText->resource.Get()));
+            }
+
+            resourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(destText->resource.Get(),destText->currentState,D3D12_RESOURCE_STATE_COPY_DEST));
+            srcText->currentState = D3D12_RESOURCE_STATE_COPY_DEST;
+        }
+
+        if(!resourceBarriers.empty()){
+            commandList->ResourceBarrier(resourceBarriers.size(),resourceBarriers.data());
+        }
+
+
         CD3DX12_TEXTURE_COPY_LOCATION srcLoc(srcText->resource.Get()),
                                         destLoc(destText->resource.Get());
         LONG top_pos = LONG(region.h) - LONG(region.y);
@@ -192,29 +285,117 @@ _NAMESPACE_BEGIN_
 
     void GED3D12CommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> &buffer, unsigned int index){
         assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const at a Vertex Func when not in render pass");
-        GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        auto *d3d12_buffer = (GED3D12Buffer *)buffer.get();
+
+        auto required_state = getRequiredResourceStateForResourceID(index,currentRenderPipeline->vertexShader->internal);
+
+        if(d3d12_buffer->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12_buffer->buffer.Get());
+            commandList->ResourceBarrier(1,&barrier);
+        }
+
+        if(!(d3d12_buffer->currentState & required_state)){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_buffer->buffer.Get(),d3d12_buffer->currentState,required_state);
+            commandList->ResourceBarrier(1,&barrier);
+            d3d12_buffer->currentState = required_state;
+        }
+
+        if(d3d12_buffer->currentState & D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE){
+            commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        }
+        else {
+            commandList->SetGraphicsRootUnorderedAccessView(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        }
         descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) &&"Cannot set Resource Const at a Vertex Func when not in render pass");
-        GED3D12Texture *d3d12_texture = (GED3D12Texture *)texture.get();
-        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        auto *d3d12_texture = (GED3D12Texture *)texture.get();
+
+        auto required_state = getRequiredResourceStateForResourceID(index,currentRenderPipeline->vertexShader->internal);
+
+        if(d3d12_texture->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12_texture->resource.Get());
+            commandList->ResourceBarrier(1,&barrier);
+        }
+
+        if(!(d3d12_texture->currentState & required_state)){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_texture->resource.Get(),d3d12_texture->currentState,required_state);
+            commandList->ResourceBarrier(1,&barrier);
+            d3d12_texture->currentState = required_state;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE cpuDescHandle;
+
+        if(d3d12_texture->currentState & D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE){
+            /// Use Shader Resource View.
+            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        }
+        else {
+            /// Use Unordered Access View
+            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart(),parentQueue->engine->d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+        }
+
+        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),cpuDescHandle);
         descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
-        GED3D12Buffer *d3d12_buffer = (GED3D12Buffer *)buffer.get();
-        commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        auto *d3d12_buffer = (GED3D12Buffer *)buffer.get();
+
+        auto required_state = getRequiredResourceStateForResourceID(index,currentRenderPipeline->fragmentShader->internal);
+
+        if(d3d12_buffer->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12_buffer->buffer.Get());
+            commandList->ResourceBarrier(1,&barrier);
+        }
+
+        if(!(d3d12_buffer->currentState & required_state)){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_buffer->buffer.Get(),d3d12_buffer->currentState,required_state);
+            commandList->ResourceBarrier(1,&barrier);
+            d3d12_buffer->currentState = required_state;
+        }
+
+        if(d3d12_buffer->currentState & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE){
+            commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        }
+        else {
+            commandList->SetGraphicsRootUnorderedAccessView(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+        }
         descriptorHeapBuffer.push_back(d3d12_buffer->bufferDescHeap.Get());
     };
 
     void GED3D12CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned int index){
          assert((!inComputePass && !inBlitPass) && "Cannot set Resource Const a Fragment Func when not in render pass");
-         auto *d3d12_texture = (GED3D12Texture *)texture.get();
-         commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        auto *d3d12_texture = (GED3D12Texture *)texture.get();
+
+        auto required_state = getRequiredResourceStateForResourceID(index,currentRenderPipeline->vertexShader->internal);
+
+        if(d3d12_texture->currentState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::UAV(d3d12_texture->resource.Get());
+            commandList->ResourceBarrier(1,&barrier);
+        }
+
+        if(!(d3d12_texture->currentState & required_state)){
+            D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_texture->resource.Get(),d3d12_texture->currentState,required_state);
+            commandList->ResourceBarrier(1,&barrier);
+            d3d12_texture->currentState = required_state;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE cpuDescHandle;
+
+        if(d3d12_texture->currentState & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE){
+            /// Use Shader Resource View.
+            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        }
+        else {
+            /// Use Unordered Access View
+            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart(),parentQueue->engine->d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+        }
+
+         commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),cpuDescHandle);
          descriptorHeapBuffer.push_back(d3d12_texture->srvDescHeap.Get());
     };
 
@@ -394,46 +575,35 @@ _NAMESPACE_BEGIN_
     }
 
     void GED3D12CommandBuffer::finishComputePass(){
-        OmegaCommon::Vector<D3D12_RESOURCE_BARRIER> uavBarriers;
-        for(auto & r : uavResourceBuffer){
-            auto res_desc = r->GetDesc();
-            if(res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D || res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D || res_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D){
-                uavBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(r,D3D12_RESOURCE_STATE_UNORDERED_ACCESS,D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-            }
-            else {
-                uavBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(r,D3D12_RESOURCE_STATE_UNORDERED_ACCESS,D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
-            }
-        }
-        if(!uavBarriers.empty()){
-            commandList->ResourceBarrier(uavBarriers.size(),uavBarriers.data());
-        }
         commandList->ClearState(nullptr);
-        uavResourceBuffer.clear();
         inComputePass = false;
         currentComputePipeline = nullptr;
         currentRootSignature = nullptr;
     };
 
-    void GED3D12CommandBuffer::waitForFence(SharedHandle<GEFence> &fence,unsigned val) {
-        auto _fence = (GED3D12Fence *)fence.get();
-        parentQueue->commandQueue->Wait(_fence->fence.Get(),val);
-    }
-
-    void GED3D12CommandBuffer::signalFence(SharedHandle<GEFence> &fence,unsigned val) {
-        auto _fence = (GED3D12Fence *)fence.get();
-        parentQueue->commandQueue->Signal(_fence->fence.Get(),val);
-    }
+//    void GED3D12CommandBuffer::waitForFence(SharedHandle<GEFence> &fence,unsigned val) {
+////        auto _fence = (GED3D12Fence *)fence.get();
+////
+////        parentQueue->commandQueue->Wait(_fence->fence.Get(),val);
+//
+//    }
+//
+//    void GED3D12CommandBuffer::signalFence(SharedHandle<GEFence> &fence,unsigned val) {
+////        auto _fence = (GED3D12Fence *)fence.get();
+////        parentQueue->commandQueue->Signal(_fence->fence.Get(),val);
+//    }
 
     GED3D12CommandBuffer::~GED3D12CommandBuffer(){
         
     };
 
-    // void GED3D12CommandBuffer::commitToQueue(){
-    //     HRESULT hr;
-    //     hr = commandList->Close();
-        
-    //     parentQueue->commandLists.push_back(commandList.Get());
-    // };
+    void GED3D12CommandQueue::notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer,
+                                                  SharedHandle<GEFence> &waitFence) {
+        multiQueueSync = true;
+        auto fence = (GED3D12Fence *)waitFence.get();
+        commandQueue->Wait(fence->fence.Get(),1);
+        commandQueue->Signal(fence->fence.Get(),0);
+    };
 
     void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         HRESULT hr;
@@ -443,6 +613,17 @@ _NAMESPACE_BEGIN_
         commandLists.push_back(d3d12_buffer->commandList.Get());
     };
 
+    void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer,
+                                                  SharedHandle<GEFence> &signalFence) {
+        multiQueueSync = true;
+        auto d3d12_buffer = (GED3D12CommandBuffer *)commandBuffer.get();
+        auto fence = (GED3D12Fence *)signalFence.get();
+        d3d12_buffer->closed = true;
+        d3d12_buffer->commandList->Close();
+        commandQueue->ExecuteCommandLists(1,(ID3D12CommandList *const *)d3d12_buffer->commandList.GetAddressOf());
+        commandQueue->Signal(fence->fence.Get(),1);
+    }
+
     void GED3D12CommandBuffer::reset(){
         closed = false;
         firstRenderPass = true;
@@ -450,11 +631,20 @@ _NAMESPACE_BEGIN_
     };
 
     void GED3D12CommandQueue::commitToGPU(){
-        for(auto & cl : commandLists){
-            cl->Close();
+        if(!multiQueueSync) {
+            for (auto &cl: commandLists) {
+                cl->Close();
+            }
+            commandQueue->ExecuteCommandLists(commandLists.size(), (ID3D12CommandList *const *) commandLists.data());
         }
-        commandQueue->ExecuteCommandLists(commandLists.size(),(ID3D12CommandList *const *)commandLists.data());
     };
+
+    void GED3D12CommandQueue::commitToGPUAndWait() {
+        commitToGPU();
+        commandQueue->Signal(fence.Get(),1);
+        WaitForSingleObject(cpuEvent,INFINITE);
+        commandQueue->Signal(fence.Get(),0);
+    }
 
     SharedHandle<GECommandBuffer> GED3D12CommandQueue::getAvailableBuffer(){
         HRESULT hr;
@@ -474,6 +664,7 @@ _NAMESPACE_BEGIN_
         if(FAILED(hr)){
             exit(1);
         };
+        multiQueueSync = false;
     };
 
     ID3D12GraphicsCommandList6 *GED3D12CommandQueue::getLastCommandList() {
@@ -481,6 +672,8 @@ _NAMESPACE_BEGIN_
     }
 
     GED3D12CommandQueue::~GED3D12CommandQueue(){
+        CloseHandle(cpuEvent);
+    }
 
-    };
+
 _NAMESPACE_END_

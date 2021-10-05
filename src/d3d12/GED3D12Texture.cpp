@@ -3,12 +3,18 @@
 
 _NAMESPACE_BEGIN_
 
-GED3D12Texture::GED3D12Texture(ID3D12Resource *res,
+GED3D12Texture::GED3D12Texture(const GETextureType & type,
+                               const GETextureUsage & usage,
+                               const TexturePixelFormat & pixelFormat,
+                               ID3D12Resource *res,
                                ID3D12DescriptorHeap *descHeap,
-                               ID3D12DescriptorHeap *rtvDescHeap):
+                               ID3D12DescriptorHeap *rtvDescHeap,
+                               D3D12_RESOURCE_STATES & currentState):
+                                GETexture(type,usage,pixelFormat),
                                resource(res),
                                srvDescHeap(descHeap),
-                               rtvDescHeap(rtvDescHeap){
+                               rtvDescHeap(rtvDescHeap),
+                               currentState(currentState){
     
 }
 

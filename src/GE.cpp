@@ -1,6 +1,7 @@
 #include "omegaGTE/GE.h"
 #include "omegaGTE/GTEShader.h"
 
+
 #ifdef TARGET_DIRECTX
 #include "d3d12/GED3D12.h"
 #endif
@@ -17,9 +18,26 @@
 #include "vulkan/GEVulkan.h"
 #endif
 
+#include <cassert>
+
 _NAMESPACE_BEGIN_
 
+
 typedef unsigned char ShaderByte;
+
+GEBuffer::GEBuffer(const BufferDescriptor::Usage &usage):usage(usage) {
+
+}
+
+bool GEBuffer::checkCanRead() {
+    assert(usage == BufferDescriptor::Readback && "Can only read from a `Readback` type of GEBuffer");
+    return true;
+}
+
+bool GEBuffer::checkCanWrite() {
+    assert(usage == BufferDescriptor::Upload && "Can only write to an `Upload` type of GEBuffer");
+    return true;
+}
 
 SharedHandle<GTEShaderLibrary> OmegaGraphicsEngine::loadShaderLibraryFromInputStream(std::istream &in) {
     auto lib = std::make_shared<GTEShaderLibrary>();

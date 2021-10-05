@@ -40,6 +40,7 @@ _NAMESPACE_BEGIN_
        friend class GED3D12CommandQueue;
 
        unsigned getRootParameterIndexOfResource(unsigned id,omegasl_shader &shader);
+       D3D12_RESOURCE_STATES getRequiredResourceStateForResourceID(unsigned & id,omegasl_shader &shader);
     public:
 
         void startBlitPass() override;
@@ -69,27 +70,37 @@ _NAMESPACE_BEGIN_
 
         GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
         void reset() override;
-        void waitForFence(SharedHandle<GEFence> &fence,unsigned val) override;
-        void signalFence(SharedHandle<GEFence> &fence,unsigned val) override;
+
         ~GED3D12CommandBuffer();
     };
 
     class GED3D12CommandQueue : public GECommandQueue {
         GED3D12Engine *engine;
+
         std::vector<ID3D12GraphicsCommandList6 *> commandLists;
         ComPtr<ID3D12CommandQueue> commandQueue;
         ComPtr<ID3D12CommandAllocator> bufferAllocator;
+
+        ComPtr<ID3D12Fence> fence;
+
+        HANDLE cpuEvent;
+
+        bool multiQueueSync = false;
+
         unsigned currentCount;
         friend class GED3D12Engine;
         friend class GED3D12CommandBuffer;
     public:
         ID3D12GraphicsCommandList6 * getLastCommandList();
-        void commitToGPU();
+        void commitToGPU() override;
+        void commitToGPUAndWait() override;
         void reset();
-        void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer);
-        SharedHandle<GECommandBuffer> getAvailableBuffer();
+        void notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &signalFence) override;
+        SharedHandle<GECommandBuffer> getAvailableBuffer() override;
         GED3D12CommandQueue(GED3D12Engine *engine,unsigned size);
-        ~GED3D12CommandQueue();
+        ~GED3D12CommandQueue() override;
     };
 _NAMESPACE_END_
 #endif

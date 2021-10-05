@@ -15,10 +15,15 @@ public:
 
     TextureDescriptor descriptor;
 
+    VkFormat format;
+
     VmaAllocationInfo alloc_info;
     VmaAllocation alloc;
 
     VmaMemoryUsage memoryUsage;
+
+    VkAccessFlags2KHR priorShaderAccess = 0;
+    VkPipelineStageFlags2KHR priorPipelineAccess = 0;
 
     void copyBytes(void *bytes, size_t len) override;
 

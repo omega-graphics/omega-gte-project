@@ -74,7 +74,8 @@ _NAMESPACE_BEGIN_
     struct  OMEGAGTE_EXPORT BufferDescriptor {
         typedef enum : int {
             Upload,
-            Readback
+            Readback,
+            GPUOnly
         } Usage;
         Usage usage = Upload;
         size_t len;
@@ -122,7 +123,7 @@ _NAMESPACE_BEGIN_
             Wrap,
             ClampToEdge,
             MirrorClampToEdge,
-            MirrorWrap
+            MirrorWrap,
         }
         /// @brief  Address Mode for Width
         uAddressMode = AddressMode::Wrap,
@@ -138,6 +139,7 @@ _NAMESPACE_BEGIN_
             MagLinearMinLinearMipPoint,
             MagPointMinLinearMipPoint,
             MagLinearMinPointMipPoint,
+            MagPointMinPointMipLinear,
             MaxAnisotropic,
             MinAnisotropic
         } filter = Filter::Linear;
@@ -246,14 +248,16 @@ _NAMESPACE_BEGIN_
     #if defined(TARGET_VULKAN)
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
     #ifdef VULKAN_TARGET_X11
-        Window w;
-        Display display;
+        Window x_window;
+        Display *x_display;
     #endif
     #ifdef VULKAN_TARGET_WAYLAND
-        wl_surface *surface;
-        wl_display *display;
+        wl_surface *wl_surface = nullptr;
+        wl_display *wl_display = nullptr;
         unsigned width;
         unsigned height;
+    #endif
+    #ifdef VULKAN_TARGET_ANDROID
     #endif
     };
     #endif

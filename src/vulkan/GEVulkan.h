@@ -24,10 +24,13 @@ _NAMESPACE_BEGIN_
     struct GTEVulkanDevice;
     #define VK_RESULT_SUCCEEDED(val) (val == VK_SUCCESS)
     class GEVulkanEngine : public OmegaGraphicsEngine {
+
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
 
         VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
     public:
+        static VkInstance instance;
+
         VmaAllocator memAllocator;
         unsigned resource_count;
     
@@ -38,9 +41,9 @@ _NAMESPACE_BEGIN_
 
         OmegaCommon::Vector<VkQueueFamilyProperties> queueFamilyProps;
 
-        OmegaCommon::Vector<std::uint32_t> queueFamilyIndicies;
+        OmegaCommon::Vector<std::uint32_t> queueFamilyIndices;
 
-        GEVulkanEngine(SharedHandle<GTEVulkanDevice> device);
+        explicit GEVulkanEngine(SharedHandle<GTEVulkanDevice> device);
 
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override;
 
@@ -77,6 +80,9 @@ _NAMESPACE_BEGIN_
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
 
+        VkAccessFlags2KHR priorAccess;
+        VkPipelineStageFlags2KHR priorPipelineAccess;
+
         size_t size() override {
             return alloc_info.size;
         };
@@ -88,9 +94,38 @@ _NAMESPACE_BEGIN_
             bufferView(view),alloc(alloc),alloc_info(alloc_info){
 
         };
-        ~GEVulkanBuffer(){
+        ~GEVulkanBuffer() override{
             vmaDestroyBuffer(engine->memAllocator,buffer,alloc);
             vkDestroyBufferView(engine->device,bufferView,nullptr);
+        };
+    };
+
+    class GEVulkanFence : public GEFence {
+    public:
+        GEVulkanEngine *engine;
+
+        VkFence fence;
+
+        VkEvent event;
+
+        GEVulkanFence(GEVulkanEngine *engine,VkFence fence):engine(engine),fence(fence){
+
+        }
+        ~GEVulkanFence() {
+            vkDestroyFence(engine->device,fence,nullptr);
+        }
+    };
+
+    class GEVulkanSamplerState : public GESamplerState {
+    public:
+        GEVulkanEngine *engine;
+
+        VkSampler sampler;
+        GEVulkanSamplerState(GEVulkanEngine *engine,VkSampler sampler):engine(engine),sampler(sampler){
+
+        }
+        ~GEVulkanSamplerState(){
+            vkDestroySampler(engine->device,sampler,nullptr);
         };
     };
     

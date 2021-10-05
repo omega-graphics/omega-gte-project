@@ -53,10 +53,14 @@ _NAMESPACE_BEGIN_
             friend class GEMetalNativeRenderTarget;
             friend class GEMetalTextureRenderTarget;
             #endif
+
+        #ifdef TARGET_VULKAN
+            friend class GEVulkanNativeRenderTarget;
+            friend class GEVulkanTextureRenderTarget;
+        #endif
         
             /// Do NOT CALL THESE CONSTRUCTORS!!!
-          
-        public:
+
             typedef enum : uint8_t {
                 Native,
                 Texture
@@ -64,7 +68,8 @@ _NAMESPACE_BEGIN_
             GERTType renderTargetTy;
             /// Do NOT CALL THIS CONSTRUCTOR!!!
             CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
-            friend SharedHandle<CommandBuffer> commandBuffer();
+          
+        public:
             void startRenderPass(const RenderPassDesc & desc);
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
 

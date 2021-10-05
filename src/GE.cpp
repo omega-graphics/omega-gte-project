@@ -112,7 +112,7 @@ SharedHandle<OmegaGraphicsEngine> OmegaGraphicsEngine::Create(SharedHandle<GTEDe
         return GED3D12Engine::Create(device);
     #endif
     #ifdef TARGET_VULKAN
-        return GEVulkanEngine::Create();
+        return GEVulkanEngine::Create(device);
     #endif
 };
 

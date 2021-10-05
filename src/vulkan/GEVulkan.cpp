@@ -2,6 +2,8 @@
 #include "GEVulkanCommandQueue.h"
 #include "GEVulkanTexture.h"
 #include "GEVulkanPipeline.h"
+#include "GEVulkanRenderTarget.h"
+
 #include <cstdint>
 #include <initializer_list>
 #include <iostream>
@@ -12,16 +14,17 @@
 
 _NAMESPACE_BEGIN_
 
-    static VkInstance instance;
+    VkInstance GEVulkanEngine::instance = nullptr;
+
     bool vulkanInit = false;
 
     void initVulkan(){
-        vkCreateInstance(nullptr,nullptr,&instance);
+        vkCreateInstance(nullptr,nullptr,&GEVulkanEngine::instance);
         vulkanInit = true;
     }
 
     void cleanupVulkan(){
-        vkDestroyInstance(instance,nullptr);
+        vkDestroyInstance(GEVulkanEngine::instance,nullptr);
         vulkanInit = false;
     }
 
@@ -40,9 +43,9 @@ _NAMESPACE_BEGIN_
         }
         OmegaCommon::Vector<VkPhysicalDevice> vk_devs;
         std::uint32_t device_count;
-        vkEnumeratePhysicalDevices(instance,&device_count,nullptr);
+        vkEnumeratePhysicalDevices(GEVulkanEngine::instance,&device_count,nullptr);
         vk_devs.resize(device_count);
-        vkEnumeratePhysicalDevices(instance,&device_count,vk_devs.data());
+        vkEnumeratePhysicalDevices(GEVulkanEngine::instance,&device_count,vk_devs.data());
         for(auto dev : vk_devs){
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(dev,&props);
@@ -202,7 +205,7 @@ _NAMESPACE_BEGIN_
         unsigned id = 0;
         for(auto & q : queueFamilyProps){
             if(q.queueFlags & VK_QUEUE_GRAPHICS_BIT || q.queueFlags & VK_QUEUE_COMPUTE_BIT){
-                queueFamilyIndicies.push_back(id);
+                queueFamilyIndices.push_back(id);
             }
             VkDeviceQueueCreateInfo queueInfo {};
             queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -268,6 +271,10 @@ _NAMESPACE_BEGIN_
                 alloc_info.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
                 break;
             }
+            case BufferDescriptor::GPUOnly : {
+                alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+                break;
+            }
         }
 
         alloc_info.priority = 0;
@@ -298,8 +305,8 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GETexture>GEVulkanEngine::makeTexture(const TextureDescriptor &desc){
         VkImageCreateInfo image_desc;
-        image_desc.queueFamilyIndexCount = queueFamilyIndicies.size();
-        image_desc.pQueueFamilyIndices = queueFamilyIndicies.data();
+        image_desc.queueFamilyIndexCount = queueFamilyIndices.size();
+        image_desc.pQueueFamilyIndices = queueFamilyIndices.data();
 
         VkFormat image_format;
 
@@ -416,6 +423,41 @@ _NAMESPACE_BEGIN_
 
         return SharedHandle<GETexture>(new GEVulkanTexture(this,image,imageView,layout,alloc_info,alloc,desc,memoryUsage));
     };
+
+
+    inline VkSamplerAddressMode convertAddressMode(const omegasl_shader_static_sampler_address_mode & addressMode){
+        switch (addressMode) {
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_WRAP : {
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            }
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRROR : {
+                return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+            }
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_MIRRORWRAP : {
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            }
+            case OMEGASL_SHADER_SAMPLER_ADDRESS_MODE_CLAMPTOEDGE : {
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            }
+        }
+    }
+
+    inline VkSamplerAddressMode convertAddressMode(const SamplerDescriptor::AddressMode & addressMode){
+        switch (addressMode) {
+            case SamplerDescriptor::AddressMode::Wrap : {
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            }
+            case SamplerDescriptor::AddressMode::MirrorWrap : {
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            }
+            case SamplerDescriptor::AddressMode::MirrorClampToEdge : {
+                return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+            }
+            case SamplerDescriptor::AddressMode::ClampToEdge : {
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            }
+        }
+    }
 
     VkPipelineLayout GEVulkanEngine::createPipelineLayoutFromShaderDescs(unsigned shaderN,
                                                                          omegasl_shader *shaders,
@@ -652,32 +694,130 @@ _NAMESPACE_BEGIN_
 
     SharedHandle<GEFence> GEVulkanEngine::makeFence(){
         
-        return nullptr;
+        VkFenceCreateInfo fenceCreateInfo {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        fenceCreateInfo.pNext = nullptr;
+
+        VkFence fence;
+        vkCreateFence(device,&fenceCreateInfo,nullptr,&fence);
+
+        return SharedHandle<GEFence>(new GEVulkanFence(this,fence));
     };
+
+    SharedHandle<GESamplerState> GEVulkanEngine::makeSamplerState(const SamplerDescriptor &desc) {
+        VkSamplerCreateInfo samplerCreateInfo {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        samplerCreateInfo.pNext = nullptr;
+        samplerCreateInfo.addressModeU = convertAddressMode(desc.uAddressMode);
+        samplerCreateInfo.addressModeV = convertAddressMode(desc.vAddressMode);
+        samplerCreateInfo.addressModeW = convertAddressMode(desc.wAddressMode);
+        samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+
+        VkFilter magFilter,minFilter;
+        VkSamplerMipmapMode mipFilter;
+        switch (desc.filter) {
+            case SamplerDescriptor::Filter::Linear : {
+                magFilter = minFilter = VK_FILTER_LINEAR;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                break;
+            }
+            case SamplerDescriptor::Filter::Point : {
+                magFilter = minFilter = VK_FILTER_NEAREST;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagLinearMinPointMipLinear : {
+                magFilter = VK_FILTER_LINEAR;
+                minFilter = VK_FILTER_NEAREST;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagLinearMinLinearMipPoint : {
+                magFilter = minFilter = VK_FILTER_LINEAR;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagLinearMinPointMipPoint : {
+                magFilter = VK_FILTER_LINEAR;
+                minFilter = VK_FILTER_NEAREST;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagPointMinLinearMipLinear : {
+                magFilter = VK_FILTER_NEAREST;
+                minFilter = VK_FILTER_LINEAR;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagPointMinLinearMipPoint : {
+                magFilter = VK_FILTER_NEAREST;
+                minFilter = VK_FILTER_LINEAR;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                break;
+            }
+            case SamplerDescriptor::Filter::MagPointMinPointMipLinear : {
+                minFilter = magFilter = VK_FILTER_NEAREST;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                break;
+            }
+            case SamplerDescriptor::Filter::MaxAnisotropic : {
+                magFilter = minFilter = VK_FILTER_LINEAR;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                samplerCreateInfo.anisotropyEnable = VK_TRUE;
+                samplerCreateInfo.maxAnisotropy = (float)desc.maxAnisotropy;
+            }
+            case SamplerDescriptor::Filter::MinAnisotropic : {
+                magFilter = minFilter = VK_FILTER_NEAREST;
+                mipFilter = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                samplerCreateInfo.anisotropyEnable = VK_TRUE;
+                samplerCreateInfo.maxAnisotropy = (float)desc.maxAnisotropy;
+            }
+        }
+        samplerCreateInfo.magFilter = magFilter;
+        samplerCreateInfo.minFilter = minFilter;
+        samplerCreateInfo.mipmapMode = mipFilter;
+
+        VkSampler sampler;
+
+        vkCreateSampler(device,&samplerCreateInfo,nullptr,&sampler);
+
+        return SharedHandle<GESamplerState>(new GEVulkanSamplerState(this,sampler));
+    }
 
     SharedHandle<GENativeRenderTarget> GEVulkanEngine::makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc){
         VkSurfaceKHR surfaceKhr;
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        VkWaylandSurfaceCreateInfoKHR infoKhr {VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
-        infoKhr.pNext = nullptr;
-        infoKhr.surface = desc.surface;
-        infoKhr.display = desc.display;
-        infoKhr.flags = 0;
-        vkCreateWaylandSurfaceKHR(instance,&infoKhr,nullptr,&surfaceKhr);
+        bool wantsWayland = desc.wl_display != nullptr && desc.wl_surface != nullptr;
+        VkBool32 waylandSupported = VK_FALSE;
+        if(wantsWayland) {
+            VkWaylandSurfaceCreateInfoKHR infoKhr{VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR};
+            infoKhr.pNext = nullptr;
+            infoKhr.surface = desc.wl_surface;
+            infoKhr.display = desc.wl_display;
+            infoKhr.flags = 0;
+            vkCreateWaylandSurfaceKHR(instance, &infoKhr, nullptr, &surfaceKhr);
+
+
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndices[0], surfaceKhr, &waylandSupported);
+        }
+        if(waylandSupported == VK_FALSE || !wantsWayland) {
+            /// If Wayland is not supported by the Physical Device, use X11 window instead
+#endif
+
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+            VkXlibSurfaceCreateInfoKHR xlibSurfaceCreateInfoKhr{VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR};
+            xlibSurfaceCreateInfoKhr.pNext = nullptr;
+            xlibSurfaceCreateInfoKhr.flags = 0;
+            xlibSurfaceCreateInfoKhr.window = desc.x_window;
+            xlibSurfaceCreateInfoKhr.dpy = desc.x_display;
+            vkCreateXlibSurfaceKHR(instance, &xlibSurfaceCreateInfoKhr, nullptr, &surfaceKhr);
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+        }
 #endif
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice,surfaceKhr,&capabilitiesKhr);
-
-        OmegaCommon::Vector<uint32_t> queueFamilyIndices;
-
-        unsigned id = 0;
-        for(auto qf : queueFamilyProps){
-            if(qf.queueFlags & (VK_QUEUE_GRAPHICS_BIT)){
-                queueFamilyIndices.push_back(id);
-            }
-            ++id;
-        }
 
         OmegaCommon::Vector<VkSurfaceFormatKHR> surfaceFormats;
         std::uint32_t count = 0;
@@ -687,8 +827,26 @@ _NAMESPACE_BEGIN_
 
         vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice,surfaceKhr,&count,surfaceFormats.data());
 
+        OmegaCommon::Vector<VkPresentModeKHR> presentModes;
 
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,surfaceKhr,&count,nullptr);
 
+        presentModes.resize(count);
+
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice,surfaceKhr,&count,presentModes.data());
+
+        VkPresentModeKHR presentModeKhr;
+
+        for(auto mode : presentModes){
+            if(mode == VK_PRESENT_MODE_IMMEDIATE_KHR){
+                presentModeKhr = mode;
+                break;
+            }
+            else if(mode == VK_PRESENT_MODE_FIFO_KHR){
+                presentModeKhr = mode;
+                break;
+            }
+        }
 
         VkSwapchainKHR swapchainKhr;
 
@@ -702,7 +860,7 @@ _NAMESPACE_BEGIN_
         swapchainInfo.imageColorSpace = surfaceFormats[0].colorSpace;
         swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
         swapchainInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        swapchainInfo.presentMode = presentModeKhr;
         swapchainInfo.imageExtent = capabilitiesKhr.currentExtent;
         swapchainInfo.imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         swapchainInfo.minImageCount = 2;
@@ -711,10 +869,11 @@ _NAMESPACE_BEGIN_
         swapchainInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
 
-
         vkCreateSwapchainKHR(device,&swapchainInfo,nullptr,&swapchainKhr);
 
-        return nullptr;
+        unsigned mipLevels = 0;
+
+        return SharedHandle<GENativeRenderTarget>(new GEVulkanNativeRenderTarget(this,surfaceKhr,swapchainKhr,surfaceFormats[0].format,mipLevels,capabilitiesKhr.currentExtent));
     };
 
     SharedHandle<GETextureRenderTarget> GEVulkanEngine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){

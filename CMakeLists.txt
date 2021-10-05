@@ -41,9 +41,12 @@ else()
 		add_compile_definitions("VULKAN_TARGET_WAYLAND")
 	elseif(ANDROID)
 		add_compile_definitions("VULKAN_TARGET_ANDROID")
-	else()
+	endif()
+
+	if(NOT ANDROID)
 		add_compile_definitions("VULKAN_TARGET_X11")
 	endif()
+
 
 	add_compile_definitions("TARGET_VULKAN")
 

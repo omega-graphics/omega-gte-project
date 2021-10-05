@@ -52,7 +52,7 @@ void GERenderTarget::CommandBuffer::bindResourceAtFragmentShader(SharedHandle<GE
     commandBuffer->bindResourceAtFragmentShader(texture,id);
 };
 
-void GERenderTarget::CommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t start){
+void GERenderTarget::CommandBuffer::drawPolygons(PolygonType polygonType, unsigned vertexCount, size_t start){
     commandBuffer->drawPolygons(polygonType,vertexCount,start);
 };
 

@@ -44,6 +44,8 @@ _NAMESPACE_BEGIN_
         class OMEGAGTE_EXPORT CommandBuffer {
             GERenderTarget *renderTargetPtr;
             SharedHandle<GECommandBuffer> commandBuffer;
+            friend class GERenderTarget;
+
             #ifdef TARGET_DIRECTX
             friend class GED3D12NativeRenderTarget;
             friend class GED3D12TextureRenderTarget;
@@ -70,24 +72,60 @@ _NAMESPACE_BEGIN_
             CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
           
         public:
+
+            /// @brief Start a Render Pass
+            /// @param desc A RenderPassDesc describing the pass.
+            /// @paragraph This method MUST be called before encoding any render commands such as drawPolygons() @see drawPolygons()
+
             void startRenderPass(const RenderPassDesc & desc);
+
+            /// @brief Sets the Render Pipeline State in the current Render Pass
+            /// @param pipelineState A GERenderPipelineState
+            /// @paragraph This method can only be called once startRenderPass() has been called and must be called before any draw commands are initiated.
             void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState);
 
+            /// @brief Binds a Buffer Resource to a Descriptor in the scope of the Vertex Shader.
+            /// @param buffer The Resource to bind.
+            /// @param id The OmegaSL Binding id.
             void bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned id);
+
+            /// @brief Binds a Texture Resource to a Descriptor in the scope of the Vertex Shader.
+            /// @param texture The Resource to bind.
+            /// @param id The OmegaSL Binding id.
             void bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned id);
-        
+
+            /// @brief Binds a Buffer Resource to a Descriptor in the scope of the Fragment Shader.
+            /// @param buffer The Resource to bind.
+            /// @param id The OmegaSL Binding id.
             void bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned id);
+
+            /// @brief Binds a Texture Resource to a Descriptor in the scope of the Fragment Shader.
+            /// @param texture The Resource to bind.
+            /// @param id The OmegaSL Binding id.
             void bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned id);
-        
+
+            /// @brief Dynamically sets the Viewports on the Render Pipeline.
+            /// @param viewports The GEViewports
             void setViewports(std::vector<GEViewport> viewports);
+
+            /// @brief Dynamically sets the Scissor Rects on the Render Pipeline.
+            /// @param scissorRects The GEScissorRects.
             void setScissorRects(std::vector<GEScissorRect> scissorRects);
         
-
+            /// @brief Defines the Primitive Topology.
             typedef enum : uint8_t {
                 Triangle,
                 TriangleStrip
-            } RenderPassDrawPolygonType;
-            void drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t start);
+            } PolygonType;
+
+            /// @brief Encodes a draw command in the current Render Pass.
+            /// @param polygonType The Type of Polygons to draw.
+            /// @param vertexCount The Number of Vertices to draw.
+            /// @param start The Index of the first Vertex to draw.
+            void drawPolygons(PolygonType polygonType, unsigned vertexCount, size_t start);
+
+            /// @brief Finish Encoding a Render Pass.
+            /// @paragraph This method must be called once a draw command has been encoded into the Render Pass.
             void endRenderPass();
             
             void startComputePass(SharedHandle<GEComputePipelineState> & computePipelineState);

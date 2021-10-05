@@ -54,32 +54,43 @@ _NAMESPACE_BEGIN_
     struct ComputePipelineDescriptor;
 
     struct NativeRenderTargetDescriptor;
+
+    /// @brief Describes a Texture Render Target
     struct TextureRenderTargetDescriptor {
         bool renderToExistingTexture = false;
         SharedHandle<GETexture> texture = nullptr;
         GRect rect;
     };
 
+    /// @brief A 3D Space sized to fixed dimensions.
     struct OMEGAGTE_EXPORT GEViewport {
         float x,y;
         float width,height;
         float nearDepth,farDepth;
     };
 
+    /// @brief A Cropping Rectangle that clips the GEViewport.
     struct OMEGAGTE_EXPORT GEScissorRect {
         float x,y;
         float width,height;
     };
 
+    /// @brief Describes a Buffer.
+    /// @paragraph Each object in the buffer MUST be the identical.
     struct  OMEGAGTE_EXPORT BufferDescriptor {
+        /// Describes the usage of the Buffer.
         typedef enum : int {
             Upload,
             Readback,
             GPUOnly
         } Usage;
+        /// @enum Usage
         Usage usage = Upload;
+        /// The length of the buffer (in bytes).
         size_t len;
+        /// The stride of each object in the buffer (in bytes).
         size_t objectStride;
+        /// The storage options of the resource.
         StorageOpts opts;
     };
 

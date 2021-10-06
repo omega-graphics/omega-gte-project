@@ -24,6 +24,7 @@ _NAMESPACE_BEGIN_
 
         friend class GEMetalCommandQueue;
         unsigned getResourceLocalIndexFromGlobalIndex(unsigned _id,omegasl_shader & shader);
+        bool shaderHasWriteAccessForResource(unsigned & _id,omegasl_shader & shader);
         void _present_drawable(NSSmartPtr & drawable);
         void _commit();
     public:
@@ -52,9 +53,6 @@ _NAMESPACE_BEGIN_
         void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
 
-        void waitForFence(SharedHandle<GEFence> &fence, unsigned int val) override;
-        void signalFence(SharedHandle<GEFence> &fence, unsigned int val) override;
-
         GEMetalCommandBuffer(GEMetalCommandQueue *parentQueue);
         ~GEMetalCommandBuffer();
         void reset() override;
@@ -65,17 +63,22 @@ _NAMESPACE_BEGIN_
 
         std::vector<SharedHandle<GECommandBuffer>> commandBuffers;
 
+        dispatch_semaphore_t semaphore;
+
         
         friend class GEMetalCommandBuffer;
         friend class GEMetalNativeRenderTarget;
         friend class GEMetalTextureRenderTarget;
         void commitToGPUAndPresent(NSSmartPtr & drawable);
     public:
-        SharedHandle<GECommandBuffer> getAvailableBuffer();
+        SharedHandle<GECommandBuffer> getAvailableBuffer() override;
         GEMetalCommandQueue(NSSmartPtr & commandQueue,unsigned size);
-        ~GEMetalCommandQueue();
-        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer);
-        void commitToGPU();
+        ~GEMetalCommandQueue() override;
+        void notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &signalFence) override;
+        void commitToGPU() override;
+        void commitToGPUAndWait() override;
     };
 _NAMESPACE_END_
 

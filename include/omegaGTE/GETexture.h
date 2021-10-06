@@ -24,7 +24,7 @@ _NAMESPACE_BEGIN_
             FromGPU = 0x01,
             GPUAccessOnly = 0x02,
             RenderTarget = 0x03,
-            MSResolveDest = 0x04
+            MSResolveSrc = 0x04
         } GETextureUsage;
     protected:
         GETextureType type;
@@ -53,7 +53,7 @@ _NAMESPACE_BEGIN_
         TexturePixelFormat pixelFormat = TexturePixelFormat::RGBA8Unorm;
         unsigned width;
         unsigned height;
-        unsigned depth;
+        unsigned depth = 1;
         unsigned mipLevels = 0;
         unsigned sampleCount = 1;
     };

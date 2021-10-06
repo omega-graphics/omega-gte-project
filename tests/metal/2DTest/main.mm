@@ -13,25 +13,29 @@ static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
+static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
 
-// static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> vertexFunc;
-// static OmegaGTE::SharedHandle<OmegaGTE::GEFunction> fragmentFunc;
-// static OmegaGTE::SharedHandle<OmegaGTE::GERenderTarget::CommandBuffer> commandBuffer;
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
 
-static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> &color){
+static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> &coord){
     auto pos_vec = OmegaGTE::FVec<4>::Create();
     pos_vec[0][0] = pt.x;
     pos_vec[1][0] = pt.y;
     pos_vec[2][0] = pt.z;
     pos_vec[3][0] = 1.f;
 
+    std::cout << "Write Vertex" << std::endl;
+
+    float padding = 0.f;
+
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(pos_vec);
-    bufferWriter->writeFloat4(color);
+    bufferWriter->writeFloat2(coord);
+    bufferWriter->writeFloat(padding);
+    bufferWriter->writeFloat(padding);
     bufferWriter->structEnd();
     
 }
@@ -40,7 +44,7 @@ static void render(id<MTLDevice> dev){
 
 
 
-    OmegaGTE::GRect rect;
+    OmegaGTE::GRect rect {};
     rect.h = 100;
     rect.w = 100;
     rect.pos.x = 0;
@@ -48,14 +52,17 @@ static void render(id<MTLDevice> dev){
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
 
 
-    std::cout << "Tessalated GRect" << std::endl;
-    auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
-    std::cout << "Created Matrix GRect" << std::endl;
+    auto coord = OmegaGTE::FVec<2>::Create();
+    coord[0][0] = 0.f;
+    coord[1][0] = 0.f;
 
-    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT4_SIZE),(FLOAT4_SIZE + FLOAT4_SIZE)};
+
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT2_SIZE + FLOAT2_SIZE),(FLOAT4_SIZE + FLOAT2_SIZE + FLOAT2_SIZE)};
     auto vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
     bufferWriter->setOutputBuffer(vertexBuffer);
+
+    bool otherSide = false;
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
@@ -69,9 +76,22 @@ static void render(id<MTLDevice> dev){
             formatGPoint3D(ss,tri.c);
             ss << "\n}";
             std::cout << ss.str() << std::endl;
-            writeVertex(tri.a,color);
-            writeVertex(tri.b,color);
-            writeVertex(tri.c,color);
+
+            writeVertex(tri.a,coord);
+
+            coord[0][0] = 0.f;
+            coord[1][0] = 1.f;
+
+            writeVertex(tri.b,coord);
+
+            coord[0][0] = 1.f;
+            coord[1][0] = 0.f;
+
+            writeVertex(tri.c,coord);
+
+            otherSide = true;
+            coord[0][0] = 1.f;
+            coord[1][0] = 1.f;
         };
     };
 
@@ -87,16 +107,12 @@ static void render(id<MTLDevice> dev){
     OmegaGTE::GERenderTarget::RenderPassDesc renderPass;
     using RenderPassDesc = OmegaGTE::GERenderTarget::RenderPassDesc;
     renderPass.colorAttachment = new RenderPassDesc::ColorAttachment(RenderPassDesc::ColorAttachment::ClearColor(1.f,1.f,1.f,1.f),RenderPassDesc::ColorAttachment::Clear);
-//    NSLog(@"Starting Render Pass");
-//    commandBuffer->startRenderPass(renderPass);
-//    commandBuffer->setRenderPipelineState(renderPipeline);
-//    commandBuffer->bindResourceAtVertexShader(vertexBuffer,0);
-//    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
-//    NSLog(@"Ending Render Pass");
-//    commandBuffer->endRenderPass();
     commandBuffer->startRenderPass(renderPass);
-//    commandBuffer->
-
+    commandBuffer->setRenderPipelineState(renderPipeline);
+    commandBuffer->bindResourceAtVertexShader(vertexBuffer,0);
+    commandBuffer->bindResourceAtFragmentShader(texture,1);
+    commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
+    commandBuffer->endRenderPass();
     NSLog(@"Ended Render Pass");
     nativeRenderTarget->submitCommandBuffer(commandBuffer);
     NSLog(@"Command Buffer Scheduled for Execution");
@@ -126,6 +142,25 @@ static void render(id<MTLDevice> dev){
         // regLayer.backgroundColor = [NSColor blueColor].CGColor;
         view.layer = metalLayer;
         // view.layer = regLayer;
+
+        NSImage *image = [[NSImage alloc] initByReferencingFile:@"test.png"];
+
+        CGImageRef img = [image CGImageForProposedRect:nil context:nil hints:nil];
+
+
+        OmegaGTE::TextureDescriptor textureDescriptor {};
+        textureDescriptor.type = OmegaGTE::GETexture::Texture2D;
+        textureDescriptor.usage = OmegaGTE::GETexture::ToGPU;
+        textureDescriptor.pixelFormat = OmegaGTE::TexturePixelFormat::RGBA8Unorm;
+        textureDescriptor.width = 320;
+        textureDescriptor.height = 424;
+        textureDescriptor.storage_opts = OmegaGTE::Shared;
+
+        texture = gte.graphicsEngine->makeTexture(textureDescriptor);
+
+        CFDataRef data = CGDataProviderCopyData(CGImageGetDataProvider(img));
+        const uint8_t *ptr = CFDataGetBytePtr(data);
+        texture->copyBytes((void *)ptr, CGImageGetWidth(img));
 
 
     

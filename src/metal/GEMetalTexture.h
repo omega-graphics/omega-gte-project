@@ -9,11 +9,17 @@ _NAMESPACE_BEGIN_
 
 class GEMetalTexture : public GETexture {
     NSSmartPtr texture;
-    TextureDescriptor desc;
+    NSSmartPtr resourceBarrier;
+
+    bool needsBarrier = false;
+
     friend class GEMetalCommandBuffer;
 public:
     void copyBytes(void *bytes,size_t len) override;
-    GEMetalTexture(NSSmartPtr texture,const TextureDescriptor & desc);
+    explicit GEMetalTexture(const GETexture::GETextureType &type,
+                   const GETexture::GETextureUsage & usage,
+                   const TexturePixelFormat & pixelFormat,
+                   NSSmartPtr texture);
 };
 
 _NAMESPACE_END_

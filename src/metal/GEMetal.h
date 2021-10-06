@@ -33,8 +33,13 @@ class GEMetalBuffer : public GEBuffer {
 public:
     NSSmartPtr metalBuffer;
     NSSmartPtr layoutDesc;
+
+    NSSmartPtr resourceBarrier;
+
+    bool needsBarrier = false;
+
     size_t size();
-    GEMetalBuffer(NSSmartPtr & buffer,NSSmartPtr & layoutDesc);
+    GEMetalBuffer(const BufferDescriptor::Usage & usage,NSSmartPtr & buffer,NSSmartPtr & layoutDesc);
     ~GEMetalBuffer();
 };
 

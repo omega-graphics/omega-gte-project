@@ -7,6 +7,8 @@
 
 #import <QuartzCore/QuartzCore.h>
 
+/// @note In Metal, we use id<MTLFence> as a Resource Barrier between different shader stages.
+
 _NAMESPACE_BEGIN_
     GEMetalCommandBuffer::GEMetalCommandBuffer(GEMetalCommandQueue *parentQueue):parentQueue(parentQueue),
     buffer({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,parentQueue->commandQueue.handle()) commandBuffer]}){
@@ -23,6 +25,16 @@ _NAMESPACE_BEGIN_
         return -1;
     };
 
+    bool GEMetalCommandBuffer::shaderHasWriteAccessForResource(unsigned int &_id, omegasl_shader &shader) {
+        OmegaCommon::ArrayRef<omegasl_shader_layout_desc> descArr {shader.pLayout,shader.pLayout + shader.nLayout};
+        for(auto l : descArr){
+            if(l.location == _id){
+                return l.io_mode != OMEGASL_SHADER_DESC_IO_IN;
+            }
+        }
+        return false;
+    }
+
     void GEMetalCommandBuffer::startBlitPass(){
         buffer.assertExists();
         bp = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) blitCommandEncoder];
@@ -30,10 +42,22 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
         assert(bp && "Must be in BLIT PASS");
+        auto srcTexture = (GEMetalTexture *)src.get(),destTexture = (GEMetalTexture *)dest.get();
+
+        /// Use MTLFences as ResourceBarrier.
+
+
+        if(srcTexture->needsBarrier){
+            [bp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,srcTexture->resourceBarrier.handle())];
+        }
+
+
         [bp copyFromTexture:
                 NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)src.get())->texture.handle())
                   toTexture:
         NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)dest.get())->texture.handle())];
+        destTexture->needsBarrier = true;
+        [bp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,destTexture->resourceBarrier.handle())];
     }
 
     void GEMetalCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,
@@ -41,11 +65,19 @@ _NAMESPACE_BEGIN_
         assert(bp && "Must be in BLIT PASS");
         auto mtl_src_texture = (GEMetalTexture *)src.get();
         auto mtl_dest_texture = (GEMetalTexture *)dest.get();
+
+        if(mtl_src_texture->needsBarrier){
+            [bp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_src_texture->resourceBarrier.handle())];
+        }
+
         [bp copyFromTexture: NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_src_texture->texture.handle())
                 sourceSlice:0 sourceLevel:0
                   toTexture: NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_dest_texture->texture.handle())
            destinationSlice:0 destinationLevel:0 sliceCount:1 levelCount:
                         NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_src_texture->texture.handle()).mipmapLevelCount];
+
+        mtl_dest_texture->needsBarrier = true;
+        [bp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_dest_texture->resourceBarrier.handle())];
     }
 
     void GEMetalCommandBuffer::finishBlitPass(){
@@ -63,12 +95,15 @@ _NAMESPACE_BEGIN_
 
         id<MTLTexture> multiSampleTextureTarget = nil;
 
-        if(desc.nRenderTarget){
+        bool needsBarrier = false;
+        NSSmartPtr barrier = NSObjectHandle{nullptr};
+
+        if(desc.nRenderTarget != nullptr){
             auto *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
             auto metalDrawable = n_rt->getDrawable();
             metalDrawable.assertExists();
-            renderPassDesc.renderTargetWidth = n_rt->drawableSize.width;
-            renderPassDesc.renderTargetHeight = n_rt->drawableSize.height;
+            renderPassDesc.renderTargetWidth = (NSUInteger)n_rt->drawableSize.width;
+            renderPassDesc.renderTargetHeight = (NSUInteger)n_rt->drawableSize.height;
             id<MTLTexture> renderTarget;
             if(desc.multisampleResolve){
                 renderTarget = NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get())->texture.handle());
@@ -81,8 +116,11 @@ _NAMESPACE_BEGIN_
         }
         else if(desc.tRenderTarget){
             auto *t_rt = (GEMetalTextureRenderTarget *)desc.tRenderTarget;
-            renderPassDesc.renderTargetWidth = t_rt->texturePtr->desc.width;
-            renderPassDesc.renderTargetHeight = t_rt->texturePtr->desc.height;
+            if(t_rt->texturePtr->needsBarrier){
+                needsBarrier = true;
+                barrier = t_rt->texturePtr->resourceBarrier;
+            }
+
             id<MTLTexture> renderTarget;
             if(desc.multisampleResolve){
                 renderTarget = NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,((GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get())->texture.handle());
@@ -91,6 +129,8 @@ _NAMESPACE_BEGIN_
             else {
                 renderTarget =  NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,t_rt->texturePtr->texture.handle());
             }
+            renderPassDesc.renderTargetWidth = renderTarget.width;
+            renderPassDesc.renderTargetHeight = renderTarget.height;
             renderPassDesc.colorAttachments[0].texture = renderTarget;
         }
         else {
@@ -99,7 +139,6 @@ _NAMESPACE_BEGIN_
         };
 
         if(desc.multisampleResolve){
-            auto resolveTexture = (GEMetalTexture *)desc.resolveDesc.multiSampleTextureSrc.get();
             renderPassDesc.colorAttachments[0].resolveTexture = multiSampleTextureTarget;
             renderPassDesc.colorAttachments[0].resolveSlice = desc.resolveDesc.slice;
             renderPassDesc.colorAttachments[0].resolveDepthPlane = desc.resolveDesc.depth;
@@ -131,6 +170,10 @@ _NAMESPACE_BEGIN_
             }
         }
         rp = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) renderCommandEncoderWithDescriptor:renderPassDesc];
+        if(needsBarrier){
+            /// Ensure texture is ready to render to when fragment stage begins.
+            [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,barrier.handle()) beforeStages:MTLRenderStageFragment];
+        }
     };
 
     void GEMetalCommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState){
@@ -142,32 +185,73 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::bindResourceAtVertexShader(SharedHandle<GEBuffer> & buffer,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
-        GEMetalBuffer *metalBuffer = (GEMetalBuffer *)buffer.get();
+        auto *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
+
+        if(metalBuffer->needsBarrier){
+            [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) beforeStages:MTLRenderStageVertex];
+            metalBuffer->needsBarrier = false;
+        }
+
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
         [rp setVertexBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
+
+        if(shaderHasWriteAccessForResource(_id,renderPipelineState->vertexShader->internal)){
+            metalBuffer->needsBarrier = true;
+            [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) afterStages:MTLRenderStageVertex];
+        }
     };
 
     void GEMetalCommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> & texture,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Vertex Func when not in render pass");
-        GEMetalTexture *metalTexture = (GEMetalTexture *)texture.get();
+        auto *metalTexture = (GEMetalTexture *)texture.get();
+
+        if(metalTexture->needsBarrier){
+            [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) beforeStages:MTLRenderStageVertex];
+            metalTexture->needsBarrier = false;
+        }
+
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
         [rp setVertexTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
+        if(shaderHasWriteAccessForResource(_id,renderPipelineState->vertexShader->internal)){
+            metalTexture->needsBarrier = true;
+            [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) afterStages:MTLRenderStageVertex];
+        }
     };
 
     void GEMetalCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
         auto *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
+
+        if(metalBuffer->needsBarrier){
+            [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) beforeStages:MTLRenderStageFragment];
+            metalBuffer->needsBarrier = false;
+        }
+
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
         [rp setFragmentBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
+        if(shaderHasWriteAccessForResource(_id,renderPipelineState->fragmentShader->internal)){
+            metalBuffer->needsBarrier = true;
+            [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) afterStages:MTLRenderStageFragment];
+        }
     };
 
     void GEMetalCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned _id){
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
         auto *metalTexture = (GEMetalTexture *)texture.get();
+
+        if(metalTexture->needsBarrier){
+            [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) beforeStages:MTLRenderStageFragment];
+            metalTexture->needsBarrier = false;
+        }
+
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
         [rp setFragmentTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
+        if(shaderHasWriteAccessForResource(_id,renderPipelineState->fragmentShader->internal)){
+            metalTexture->needsBarrier = true;
+            [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) afterStages:MTLRenderStageFragment];
+        }
     };
 
     void GEMetalCommandBuffer::setViewports(std::vector<GEViewport> viewports){
@@ -219,7 +303,7 @@ _NAMESPACE_BEGIN_
             primativeType = MTLPrimitiveTypeTriangle;
         };
 
-        NSLog(@"CALLING DRAW PRIMITIVES");
+//        NSLog(@"CALLING DRAW PRIMITIVES");
         [rp drawPrimitives:primativeType vertexStart:startIdx vertexCount:vertexCount];
     };
 
@@ -244,13 +328,33 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned int _id) {
         assert(cp != nil && "");
         auto mtl_buffer = (GEMetalBuffer *)buffer.get();
+
+        if(mtl_buffer->needsBarrier){
+            [cp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_buffer->resourceBarrier.handle())];
+            mtl_buffer->needsBarrier = false;
+        }
+
         [cp setBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,mtl_buffer->metalBuffer.handle()) offset:0 atIndex:getResourceLocalIndexFromGlobalIndex(_id,computePipelineState->computeShader->internal)];
+        if(shaderHasWriteAccessForResource(_id,computePipelineState->computeShader->internal)){
+            mtl_buffer->needsBarrier = true;
+            [cp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_buffer->resourceBarrier.handle())];
+        }
     }
 
     void GEMetalCommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int _id) {
         assert(cp != nil && "");
         auto mtl_texture = (GEMetalTexture *)texture.get();
+
+        if(mtl_texture->needsBarrier){
+            [cp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_texture->resourceBarrier.handle())];
+            mtl_texture->needsBarrier = false;
+        }
+
         [cp setTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,mtl_texture->texture.handle()) atIndex:getResourceLocalIndexFromGlobalIndex(_id,computePipelineState->computeShader->internal)];
+        if(shaderHasWriteAccessForResource(_id,computePipelineState->computeShader->internal)){
+            mtl_texture->needsBarrier = true;
+            [cp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,mtl_texture->resourceBarrier.handle())];
+        }
     }
 
     void GEMetalCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
@@ -286,17 +390,17 @@ _NAMESPACE_BEGIN_
         NSLog(@"Commit to GPU!");
     };
 
-    void GEMetalCommandBuffer::waitForFence(SharedHandle<GEFence> &fence, unsigned int val) {
-        auto event = (GEMetalFence *)fence.get();
-        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
-                encodeWaitForEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
-    }
-
-    void GEMetalCommandBuffer::signalFence(SharedHandle<GEFence> &fence, unsigned int val) {
-        auto event = (GEMetalFence *)fence.get();
-        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
-                encodeSignalEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
-    }
+//    void GEMetalCommandBuffer::waitForFence(SharedHandle<GEFence> &fence, unsigned int val) {
+//        auto event = (GEMetalFence *)fence.get();
+//        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
+//                encodeWaitForEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
+//    }
+//
+//    void GEMetalCommandBuffer::signalFence(SharedHandle<GEFence> &fence, unsigned int val) {
+//        auto event = (GEMetalFence *)fence.get();
+//        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle())
+//                encodeSignalEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,event->metalEvent.handle()) value:val];
+//    }
 
     void GEMetalCommandBuffer::reset(){
         buffer = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,parentQueue->commandQueue.handle()) commandBuffer]};
@@ -310,15 +414,34 @@ _NAMESPACE_BEGIN_
 
     GEMetalCommandQueue::GEMetalCommandQueue(NSSmartPtr & queue,unsigned size):
     GECommandQueue(size),
-    commandQueue(queue),commandBuffers(){
+    commandQueue(queue),commandBuffers(),semaphore(dispatch_semaphore_create(0)){
         
     };
+
+    void GEMetalCommandQueue::notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer,
+                                                  SharedHandle<GEFence> &waitFence) {
+        auto _commandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
+        auto _fence = (GEMetalFence *)waitFence.get();
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,_commandBuffer->buffer.handle())
+                encodeWaitForEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,_fence->metalEvent.handle()) value:1];
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,_commandBuffer->buffer.handle())
+                encodeSignalEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,_fence->metalEvent.handle()) value:0];
+    }
 
     void GEMetalCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         auto _commandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,_commandBuffer->buffer.handle()) enqueue];
         commandBuffers.push_back(commandBuffer);
     };
+
+    void GEMetalCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer,
+                                                  SharedHandle<GEFence> &signalFence) {
+        submitCommandBuffer(commandBuffer);
+        auto _commandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
+        auto _fence = (GEMetalFence *)signalFence.get();
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,_commandBuffer->buffer.handle())
+                encodeSignalEvent:NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,_fence->metalEvent.handle()) value:1];
+    }
 
     void GEMetalCommandQueue::commitToGPU(){
         for(auto & commandBuffer : commandBuffers){
@@ -338,9 +461,20 @@ _NAMESPACE_BEGIN_
 //        commandBuffers.clear();
     };
 
+    void GEMetalCommandQueue::commitToGPUAndWait() {
+        auto lastCommandBuffer = (GEMetalCommandBuffer *)commandBuffers.back().get();
+        __block dispatch_semaphore_t sem = semaphore;
+        [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,lastCommandBuffer->buffer.handle()) addCompletedHandler:^(id<MTLCommandBuffer> buffer){
+            dispatch_semaphore_signal(sem);
+        }];
+        commitToGPU();
+        dispatch_semaphore_wait(semaphore,DISPATCH_TIME_FOREVER);
+    }
+
     GEMetalCommandQueue::~GEMetalCommandQueue(){
         commandQueue.assertExists();
         NSLog(@"Metal Command Queue Destroy");
+        dispatch_release(semaphore);
     //    [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,commandQueue.handle()) autorelease];
     };
 

@@ -81,8 +81,15 @@ _NAMESPACE_BEGIN_
         assert(data);
     };
 
-    GEMetalBuffer::GEMetalBuffer(NSSmartPtr & buffer,NSSmartPtr &layoutDesc):metalBuffer(buffer), layoutDesc(layoutDesc){
+    GEMetalBuffer::GEMetalBuffer(const BufferDescriptor::Usage & usage,
+                                 NSSmartPtr & buffer,
+                                 NSSmartPtr &layoutDesc):
+            GEBuffer(usage),
+            metalBuffer(buffer),
+            layoutDesc(layoutDesc){
 
+        id<MTLDevice> device = NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer.handle()).device;
+        resourceBarrier = NSObjectHandle {NSOBJECT_CPP_BRIDGE [device newFence]};
     };
     
     size_t GEMetalBuffer::size(){
@@ -102,6 +109,7 @@ _NAMESPACE_BEGIN_
         GEMetalBuffer *buffer_ = nil;
         MTLByte *_data_ptr = nullptr;
         size_t currentOffset = 0;
+        size_t structOffset = 0;
     public:
         GEMetalBufferWriter() = default;
         void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
@@ -117,19 +125,19 @@ _NAMESPACE_BEGIN_
             currentOffset += sizeof(v);
         }
         void writeFloat2(FVec<2> &v) override {
-            auto _v = float2(v);
-            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+            auto _v = simd_make_float2(v[0][0],v[1][0]);
+            memcpy(_data_ptr + currentOffset,&_v,FLOAT2_SIZE);
+            currentOffset += FLOAT2_SIZE;
         }
         void writeFloat3(FVec<3> &v) override {
             auto _v = float3(v);
-            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+            memcpy(_data_ptr + currentOffset,&_v,FLOAT3_SIZE);
+            currentOffset += FLOAT3_SIZE;
         }
         void writeFloat4(FVec<4> &v) override {
             auto _v = float4(v);
-            memcpy(_data_ptr + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+            memcpy(_data_ptr + currentOffset,&_v,FLOAT4_SIZE);
+            currentOffset += FLOAT4_SIZE;
         }
         void structEnd() override {
 
@@ -262,7 +270,7 @@ _NAMESPACE_BEGIN_
 
             NSSmartPtr buffer ({NSOBJECT_CPP_BRIDGE mtlBuffer}),
             layoutDesc(NSObjectHandle {NSOBJECT_CPP_BRIDGE descriptor});
-            return std::shared_ptr<GEBuffer>(new GEMetalBuffer(buffer,layoutDesc));
+            return std::shared_ptr<GEBuffer>(new GEMetalBuffer(desc.usage,buffer,layoutDesc));
         };
         SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor &desc) override{
             metalDevice.assertExists();
@@ -280,6 +288,7 @@ _NAMESPACE_BEGIN_
 
             pipelineDescriptor.computeFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,computeShader->function.handle());
 
+
             NSError *error;
             NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newComputePipelineStateWithDescriptor:pipelineDescriptor options:MTLPipelineOptionNone reflection:nil error:&error]};
 
@@ -292,6 +301,7 @@ _NAMESPACE_BEGIN_
         };
         SharedHandle<GEFence> makeFence() override{
              NSSmartPtr fence = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newEvent]};
+
              return SharedHandle<GEFence>(new GEMetalFence(fence));
         };
         SharedHandle<GEHeap> makeHeap(const HeapDescriptor &desc) override{
@@ -316,6 +326,7 @@ _NAMESPACE_BEGIN_
             pipelineDesc.vertexFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,vertexFunc->function.handle());
             pipelineDesc.fragmentFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,fragmentFunc->function.handle());
             pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+
             
             NSError *error;
             NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newRenderPipelineStateWithDescriptor:pipelineDesc error:&error]};
@@ -341,7 +352,7 @@ _NAMESPACE_BEGIN_
                     GETexture::RenderTarget,
                     TexturePixelFormat::RGBA8Unorm,
                     (unsigned int)desc.rect.w,
-                    (unsigned int)desc.rect.h,0};
+                    (unsigned int)desc.rect.h,1};
 
                 texture = makeTexture(textureDescriptor);
             }
@@ -353,6 +364,27 @@ _NAMESPACE_BEGIN_
             metalDevice.assertExists();
             MTLTextureDescriptor *mtlDesc = [[MTLTextureDescriptor alloc] init];
             MTLTextureType textureType;
+            MTLTextureUsage usage;
+            switch (desc.usage) {
+                case GETexture::ToGPU : {
+                    usage = MTLTextureUsageShaderRead;
+                    break;
+                }
+                case GETexture::FromGPU : {
+                    usage = MTLTextureUsageShaderWrite;
+                    break;
+                }
+                case GETexture::GPUAccessOnly : {
+                    usage = MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
+                    break;
+                }
+                case GETexture::RenderTarget :
+                case GETexture::MSResolveSrc : {
+                    usage = MTLTextureUsageRenderTarget;
+                    break;
+                }
+            }
+
             switch (desc.type) {
                 case GETexture::Texture1D : {
                     textureType = MTLTextureType1D;
@@ -372,6 +404,8 @@ _NAMESPACE_BEGIN_
                     break;
                 }
             }
+
+            mtlDesc.usage = usage;
             mtlDesc.textureType = textureType;
             mtlDesc.width = desc.width;
             mtlDesc.height = desc.height;
@@ -399,8 +433,9 @@ _NAMESPACE_BEGIN_
             mtlDesc.pixelFormat = pixelFormat;
 
             NSSmartPtr texture = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newTextureWithDescriptor:mtlDesc]};
-            return std::shared_ptr<GETexture>(new GEMetalTexture(texture,desc));
+            return std::shared_ptr<GETexture>(new GEMetalTexture(desc.type,desc.usage,desc.pixelFormat,texture));
         };
+
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override {
             MTLSamplerDescriptor *mtlSamplerDescriptor = [[MTLSamplerDescriptor alloc] init];
 

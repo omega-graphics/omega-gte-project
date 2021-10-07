@@ -2,7 +2,12 @@
 #include <windows.h>
 #include <pathcch.h>
 
+#include <wrl.h>
+#include <wincodec.h>
+
 #pragma comment(lib,"Pathcch.lib")
+#pragma comment(lib,"windowscodecs.lib")
+#pragma comment(lib,"runtimeobject.lib")
 
 LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -16,13 +21,14 @@ static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> renderTarget;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipelineState;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBuffer> vertexBuffer;
+static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
 
-void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
+void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> & coord){
     auto vertex_pos = OmegaGTE::FVec<4>::Create();
     vertex_pos[0][0] = pt.x;
     vertex_pos[1][0] = pt.y;
@@ -31,7 +37,7 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> & color){
 
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(vertex_pos);
-    bufferWriter->writeFloat4(color);
+    bufferWriter->writeFloat2(coord);
     bufferWriter->structEnd();
 }
 
@@ -45,11 +51,13 @@ void tessalate(){
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
 
     std::cout << "Tessalated GRect" << std::endl;
-    auto color = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
+    auto coord = OmegaGTE::FVec<2>::Create();
+    coord[0][0] = 0.f;
+    coord[1][0] = 0.f;
 
     std::cout << "Created Matrix GRect" << std::endl;
 
-    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT4_SIZE),FLOAT4_SIZE + FLOAT4_SIZE};
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT2_SIZE),FLOAT4_SIZE + FLOAT2_SIZE};
 
     vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
@@ -68,9 +76,21 @@ void tessalate(){
             ss << "\n}";
             std::cout << ss.str() << std::endl;
             std::cout << "Create Vertex" << std::endl;
-            writeVertex(tri.a,color);
-            writeVertex(tri.b,color);
-            writeVertex(tri.c,color);
+
+            writeVertex(tri.a,coord);
+
+            coord[0][0] = 0.f;
+            coord[1][0] = 1.f;
+
+            writeVertex(tri.b,coord);
+
+            coord[0][0] = 1.f;
+            coord[1][0] = 0.f;
+
+            writeVertex(tri.c,coord);
+
+            coord[0][0] = 1.f;
+            coord[1][0] = 1.f;
         };
     };
 
@@ -89,7 +109,44 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     SetCurrentDirectoryW(name);
     MessageBoxW(GetForegroundWindow(),(std::wstring(L"Current Dir:") + name).c_str(),L"NOTE",MB_OK);
 
-    gte = OmegaGTE::Init(nullptr);
+    CoInitialize(NULL);
+
+    Microsoft::WRL::ComPtr<IWICImagingFactory> imageFactory;
+
+    auto res = CoCreateInstance(CLSID_WICImagingFactory,NULL,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&imageFactory));
+
+    /// Load Png Image
+
+    Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+    imageFactory->CreateDecoderFromFilename(L"test.png",NULL,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
+
+    IWICBitmapFrameDecode *decoded;
+    decoder->GetFrame(0,&decoded);
+
+    gte = OmegaGTE::InitWithDefaultDevice();
+
+    UINT w,h;
+    decoded->GetSize(&w,&h);
+
+    OmegaGTE::TextureDescriptor textureDescriptor {};
+    textureDescriptor.usage = OmegaGTE::GETexture::ToGPU;
+    textureDescriptor.type = OmegaGTE::GETexture::Texture2D;
+    textureDescriptor.pixelFormat = OmegaGTE::TexturePixelFormat::RGBA8Unorm;
+    textureDescriptor.width = w;
+    textureDescriptor.height = h;
+    textureDescriptor.storage_opts = OmegaGTE::Shared;
+
+    texture = gte.graphicsEngine->makeTexture(textureDescriptor);
+
+    size_t bitmapSize = w * 4 * h;
+
+    auto buffer = new BYTE[bitmapSize];
+
+    decoded->CopyPixels(NULL,w * 4,bitmapSize,buffer);
+
+    texture->copyBytes((void *)buffer,w * 4);
+
+
 
 
     library = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
@@ -178,7 +235,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     commandBuffer->startRenderPass(renderPassDesc);
     commandBuffer->setRenderPipelineState(renderPipelineState);
-    commandBuffer->setResourceConstAtVertexFunc(vertexBuffer,0);
+    commandBuffer->bindResourceAtVertexShader(vertexBuffer,0);
+    commandBuffer->bindResourceAtFragmentShader(texture,1);
     commandBuffer->setScissorRects({scissorRect});
     commandBuffer->setViewports({viewport});
     commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
@@ -209,6 +267,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
     OmegaGTE::Close(gte);
+
+    CoUninitialize();
 
     return msg.wParam;
 };

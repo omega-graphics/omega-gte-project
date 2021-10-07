@@ -385,6 +385,16 @@ namespace omegasl {
                                 layoutDesc.gpu_relative_loc = u_resource_count;
                                 ++u_resource_count;
                             }
+
+                            shaderOut << ",";
+
+                            /// Scope all relative resource bindings to relative shader.
+                            if(shaderDesc.type == OMEGASL_SHADER_FRAGMENT){
+                                shaderOut << "space1";
+                            }
+                            else {
+                                shaderOut << "space0";
+                            }
                             shaderOut << ");" << std::endl;
                         }
                         shaderLayout.push_back(layoutDesc);

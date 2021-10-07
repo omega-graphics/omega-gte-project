@@ -466,7 +466,12 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         ID3D12RootSignature *signature;
         D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc;
-        createRootSignatureFromOmegaSLShaders(2,shaders,&rootSigDesc,&signature);
+        bool b = createRootSignatureFromOmegaSLShaders(2,shaders,&rootSigDesc,&signature);
+
+        if(!b){
+            DEBUG_STREAM("Failed to Create Root Signature");
+            exit(1);
+        }
 
         auto *vertexShader = (GED3D12Shader *)desc.vertexFunc.get(),
         *fragmentShader = (GED3D12Shader *)desc.fragmentFunc.get();
@@ -546,7 +551,8 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             d.pRootSignature = signature;
         }
         else {
-
+            DEBUG_STREAM("Failed to Create Root Signature");
+            exit(1);
         }
 
         hr = d3d12_device->CreateComputePipelineState(&d,IID_PPV_ARGS(&state));
@@ -649,13 +655,13 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             }
         }
 
-        if(desc.usage & GETexture::RenderTarget){
+        if(desc.usage == GETexture::RenderTarget){
             res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
         }
-        else if(desc.usage & GETexture::ToGPU){
+        else if(desc.usage == GETexture::ToGPU){
             res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
         }   
-        else if(desc.usage & GETexture::FromGPU){
+        else if(desc.usage == GETexture::FromGPU){
             res_states |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         }
         else {
@@ -681,7 +687,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
             if(isSRV) {
                 res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-                res_view_desc.Texture1D.MostDetailedMip = -1;
+                res_view_desc.Texture1D.MostDetailedMip = 0;
                 res_view_desc.Texture1D.MipLevels = desc.mipLevels;
                 res_view_desc.Texture1D.ResourceMinLODClamp = 2.f;
 
@@ -706,7 +712,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
 
                 res_view_desc.Texture2D.MipLevels = desc.mipLevels;
-                res_view_desc.Texture2D.MostDetailedMip = -1;
+                res_view_desc.Texture2D.MostDetailedMip = 0;
                 res_view_desc.Texture2D.PlaneSlice = 0;
                 res_view_desc.Texture2D.ResourceMinLODClamp = 2.f;
             }
@@ -739,7 +745,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
            if(isSRV){
                res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
                res_view_desc.Texture3D.ResourceMinLODClamp = 2.f;
-               res_view_desc.Texture3D.MostDetailedMip = -1;
+               res_view_desc.Texture3D.MostDetailedMip = 0;
                res_view_desc.Texture3D.MipLevels = desc.mipLevels;
            }
 
@@ -751,8 +757,6 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                  view_desc.Texture3D.WSize = desc.depth;
             }
         };
-
-        ID3D12Resource *texture;
         CD3DX12_HEAP_PROPERTIES heap_prop;
 
 
@@ -760,7 +764,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
-        else if(desc.usage == GETexture::MSResolveDest || desc.usage == GETexture::GPUAccessOnly){
+        else if(desc.usage == GETexture::MSResolveSrc || desc.usage == GETexture::GPUAccessOnly){
             heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         }
@@ -769,29 +773,58 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
         }
 
+        /// Create Texture Resource
 
-        hr = d3d12_device->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE,&d3d12_desc,res_states,nullptr,IID_PPV_ARGS(&texture));
+        auto textureHeapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+        D3D12_RESOURCE_STATES states = res_states;
+
+
+        ID3D12Resource *texture,*cpuSideRes = nullptr;
+
+        hr = d3d12_device->CreateCommittedResource(&textureHeapProps, D3D12_HEAP_FLAG_NONE,&d3d12_desc,states,nullptr,IID_PPV_ARGS(&texture));
         if(FAILED(hr)){
 
         };
 
+
+        /// Create GPU/CPU Transition Heap
+        if(desc.usage != GETexture::GPUAccessOnly){
+            auto size = GetRequiredIntermediateSize(texture,0,1);
+            auto res = CD3DX12_RESOURCE_DESC::Buffer(size);
+            hr = d3d12_device->CreateCommittedResource(&heap_prop,D3D12_HEAP_FLAG_NONE,&res,D3D12_RESOURCE_STATE_GENERIC_READ,nullptr,IID_PPV_ARGS(&cpuSideRes));
+            if(FAILED(hr)){
+
+            };
+        }
+
+
+
         ID3D12DescriptorHeap *descHeap = nullptr, *rtvDescHeap = nullptr;
 
         D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
-        descHeapDesc.NumDescriptors = 1;
+
+        if(desc.usage == GETexture::GPUAccessOnly){
+            descHeapDesc.NumDescriptors = 2;
+        }
+        else {
+            descHeapDesc.NumDescriptors = 1;
+        }
+
         descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
 
-        if(desc.usage & GETexture::ToGPU || desc.usage & GETexture::FromGPU) {
+        if(desc.usage == GETexture::ToGPU || desc.usage == GETexture::FromGPU) {
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
             hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&descHeap));
             if (FAILED(hr)) {
-
+                DEBUG_STREAM("Failed to Create Descriptor Heap");
+                exit(1);
             };
             auto increment = d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-            CD3DX12_CPU_DESCRIPTOR_HANDLE handle(descHeap->GetCPUDescriptorHandleForHeapStart(),0,increment);
+            CD3DX12_CPU_DESCRIPTOR_HANDLE handle(descHeap->GetCPUDescriptorHandleForHeapStart());
 
             if(isSRV){
                 d3d12_device->CreateShaderResourceView(texture, &res_view_desc,
@@ -800,7 +833,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
             if(isUAV) {
 
-                handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(descHeap->GetCPUDescriptorHandleForHeapStart(),1,increment);
+                handle.Offset(1,increment);
 
                 d3d12_device->CreateUnorderedAccessView(texture,nullptr, &uav_view_desc,
                                                         handle);
@@ -819,7 +852,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
         };
 
-        return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,descHeap,rtvDescHeap,res_states));
+        return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,cpuSideRes,descHeap,rtvDescHeap,res_states));
     };
 
     SharedHandle<GEBuffer> GED3D12Engine::makeBuffer(const BufferDescriptor &desc){
@@ -947,7 +980,15 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         std::vector<D3D12_ROOT_PARAMETER1> params;
         std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers;
 
+        UINT registerSpace;
+
         for(auto & s : shaders){
+            if(s.type == OMEGASL_SHADER_FRAGMENT){
+                registerSpace = 1;
+            }
+            else {
+                registerSpace = 0;
+            }
             ArrayRef<omegasl_shader_layout_desc> sLayout {s.pLayout,s.pLayout + s.nLayout};
             for(auto & l : sLayout){
                 CD3DX12_ROOT_PARAMETER1 parameter1;
@@ -984,22 +1025,37 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                     staticSamplers.push_back(desc);
                     continue;
                 }
-                else {
+                else if(l.type == OMEGASL_SHADER_BUFFER_DESC) {
                     if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN) {
-                        parameter1.InitAsShaderResourceView(l.gpu_relative_loc);
+                        parameter1.InitAsShaderResourceView(l.gpu_relative_loc,registerSpace);
                     }
                     else {
-                        parameter1.InitAsUnorderedAccessView(l.gpu_relative_loc);
+                        parameter1.InitAsUnorderedAccessView(l.gpu_relative_loc,registerSpace);
                     }
+                }
+                /// Create Descriptor Table for Textures
+                else {
+
+                    auto range = new CD3DX12_DESCRIPTOR_RANGE1();
+                    D3D12_DESCRIPTOR_RANGE_TYPE rangeType;
+                    if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
+                        rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+                    }
+                    else {
+                        rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+                    }
+
+                    range->Init(rangeType,1,l.gpu_relative_loc,registerSpace);
+                    parameter1.InitAsDescriptorTable(1,range);
                 }
                 params.push_back(parameter1);
             }
         }
 
         auto root_params = new D3D12_ROOT_PARAMETER1[params.size()];
-        memcpy(root_params,params.data(),sizeof(D3D12_ROOT_PARAMETER1) * params.size());
+        std::copy(params.begin(),params.end(),root_params);
         auto static_samplers = new D3D12_STATIC_SAMPLER_DESC[staticSamplers.size()];
-        memcpy(static_samplers,staticSamplers.data(),sizeof(D3D12_STATIC_SAMPLER_DESC) * staticSamplers.size());
+        std::copy(staticSamplers.begin(),staticSamplers.end(),static_samplers);
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc;
         /// @note Always allow input layout regardless of pipeline type.

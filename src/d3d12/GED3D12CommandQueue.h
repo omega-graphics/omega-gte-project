@@ -11,6 +11,7 @@ _NAMESPACE_BEGIN_
 
     class GED3D12CommandBuffer : public GECommandBuffer {
         ComPtr<ID3D12GraphicsCommandList6> commandList;
+        ComPtr<ID3D12CommandAllocator> commandAllocator;
         GED3D12CommandQueue *parentQueue;
         bool inComputePass;
         bool inBlitPass;
@@ -21,8 +22,6 @@ _NAMESPACE_BEGIN_
         bool hasMultisampleDesc;
         GERenderTarget::RenderPassDesc::MultisampleResolveDesc *multisampleResolveDesc = nullptr;
 
-
-        std::vector<ID3D12DescriptorHeap *> descriptorHeapBuffer;
         friend class GED3D12CommandQueue;
 
         struct {
@@ -34,8 +33,6 @@ _NAMESPACE_BEGIN_
         GED3D12ComputePipelineState *currentComputePipeline = nullptr;
 
         D3D12_ROOT_SIGNATURE_DESC1 * currentRootSignature = nullptr;
-
-        OmegaCommon::Vector<ID3D12Resource *> uavResourceBuffer;
 
        friend class GED3D12CommandQueue;
 
@@ -68,10 +65,10 @@ _NAMESPACE_BEGIN_
         void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
 
-        GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,GED3D12CommandQueue *parentQueue);
+        GED3D12CommandBuffer(ID3D12GraphicsCommandList6 *commandList,ID3D12CommandAllocator *commandAllocator,GED3D12CommandQueue *parentQueue);
         void reset() override;
 
-        ~GED3D12CommandBuffer();
+        ~GED3D12CommandBuffer() override;
     };
 
     class GED3D12CommandQueue : public GECommandQueue {
@@ -79,7 +76,6 @@ _NAMESPACE_BEGIN_
 
         std::vector<ID3D12GraphicsCommandList6 *> commandLists;
         ComPtr<ID3D12CommandQueue> commandQueue;
-        ComPtr<ID3D12CommandAllocator> bufferAllocator;
 
         ComPtr<ID3D12Fence> fence;
 
@@ -94,7 +90,6 @@ _NAMESPACE_BEGIN_
         ID3D12GraphicsCommandList6 * getLastCommandList();
         void commitToGPU() override;
         void commitToGPUAndWait() override;
-        void reset();
         void notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence) override;
         void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer) override;
         void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &signalFence) override;

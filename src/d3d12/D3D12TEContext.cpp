@@ -37,7 +37,7 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessalationEngineContext {
         return {};
     };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    D3D12NativeRenderTargetTEContext(GED3D12NativeRenderTarget * target):target(target){
+    D3D12NativeRenderTargetTEContext(SharedHandle<GED3D12NativeRenderTarget> target):target(target){
 
     };
 };
@@ -58,15 +58,15 @@ class D3D12TextureRenderTargetTEContext : public OmegaTessalationEngineContext {
         return {};
     };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    D3D12TextureRenderTargetTEContext(GED3D12TextureRenderTarget * target):target(target){};
+    D3D12TextureRenderTargetTEContext(SharedHandle<GED3D12TextureRenderTarget> target):target(target){};
 };
 
 SharedHandle<OmegaTessalationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){
-    return std::make_shared<D3D12NativeRenderTargetTEContext>((GED3D12NativeRenderTarget *)renderTarget.get());
+    return std::make_shared<D3D12NativeRenderTargetTEContext>(std::dynamic_pointer_cast<GED3D12NativeRenderTarget>(renderTarget));
 };
 
 SharedHandle<OmegaTessalationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> &renderTarget){
-    return std::make_shared<D3D12TextureRenderTargetTEContext>((GED3D12TextureRenderTarget *)renderTarget.get());
+    return std::make_shared<D3D12TextureRenderTargetTEContext>(std::dynamic_pointer_cast<GED3D12TextureRenderTarget>(renderTarget));
 };
 
 

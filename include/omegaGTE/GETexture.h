@@ -36,7 +36,7 @@ _NAMESPACE_BEGIN_
                   const GETextureUsage & usage,
                   const TexturePixelFormat & pixelFormat);
     public:
-        virtual void copyBytes(void *bytes,size_t len) = 0;
+        virtual void copyBytes(void *bytes,size_t bytesPerRow) = 0;
         virtual ~GETexture() = default;
     };
 
@@ -54,7 +54,7 @@ _NAMESPACE_BEGIN_
         unsigned width;
         unsigned height;
         unsigned depth = 1;
-        unsigned mipLevels = 0;
+        unsigned mipLevels = 1;
         unsigned sampleCount = 1;
     };
 

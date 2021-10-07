@@ -1,7 +1,7 @@
-#include "omegaGTE/GE.h"
+#include <OmegaGTE.h>
 #include <gtk/gtk.h>
 
-OmegaGTE::SharedHandle<OmegaGTE::OmegaGraphicsEngine> graphicsEngine;
+OmegaGTE::GTE gte;
 
 static void start_application(GtkApplication *app,gpointer user_data){
     GtkWidget *window;
@@ -14,11 +14,15 @@ static void start_application(GtkApplication *app,gpointer user_data){
 
 int main(int argc,char *argv[]){
     
-    graphicsEngine = OmegaGTE::OmegaGraphicsEngine::Create();
+    gte = OmegaGTE::InitWithDefaultDevice();
+    
 
     GtkApplication *app = gtk_application_new("org.omegagraphics.OmegaGTETest",G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app,"activate",G_CALLBACK(start_application),NULL);
     auto status = g_application_run(G_APPLICATION(app),argc,argv);
     g_object_unref(app);
+
+    OmegaGTE::Close(gte);
+
     return status;
 };

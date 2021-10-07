@@ -1,6 +1,7 @@
 #include "GEVulkan.h"
 #include "omegaGTE/GETexture.h"
 
+
 #ifndef OMEGAGTE_VULKAN_GEVULKANTEXTURE_H
 #define OMEGAGTE_VULKAN_GEVULKANTEXTURE_H
 
@@ -28,7 +29,18 @@ public:
     void copyBytes(void *bytes, size_t len) override;
 
 
-    GEVulkanTexture(GEVulkanEngine *engine,VkImage & img,VkImageView & img_view,VkImageLayout & layout,VmaAllocationInfo alloc_info,VmaAllocation alloc, const TextureDescriptor & descriptor,VmaMemoryUsage memoryUsage);
+    explicit GEVulkanTexture(
+        const GETexture::GETextureType & type,
+        const GETexture::GETextureUsage & usage,
+        const TexturePixelFormat & format,
+        GEVulkanEngine *engine,
+        VkImage & img,
+        VkImageView & img_view,
+        VkImageLayout & layout,
+        VmaAllocationInfo alloc_info,
+        VmaAllocation alloc, 
+        const TextureDescriptor & descriptor,
+        VmaMemoryUsage memoryUsage);
     ~GEVulkanTexture();
 };
 

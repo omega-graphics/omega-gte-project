@@ -3,6 +3,8 @@
 #include "GEVulkanPipeline.h"
 #include "GEVulkan.h"
 #include "GEVulkanTexture.h"
+#include "vulkan/vulkan_core.h"
+#include <cstdint>
 
 _NAMESPACE_BEGIN_
     unsigned int GEVulkanCommandBuffer::getBindingForResourceID(unsigned int &id, omegasl_shader &shader) {\
@@ -623,27 +625,30 @@ _NAMESPACE_BEGIN_
         vkResetCommandBuffer(commandBuffer,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
     };
 
-    void GEVulkanCommandBuffer::signalFence(SharedHandle<GEFence> &fence, unsigned int val) {
-        auto vkFence = ((GEVulkanFence *)fence.get());
-        vkCmdSetEvent(commandBuffer,vkFence->event,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-    }
-
-    void GEVulkanCommandBuffer::waitForFence(SharedHandle<GEFence> &fence, unsigned int val) {
-        auto vkFence = ((GEVulkanFence *)fence.get());
-        vkCmdWaitEvents(commandBuffer,
-                        1,
-                        &vkFence->event,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                        0,
-                        nullptr,0,nullptr,0,nullptr);
-        vkCmdResetEvent(commandBuffer,vkFence->event,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    void GEVulkanCommandQueue::notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence){
+        auto buffer = (GEVulkanCommandBuffer *)commandBuffer.get();
+        auto fence = (GEVulkanFence *)waitFence.get();
+        vkCmdWaitEvents(buffer->commandBuffer,
+            1,
+            &fence->event,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0,nullptr,
+            0,nullptr,
+            0,nullptr);
+        vkCmdResetEvent(buffer->commandBuffer,fence->event,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
 
     void GEVulkanCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
         auto buffer = (GEVulkanCommandBuffer *)commandBuffer.get();
         commandQueue.push_back(buffer->commandBuffer);
     };
+
+    void GEVulkanCommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer,SharedHandle<GEFence> & signalFence){
+        auto buffer = (GEVulkanCommandBuffer *)commandBuffer.get();
+        auto fence = (GEVulkanFence *)signalFence.get();
+        vkCmdSetEvent(buffer->commandBuffer,fence->event,VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    }
 
    SharedHandle<GECommandBuffer> GEVulkanCommandQueue::getAvailableBuffer(){
        auto res = std::make_shared<GEVulkanCommandBuffer>(commandBuffers[currentBufferIndex],this);
@@ -656,12 +661,16 @@ _NAMESPACE_BEGIN_
     }
 
    void GEVulkanCommandQueue::commitToGPU(){
+        for(auto cb : commandQueue){
+            vkEndCommandBuffer(cb);
+        }
+
        VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
        submission.commandBufferCount = commandQueue.size();
        submission.pCommandBuffers = commandQueue.data();
        submission.pNext = nullptr;
 
-       auto res = vkQueueSubmit(vkQueue, 1, &submission, submitFence);
+       auto res = vkQueueSubmit(vkQueue, 1, &submission,VK_NULL_HANDLE);
        if(!VK_RESULT_SUCCEEDED(res)){
            printf("Failed to Submit Command Buffers to GPU");
            exit(1);
@@ -669,8 +678,30 @@ _NAMESPACE_BEGIN_
 
        commandQueue.clear();
 
-       vkWaitForFences(engine->device,1,&submitFence,VK_TRUE,UINT64_MAX);
+    
    };
+
+   void GEVulkanCommandQueue::commitToGPUAndWait(){
+        for(auto cb : commandQueue){
+            vkEndCommandBuffer(cb);
+        }
+
+       VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+       submission.commandBufferCount = commandQueue.size();
+       submission.pCommandBuffers = commandQueue.data();
+       submission.pNext = nullptr;
+
+       auto res = vkQueueSubmit(vkQueue, 1, &submission,submitFence);
+       if(!VK_RESULT_SUCCEEDED(res)){
+           printf("Failed to Submit Command Buffers to GPU");
+           exit(1);
+       };
+
+       commandQueue.clear();
+       vkWaitForFences(engine->device,1,&submitFence,VK_TRUE,UINT64_MAX);
+       
+
+   }
 
    GEVulkanCommandQueue::GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size):GECommandQueue(size){
        VkResult res;
@@ -682,22 +713,9 @@ _NAMESPACE_BEGIN_
 
        vkCreateFence(engine->device,&fenceCreateInfo,nullptr,&submitFence);
 
-       unsigned queueFamilyIndex = 0;
-       bool foundQueueFamily = false;
-       for(auto & qf : engine->queueFamilyProps){
-           if(qf.queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)){
-               foundQueueFamily = true;
-               break;
-           }
-           ++queueFamilyIndex;
-       }
+        
 
-       if(!foundQueueFamily){
-           std::cout << "Failed to find queue family" << std::endl;
-           exit(1);
-       }
-
-       poolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+       poolCreateInfo.queueFamilyIndex = engine->queueFamilyIndices.front();
        poolCreateInfo.pNext = nullptr;
        poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 

@@ -1,15 +1,19 @@
 #include "GEVulkanTexture.h"
-#include "vulkan/vulkan_core.h"
 
 _NAMESPACE_BEGIN_
 
 GEVulkanTexture::GEVulkanTexture(
+    const GETexture::GETextureType & type,
+    const GETexture::GETextureUsage & usage,
+    const TexturePixelFormat & format,
     GEVulkanEngine *engine,
     VkImage & img,
     VkImageView & img_view,
     VkImageLayout & layout,
     VmaAllocationInfo alloc_info,
     VmaAllocation alloc,const TextureDescriptor & descriptor,VmaMemoryUsage memoryUsage):
+
+GETexture(type,usage,format),
 engine(engine),
 img(std::move(img)),
 img_view(std::move(img_view)),

@@ -1,5 +1,7 @@
 include(CMakeParseArguments)
 
+pkg_check_modules(GTK gtk+-3.0)
+
 function(add_vulkan_test)
     cmake_parse_arguments("_ARG" "" "NAME" ";SOURCES;LIBS" ${ARGN})
     add_executable(${_ARG_NAME} ${_ARG_SOURCES})

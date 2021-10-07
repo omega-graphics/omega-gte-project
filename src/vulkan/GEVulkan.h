@@ -15,10 +15,13 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+
 #include "omegaGTE/GE.h"
 
 #ifndef OMEGAGTE_VULKAN_GEVULKAN_H
 #define OMEGAGTE_VULKAN_GEVULKAN_H
+
+
 
 _NAMESPACE_BEGIN_
     struct GTEVulkanDevice;
@@ -86,11 +89,13 @@ _NAMESPACE_BEGIN_
         size_t size() override {
             return alloc_info.size;
         };
-        GEVulkanBuffer(GEVulkanEngine *engine,
+        explicit GEVulkanBuffer(
+            const BufferDescriptor::Usage & usage,
+            GEVulkanEngine *engine,
             VkBuffer & buffer,
             VkBufferView &view,
             VmaAllocation alloc, 
-            VmaAllocationInfo alloc_info):engine(engine),buffer(buffer),
+            VmaAllocationInfo alloc_info):GEBuffer(usage),engine(engine),buffer(buffer),
             bufferView(view),alloc(alloc),alloc_info(alloc_info){
 
         };

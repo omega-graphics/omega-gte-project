@@ -1,3 +1,5 @@
+#define VMA_IMPLEMENTATION 1
+
 #include "GEVulkan.h"
 #include "GEVulkanCommandQueue.h"
 #include "GEVulkanTexture.h"
@@ -297,7 +299,7 @@ _NAMESPACE_BEGIN_
         vkCreateBufferView(device,&bufferViewInfo,nullptr,&bufferView);
 
        
-        return SharedHandle<GEBuffer>(new GEVulkanBuffer(this,buffer,bufferView,allocation,allocationInfo));
+        return SharedHandle<GEBuffer>(new GEVulkanBuffer(desc.usage,this,buffer,bufferView,allocation,allocationInfo));
     };
     SharedHandle<GEHeap> GEVulkanEngine::makeHeap(const HeapDescriptor &desc){
         return nullptr;
@@ -362,14 +364,14 @@ _NAMESPACE_BEGIN_
         VkDescriptorType descType;
 
         switch (desc.usage) {
-            case GETexture::GPURead : {
+            case GETexture::ToGPU : {
                 usageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU;
                 layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                 descType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
                 break;
             }
-            case GETexture::GPUWrite : {
+            case GETexture::FromGPU : {
                 usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_GPU_TO_CPU;
                 layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -383,10 +385,10 @@ _NAMESPACE_BEGIN_
                 descType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 break;
             }
-            case GETexture::MSResolveDest : {
+            case GETexture::MSResolveSrc : {
                 usageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
-                layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                 descType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 break;
             }
@@ -421,7 +423,7 @@ _NAMESPACE_BEGIN_
 
         
 
-        return SharedHandle<GETexture>(new GEVulkanTexture(this,image,imageView,layout,alloc_info,alloc,desc,memoryUsage));
+        return SharedHandle<GETexture>(new GEVulkanTexture(desc.type,desc.usage,desc.pixelFormat,this,image,imageView,layout,alloc_info,alloc,desc,memoryUsage));
     };
 
 

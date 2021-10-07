@@ -32,8 +32,8 @@ _NAMESPACE_BEGIN_
         void insertResourceBarrierIfNeeded(GEVulkanTexture *texture,unsigned & resource_id,omegasl_shader & shader);
         void insertResourceBarrierIfNeeded(GEVulkanBuffer *buffer,unsigned & resource_id,omegasl_shader & shader);
     public:
-        void waitForFence(SharedHandle<GEFence> &fence, unsigned int val) override;
-        void signalFence(SharedHandle<GEFence> &fence, unsigned int val) override;
+        // void waitForFence(SharedHandle<GEFence> &fence, unsigned int val) override;
+        // void signalFence(SharedHandle<GEFence> &fence, unsigned int val) override;
 
         void startRenderPass(const GERenderPassDescriptor &desc) override;
 
@@ -86,11 +86,14 @@ _NAMESPACE_BEGIN_
         friend class GEVulkanCommandBuffer;
     public:
         VkQueue vkQueue;
-        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer);
-        void commitToGPU();
+        void notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer) override;
+        void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &signalFence) override;
+        void commitToGPU() override;
+        void commitToGPUAndWait() override;
         void present();
         VkCommandBuffer &getLastCommandBufferInQueue();
-        SharedHandle<GECommandBuffer> getAvailableBuffer();
+        SharedHandle<GECommandBuffer> getAvailableBuffer() override;
         GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size);
         ~GEVulkanCommandQueue();
     };

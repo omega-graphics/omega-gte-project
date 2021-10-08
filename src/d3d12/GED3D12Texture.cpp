@@ -85,8 +85,11 @@ void GED3D12Texture::copyBytes(void *bytes,size_t bytesPerRow){
 
     auto desc = resource->GetDesc();
 
-    cpuSideresource->Map(0,nullptr,&mem_ptr);
-
+    HRESULT hr = cpuSideresource->Map(0,nullptr,&mem_ptr);
+    if(FAILED(hr)){
+        DEBUG_STREAM("Failed to Map Memory Ptr to Texture");
+        exit(1);
+    }
 
 
     D3D12_SUBRESOURCE_DATA subresourceData {};

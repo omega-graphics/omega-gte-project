@@ -4,6 +4,8 @@
 #include "GED3D12RenderTarget.h"
 #include "GED3D12Pipeline.h"
 
+#include "../BufferIO.h"
+
 #include <atlstr.h>
 #include <cassert>
 
@@ -85,7 +87,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 //    return SharedHandle<GEBuffer>(new GED3D12Buffer(desc.usage,buffer,descHeap,state));
 //};
 
-//SharedHandle<GETexture> GED3D12Heap::makeTexture(const TextureDescriptor &desc){
+//SharedHandle<GETexture> GED3D12Heap::makeTexture3D(const TextureDescriptor &desc){
 //    HRESULT hr;
 //    D3D12_RESOURCE_DESC d3d12_desc;
 //    D3D12_RESOURCE_STATES res_states;
@@ -230,46 +232,82 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     class GED3D12BufferWriter : public GEBufferWriter {
         GED3D12Buffer * _buffer = nullptr;
         D3DByte *_data_buffer = nullptr;
+
+        bool inStruct=false;
+        OmegaCommon::Vector<DataBlock> blocks;
         size_t currentOffset = 0;
     public:
         void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
-            currentOffset = 0;
             _buffer = (GED3D12Buffer *)buffer.get();
             CD3DX12_RANGE range(0,0);
 
             _buffer->buffer->Map(0,&range,(void **)&_data_buffer);
+            currentOffset = 0;
         }
         void structBegin() override {
-
+            if(!blocks.empty()){
+                blocks.clear();
+            }
+            inStruct = true;
         }
         void writeFloat(float &v) override {
-            memcpy(_data_buffer + currentOffset,&v,sizeof(v));
-            currentOffset += sizeof(v);
+            DataBlock block{
+                OMEGASL_FLOAT,
+                new float(v)};
+            blocks.push_back(block);
         }
         void writeFloat2(FVec<2> &v) override {
-           DirectX::XMFLOAT2 _v {v[0][0],v[1][0]};
-            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+           DataBlock block{
+               OMEGASL_FLOAT2,
+               new DirectX::XMFLOAT2{v[0][0],v[1][0]}
+           };
+           blocks.push_back(block);
         }
         void writeFloat3(FVec<3> &v) override {
-            DirectX::XMFLOAT3 _v {v[0][0],v[1][0],v[2][0]};
-            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+            DataBlock block {
+                OMEGASL_FLOAT3,
+                new DirectX::XMFLOAT3 {v[0][0],v[1][0],v[2][0]}
+            };
+            blocks.push_back(block);
         }
         void writeFloat4(FVec<4> &v) override {
-            DirectX::XMFLOAT4 _v {v[0][0],v[1][0],v[2][0],v[3][0]};
-            memcpy(_data_buffer + currentOffset,&_v,sizeof(_v));
-            currentOffset += sizeof(_v);
+            DataBlock block {
+                OMEGASL_FLOAT4,
+                new DirectX::XMFLOAT4 {v[0][0],v[1][0],v[2][0],v[3][0]}
+            };
+            blocks.push_back(block);
         }
         void structEnd() override {
-
+            inStruct = false;
         }
-        void finish() override {
+
+        void sendToBuffer() override {
+            assert(!inStruct && "");
+            for(auto & block : blocks){
+                size_t dataSize = 0;
+                if(block.type == OMEGASL_FLOAT){
+                    dataSize = sizeof(float);
+                }
+                else if(block.type == OMEGASL_FLOAT2){
+                    dataSize = sizeof(DirectX::XMFLOAT2);
+                }
+                else if(block.type == OMEGASL_FLOAT3){
+                    dataSize = sizeof(DirectX::XMFLOAT3);
+                }
+                else if(block.type == OMEGASL_FLOAT4){
+                    dataSize = sizeof(DirectX::XMFLOAT4);
+                }
+                memcpy(_data_buffer + currentOffset,block.data,dataSize);
+                currentOffset += dataSize;
+            }
+        }
+
+        void flush() override {
             _buffer->buffer->Unmap(0,nullptr);
             _buffer = nullptr;
             _data_buffer = nullptr;
+            std::cout << "LastOffset:" << currentOffset << std::endl;
             currentOffset = 0;
-
         }
     };
 
@@ -288,6 +326,9 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             CD3DX12_RANGE range(0,0);
 
             _buffer->buffer->Map(0,&range,(void **)&_data_buffer);
+        }
+        void setStructLayout(std::initializer_list<omegasl_data_type> fields) override {
+
         }
         void structBegin() override {
 
@@ -323,7 +364,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         void structEnd() override {
 
         }
-        void finish() override {
+        void reset() override {
             _data_buffer = nullptr;
             currentOffset = 0;
             _buffer->buffer->Unmap(0,nullptr);
@@ -677,7 +718,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             res_view_desc.Format = dxgiFormat;
         }
 
-        D3D12_RENDER_TARGET_VIEW_DESC view_desc;
+        D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
         if(desc.type == GETexture::Texture1D){
             d3d12_desc = CD3DX12_RESOURCE_DESC::Tex1D(dxgiFormat,desc.width,1,desc.mipLevels);
             if(isUAV) {
@@ -687,10 +728,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
             if(isSRV) {
                 res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-                res_view_desc.Texture1D.MostDetailedMip = 0;
                 res_view_desc.Texture1D.MipLevels = desc.mipLevels;
-                res_view_desc.Texture1D.ResourceMinLODClamp = 2.f;
-
             }
 
         }
@@ -699,7 +737,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             if(isUAV){
                 uav_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
                 uav_view_desc.Texture2D.MipSlice = desc.mipLevels;
-                uav_view_desc.Texture2D.PlaneSlice =0;
+                uav_view_desc.Texture2D.PlaneSlice = 0;
             }
 
             if(isSRV) {
@@ -712,9 +750,9 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
 
                 res_view_desc.Texture2D.MipLevels = desc.mipLevels;
-                res_view_desc.Texture2D.MostDetailedMip = 0;
+                res_view_desc.Texture2D.MostDetailedMip = desc.mipLevels - 1;
                 res_view_desc.Texture2D.PlaneSlice = 0;
-                res_view_desc.Texture2D.ResourceMinLODClamp = 2.f;
+                res_view_desc.Texture2D.ResourceMinLODClamp = desc.mipLevels - 1;
             }
 
 
@@ -744,8 +782,6 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
            if(isSRV){
                res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-               res_view_desc.Texture3D.ResourceMinLODClamp = 2.f;
-               res_view_desc.Texture3D.MostDetailedMip = 0;
                res_view_desc.Texture3D.MipLevels = desc.mipLevels;
            }
 

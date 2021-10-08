@@ -29,9 +29,9 @@ _NAMESPACE_BEGIN_
 
     class GED3D12TextureRenderTarget : public GETextureRenderTarget {
         GED3D12Engine *engine;
-        ComPtr<ID3D12Resource> renderTarget;
         SharedHandle<GED3D12CommandQueue> commandQueue;
     public:
+        ComPtr<ID3D12Resource> renderTarget;
         void commit();
         SharedHandle<CommandBuffer> commandBuffer();
         ComPtr<ID3D12Resource> renderTargetView;

@@ -4,7 +4,7 @@ _NAMESPACE_BEGIN_
 
 GTE Init(SharedHandle<GTEDevice> & device){
     auto ge = OmegaGraphicsEngine::Create(device);
-    return {ge,OmegaTessalationEngine::Create()};
+    return {ge, OmegaTessellationEngine::Create()};
 };
 
 GTE InitWithDefaultDevice(){

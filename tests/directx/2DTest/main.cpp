@@ -18,7 +18,7 @@ LRESULT CALLBACK   WndProc(HWND, UINT, WPARAM, LPARAM);
 static OmegaGTE::GTE gte;
 static OmegaGTE::SharedHandle<OmegaGTE::GTEShaderLibrary> library;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> renderTarget;
-static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
+static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessellationEngineContext> tessContext;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipelineState;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBuffer> vertexBuffer;
 static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
@@ -39,6 +39,7 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> & coord){
     bufferWriter->writeFloat4(vertex_pos);
     bufferWriter->writeFloat2(coord);
     bufferWriter->structEnd();
+    bufferWriter->sendToBuffer();
 }
 
 void tessalate(){
@@ -48,7 +49,7 @@ void tessalate(){
     rect.w = 300;
     rect.pos.x = 0;
     rect.pos.y = 0;
-    auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
+    auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessellationParams::Rect(rect));
 
     std::cout << "Tessalated GRect" << std::endl;
     auto coord = OmegaGTE::FVec<2>::Create();
@@ -57,44 +58,52 @@ void tessalate(){
 
     std::cout << "Created Matrix GRect" << std::endl;
 
-    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT2_SIZE),FLOAT4_SIZE + FLOAT2_SIZE};
+    size_t structSize = OmegaGTE::omegaSLStructSize({OMEGASL_FLOAT4,OMEGASL_FLOAT2});
+
+    std::cout << "StructSize:" << structSize << std::endl;
+
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 *structSize,structSize};
 
     vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
     bufferWriter->setOutputBuffer(vertexBuffer);
+
+    bool otherSide = true;
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
         for(auto &tri : mesh.vertexTriangles){
             std::ostringstream ss;
             ss << "Triangle: {\n  A:";
-            formatGPoint3D(ss,tri.a);
+            formatGPoint3D(ss,tri.a.pt);
             ss << "\n  B:";
-            formatGPoint3D(ss,tri.b);
+            formatGPoint3D(ss,tri.b.pt);
             ss << "\n  C:";
-            formatGPoint3D(ss,tri.c);
+            formatGPoint3D(ss,tri.c.pt);
             ss << "\n}";
             std::cout << ss.str() << std::endl;
             std::cout << "Create Vertex" << std::endl;
 
-            writeVertex(tri.a,coord);
+            writeVertex(tri.a.pt,coord);
 
             coord[0][0] = 0.f;
             coord[1][0] = 1.f;
 
-            writeVertex(tri.b,coord);
+            writeVertex(tri.b.pt,coord);
 
             coord[0][0] = 1.f;
             coord[1][0] = 0.f;
 
-            writeVertex(tri.c,coord);
+
+            writeVertex(tri.c.pt,coord);
 
             coord[0][0] = 1.f;
             coord[1][0] = 1.f;
+            otherSide = true;
         };
     };
 
-    bufferWriter->finish();
+    bufferWriter->flush();
 
 };
 
@@ -131,7 +140,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     OmegaGTE::TextureDescriptor textureDescriptor {};
     textureDescriptor.usage = OmegaGTE::GETexture::ToGPU;
     textureDescriptor.type = OmegaGTE::GETexture::Texture2D;
-    textureDescriptor.pixelFormat = OmegaGTE::TexturePixelFormat::RGBA8Unorm;
+    textureDescriptor.pixelFormat = OmegaGTE::TexturePixelFormat::RGBA8Unorm_SRGB;
     textureDescriptor.width = w;
     textureDescriptor.height = h;
     textureDescriptor.storage_opts = OmegaGTE::Shared;
@@ -267,6 +276,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
     OmegaGTE::Close(gte);
+
+    decoded->Release();
+    decoder->Release();
+    imageFactory->Release();
 
     CoUninitialize();
 

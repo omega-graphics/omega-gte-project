@@ -30,17 +30,6 @@
 #define _NAMESPACE_BEGIN_ namespace OmegaGTE {
 #define _NAMESPACE_END_ }
 
-#ifdef TARGET_VULKAN
-#include <glm/glm.hpp>
-#endif
-
-#ifdef TARGET_DIRECTX
-#include <DirectXMath.h>
-#endif
-
-#ifdef TARGET_METAL
-#include <simd/simd.h>
-#endif
 
 _NAMESPACE_BEGIN_
     using namespace OmegaCommon;
@@ -448,6 +437,24 @@ _NAMESPACE_BEGIN_
             *(pt_b) = new Node(new Pt_Ty(std::move(pt)));
             ++len;
         };
+        void assign(const GVectorPath_Base & other){
+            Node * pt_a = other.first;
+            first = new Node(new Pt_Ty(*(pt_a->pt)));
+            Node *next = first->next;
+            Node *pt_b = other.first->next;
+            next = new Node(new Pt_Ty(*(pt_b->pt)));
+            unsigned idx = other.len-1;
+            while(idx > 0){
+                next = next->next;
+                if(pt_b) {
+                    pt_b = pt_b->next;
+                    if(pt_b)
+                        next = new Node(new Pt_Ty(*(pt_b->pt)));
+                }
+                --idx;
+            };
+            len = other.len;
+        }
         public:
         Pt_Ty & firstPt(){
             return *(first->pt);
@@ -493,28 +500,27 @@ _NAMESPACE_BEGIN_
         };
         GVectorPath_Base(const Pt_Ty & start):first(new Node(new Pt_Ty(std::move(start)))),len(0),numPoints(1){};
         GVectorPath_Base(Pt_Ty &&start):first(new Node(new Pt_Ty(std::move(start)))),len(0),numPoints(1){};
-        GVectorPath_Base(GVectorPath_Base<Pt_Ty> & other){
-            Node *& pt_a = other.first;
-            first = new Node(new Pt_Ty(*(pt_a->pt)));
-            Node *&next = first->next;
-            Node *& pt_b = other.first->next;
-            next = new Node(new Pt_Ty(*(pt_b->pt)));
-            unsigned idx = other.len-1;
-            while(idx > 0){
-                next = next->next;
-                if(pt_b) {
-                    pt_b = pt_b->next;
-                    if(pt_b)
-                        next = new Node(new Pt_Ty(*(pt_b->pt)));
-                }
-                --idx;
-            };
-            len = other.len;
-            
-        };
         GVectorPath_Base() = delete;
-        GVectorPath_Base(const GVectorPath_Base<Pt_Ty> &) = delete;
-        GVectorPath_Base(GVectorPath_Base<Pt_Ty> && other):first(other.first),len(other.len){};
+        GVectorPath_Base(const GVectorPath_Base<Pt_Ty> &other){
+            assign(other);
+        };
+        GVectorPath_Base(GVectorPath_Base<Pt_Ty> && other) noexcept{
+            assign(other);
+        };
+        GVectorPath_Base & operator=(const GVectorPath_Base<Pt_Ty> &other){
+            if(this == &other){
+                return *this;
+            }
+            assign(other);
+            return *this;
+        }
+        GVectorPath_Base & operator=(GVectorPath_Base<Pt_Ty> &&other) noexcept {
+            if(this == &other){
+                return *this;
+            }
+            assign(other);
+            return *this;
+        }
         ~GVectorPath_Base(){
             delete first;
         };
@@ -793,30 +799,6 @@ _NAMESPACE_BEGIN_
         return m;
     }
 
-    /// Matrix Conversion Functions
-
-    #define FLOAT_SIZE sizeof(float)
-
-#ifdef TARGET_DIRECTX
-
-#define FLOAT2_SIZE sizeof(DirectX::XMFLOAT2)
-#define FLOAT3_SIZE sizeof(DirectX::XMFLOAT3)
-#define FLOAT4_SIZE sizeof(DirectX::XMFLOAT4)
-
-
-#elif defined(TARGET_METAL)
-
-#define FLOAT2_SIZE sizeof(simd_float2)
-#define FLOAT3_SIZE sizeof(simd_float3)
-#define FLOAT4_SIZE sizeof(simd_float4)
-
-#elif defined(TARGET_VULKAN)
-
-    glm::vec2 float2(const FVec<2> & mat);
-    glm::vec3 float3(const FVec<3> & mat);
-    glm::vec4 float4(const FVec<4> & mat);
-    
-#endif
 
 
     template<class _Ty>

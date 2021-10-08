@@ -2,7 +2,7 @@
 Omega Tessalation Engine
 ========================
 
-.. cpp:class:: OmegaGTE::OmegaTessalationEngine
+.. cpp:class:: OmegaGTE::OmegaTessellationEngine
 
 The tessalation engine.
 

@@ -13,6 +13,8 @@ struct GTEShaderLibrary {
     std::map<std::string,SharedHandle<GTEShader>> shaders;
 };
 
+size_t OMEGAGTE_EXPORT omegaSLStructSize(OmegaCommon::Vector<omegasl_data_type> fields) noexcept;
+
 struct OMEGAGTE_EXPORT GEBufferWriter {
     virtual void setOutputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
     virtual void structBegin() = 0;
@@ -21,19 +23,21 @@ struct OMEGAGTE_EXPORT GEBufferWriter {
     virtual void writeFloat3(FVec<3> & v) = 0;
     virtual void writeFloat4(FVec<4> & v) = 0;
     virtual void structEnd() = 0;
-    virtual void finish() = 0;
+    virtual void sendToBuffer() = 0;
+    virtual void flush() = 0;
     static SharedHandle<GEBufferWriter> Create();
 };
 
 struct OMEGAGTE_EXPORT GEBufferReader {
     virtual void setInputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
+    virtual void setStructLayout(std::initializer_list<omegasl_data_type> fields) = 0;
     virtual void structBegin() = 0;
     virtual void getFloat(float & v) = 0;
     virtual void getFloat2(FVec<2> & v) = 0;
     virtual void getFloat3(FVec<3> & v) = 0;
     virtual void getFloat4(FVec<4> & v) = 0;
     virtual void structEnd() = 0;
-    virtual void finish() = 0;
+    virtual void reset() = 0;
     static SharedHandle<GEBufferReader> Create();
 };
 

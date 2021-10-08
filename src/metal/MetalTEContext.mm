@@ -71,7 +71,7 @@ class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
 
         };
     };
-    MetalNativeRenderTargetTEContext(GEMetalNativeRenderTarget * target):target(target){};
+    MetalNativeRenderTargetTEContext(SharedHandle<GEMetalNativeRenderTarget> target):target(target){};
 };
 
 class MetalTextureRenderTargetTEContext : public OmegaTessalationEngineContext {
@@ -92,15 +92,15 @@ class MetalTextureRenderTargetTEContext : public OmegaTessalationEngineContext {
 
         };
     };
-    MetalTextureRenderTargetTEContext(GEMetalTextureRenderTarget * target):target(target){};
+    MetalTextureRenderTargetTEContext(SharedHandle<GEMetalTextureRenderTarget> target):target(target){};
 };
 
 SharedHandle<OmegaTessalationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){
-    return std::make_shared<MetalNativeRenderTargetTEContext>((GEMetalNativeRenderTarget *)renderTarget.get());
+    return std::make_shared<MetalNativeRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalNativeRenderTarget>(renderTarget));
 };
 
 SharedHandle<OmegaTessalationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> &renderTarget){
-    return std::make_shared<MetalTextureRenderTargetTEContext>((GEMetalTextureRenderTarget *)renderTarget.get());
+    return std::make_shared<MetalTextureRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalTextureRenderTarget>(renderTarget));
 };
 
 

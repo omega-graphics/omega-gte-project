@@ -53,7 +53,7 @@ OMEGAGTE_EXPORT OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices();
 /// @brief The Graphics and Tessalation Engine!
 struct OMEGAGTE_EXPORT GTE {
     SharedHandle<OmegaGraphicsEngine> graphicsEngine;
-    SharedHandle<OmegaTessalationEngine> tessalationEngine;
+    SharedHandle<OmegaTessellationEngine> tessalationEngine;
 };
 
 

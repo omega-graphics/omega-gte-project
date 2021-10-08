@@ -69,7 +69,7 @@ _NAMESPACE_BEGIN_
 //            return heap->GetDesc().SizeInBytes;
 //        };
 //        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
-//        SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override;
+//        SharedHandle<GETexture> makeTexture3D(const TextureDescriptor &desc) override;
 //    };
 
     class GED3D12Engine : public OmegaGraphicsEngine {

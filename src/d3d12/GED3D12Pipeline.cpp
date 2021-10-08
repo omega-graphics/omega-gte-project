@@ -13,6 +13,13 @@ GED3D12RenderPipelineState::GED3D12RenderPipelineState(SharedHandle<GTEShader> &
                                                        rootSignature(signature),rootSignatureDesc(rootSignatureDesc){};
 
 GED3D12RenderPipelineState::~GED3D12RenderPipelineState() {
+    auto array = OmegaCommon::makeArrayRef((D3D12_ROOT_PARAMETER1 *)rootSignatureDesc.pParameters,
+                                           (D3D12_ROOT_PARAMETER1 *)rootSignatureDesc.pParameters + rootSignatureDesc.NumParameters);
+    for(auto & p : array){
+        if(p.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE){
+            delete p.DescriptorTable.pDescriptorRanges;
+        }
+    }
     delete [] rootSignatureDesc.pParameters;
     delete [] rootSignatureDesc.pStaticSamplers;
 }

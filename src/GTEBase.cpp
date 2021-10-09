@@ -1,6 +1,12 @@
 #include "omegaGTE/GTEBase.h"
 #include "omegaGTE/GTEShader.h"
 
+#ifdef TARGET_METAL
+// Use strict Metal simd data type alignment
+#include <simd/simd.h>
+#endif
+
+
 _NAMESPACE_BEGIN_
 
 const long double PI = std::acos(-1);
@@ -24,17 +30,33 @@ size_t omegaSLStructSize(OmegaCommon::Vector<omegasl_data_type> data) noexcept{
             }
             case OMEGASL_FLOAT2 :
             case OMEGASL_INT2 : {
+#if defined(TARGET_METAL)
+                auto _s = sizeof(simd_float2);
+                if(biggestWord < _s){
+                    biggestWord = _s;
+                }
+                data_sizes.push_back(_s);
+#else
                 auto _s = sizeof(float);
                 if(biggestWord < _s){
                     biggestWord = _s;
                 }
                 data_sizes.push_back(_s);
                 data_sizes.push_back(_s);
+
+#endif
                 break;
             }
             case OMEGASL_FLOAT3 :
             case OMEGASL_INT3 :
             {
+#if defined(TARGET_METAL)
+                auto _s = sizeof(simd_float3);
+                if(biggestWord < _s){
+                    biggestWord = _s;
+                }
+                data_sizes.push_back(_s);
+#else
                 auto _s = sizeof(float);
                 if(biggestWord < _s){
                     biggestWord = _s;
@@ -42,11 +64,19 @@ size_t omegaSLStructSize(OmegaCommon::Vector<omegasl_data_type> data) noexcept{
                 data_sizes.push_back(_s);
                 data_sizes.push_back(_s);
                 data_sizes.push_back(_s);
+#endif
                 break;
             }
             case OMEGASL_FLOAT4 :
             case OMEGASL_INT4 :
             {
+#if defined(TARGET_METAL)
+                auto _s = sizeof(simd_float4);
+                if(biggestWord < _s){
+                    biggestWord = _s;
+                }
+                data_sizes.push_back(_s);
+#else
                 auto _s = sizeof(float);
                 if(biggestWord < _s){
                     biggestWord = _s;
@@ -55,6 +85,7 @@ size_t omegaSLStructSize(OmegaCommon::Vector<omegasl_data_type> data) noexcept{
                 data_sizes.push_back(_s);
                 data_sizes.push_back(_s);
                 data_sizes.push_back(_s);
+#endif
                 break;
             }
         }

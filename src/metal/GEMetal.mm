@@ -12,7 +12,10 @@
 
 #include "OmegaGTE.h"
 
+#include "../BufferIO.h"
+
 #import <Metal/Metal.h>
+#include <simd/simd.h>
 
 #if !__has_attribute(ext_vector_type)
 #pragma error("Requires vector types")
@@ -50,28 +53,7 @@ _NAMESPACE_BEGIN_
 
 
     /// =========================================================>
-
-
-
-    simd_float2 float2(const FVec<2> &mat){
-        return simd::make_float2(mat[0][0],mat[1][0]);
-    };
-    simd_float3 float3(const FVec<3> &mat){
-        return simd::make_float3(mat[0][0],mat[1][0],mat[2][0]);
-    };
-    simd_float4 float4(const FVec<4> &mat){
-        return simd::make_float4(mat[0][0],mat[1][0],mat[2][0],mat[3][0]);
-    };
-
-    simd_double2 double2(const DVec<2> &mat){
-        return simd::make_double2(mat[0][0],mat[1][0]);
-    };
-    simd_double3 double3(const DVec<3> &mat){
-        return simd::make_double3(mat[0][0],mat[1][0],mat[2][0]);
-    };
-    simd_double4 double4(const DVec<4> &mat){
-        return simd::make_double4(mat[0][0],mat[1][0],mat[2][0],mat[3][0]);
-    };
+    
 
     NSSmartPtr::NSSmartPtr(const NSObjectHandle & handle):data(handle.data){
 
@@ -109,7 +91,32 @@ _NAMESPACE_BEGIN_
         GEMetalBuffer *buffer_ = nil;
         MTLByte *_data_ptr = nullptr;
         size_t currentOffset = 0;
-        size_t structOffset = 0;
+        bool inStruct = false;
+        
+        OmegaCommon::Vector<DataBlock> blocks;
+        inline void clearBlocks(){
+            for(auto & b : blocks){
+                switch (b.type) {
+                    case OMEGASL_FLOAT : {
+                        delete (float *)b.data;
+                        break;
+                    }
+                    case OMEGASL_FLOAT2 : {
+                        delete (simd_float2 *)b.data;
+                        break;
+                    }
+                    case OMEGASL_FLOAT3 : {
+                        delete (simd_float3 *)b.data;
+                        break;
+                    }
+                    case OMEGASL_FLOAT4 : {
+                        delete (simd_float4 *)b.data;
+                        break;
+                    }
+                }
+            }
+            blocks.clear();
+        }
     public:
         GEMetalBufferWriter() = default;
         void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
@@ -118,33 +125,127 @@ _NAMESPACE_BEGIN_
             _data_ptr = (MTLByte *)[NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer_->metalBuffer.handle()) contents];;
         }
         void structBegin() override {
-
+            if(!blocks.empty()){
+                clearBlocks();
+            }
+            inStruct = true;
         }
         void writeFloat(float &v) override {
-            memcpy(_data_ptr + currentOffset,&v,sizeof(v));
-            currentOffset += sizeof(v);
+            DataBlock block {OMEGASL_FLOAT,new float(v)};
+            blocks.push_back(block);
         }
         void writeFloat2(FVec<2> &v) override {
-            auto _v = simd_make_float2(v[0][0],v[1][0]);
-            memcpy(_data_ptr + currentOffset,&_v,FLOAT2_SIZE);
-            currentOffset += FLOAT2_SIZE;
+            DataBlock block {OMEGASL_FLOAT2,new simd_float2(simd_make_float2(v[0][0],v[1][0]))};
+            blocks.push_back(block);
         }
         void writeFloat3(FVec<3> &v) override {
-            auto _v = float3(v);
-            memcpy(_data_ptr + currentOffset,&_v,FLOAT3_SIZE);
-            currentOffset += FLOAT3_SIZE;
+            DataBlock block {OMEGASL_FLOAT3,new simd_float3(simd_make_float3(v[0][0],v[1][0],v[2][0]))};
+            blocks.push_back(block);
         }
         void writeFloat4(FVec<4> &v) override {
-            auto _v = float4(v);
-            memcpy(_data_ptr + currentOffset,&_v,FLOAT4_SIZE);
-            currentOffset += FLOAT4_SIZE;
+            DataBlock block {OMEGASL_FLOAT4,new simd_float4(simd_make_float4(v[0][0],v[1][0],v[2][0],v[3][0]))};
+            blocks.push_back(block);
         }
         void structEnd() override {
-
+            inStruct = false;
         }
-        void finish() override {
+        void sendToBuffer() override {
+            assert(!inStruct && "Struct must be finished be written to before sending data");
+            size_t biggestSize = 1;
+
+            OmegaCommon::Vector<size_t> sizes;
+            for(auto & d : blocks){
+                size_t s = 0;
+                switch (d.type) {
+                    case OMEGASL_FLOAT : {
+                        s = sizeof(float);
+                        break;
+                    }
+                    case OMEGASL_FLOAT2 : {
+                        s = sizeof(simd_float2);
+                        break;
+                    }
+                    case OMEGASL_FLOAT3 : {
+                        s = sizeof(simd_float3);
+                        break;
+                    }
+                    case OMEGASL_FLOAT4 : {
+                        s = sizeof(simd_float4);
+                        break;
+                    }
+                }
+                if(s > biggestSize){
+                    biggestSize = s;
+                }
+                sizes.push_back(s);
+            }
+
+            size_t offsetBefore = 0;
+            size_t offsetAfter = 0;
+
+            bool afterBiggestWord = false;
+            for(unsigned i = 0;i < blocks.size();i++){
+                auto & s = sizes[i];
+                auto & block = blocks[i];
+                if(afterBiggestWord){
+                    memcpy(_data_ptr + currentOffset + offsetAfter,block.data,s);
+                    offsetAfter += s;
+                }
+                else {
+                    if (s == biggestSize) {
+                        auto padding = offsetBefore % biggestSize;
+
+                        if(padding > 0) {
+                            auto *pad = new MTLByte[padding];
+
+                            size_t paddingLen = padding;
+                            auto *pad_it = pad;
+                            while (paddingLen > 0) {
+                                *pad_it = 0;
+                                ++pad_it;
+                                --paddingLen;
+                            }
+                            memcpy(_data_ptr + currentOffset + offsetBefore,pad,padding);
+                            offsetBefore += padding;
+                            delete [] pad;
+                        }
+
+                        memcpy(_data_ptr + currentOffset + offsetBefore,block.data,s);
+                        afterBiggestWord = true;
+                        currentOffset += (offsetBefore + s);
+                    }
+                    else {
+                        memcpy(_data_ptr + currentOffset + offsetBefore,block.data,s);
+                        offsetBefore += s;
+                    }
+                }
+            }
+
+            if(offsetAfter > 0){
+                auto padding = offsetAfter % biggestSize;
+
+                if(padding > 0) {
+                    auto *pad = new MTLByte[padding];
+
+                    size_t paddingLen = padding;
+                    auto *pad_it = pad;
+                    while (paddingLen > 0) {
+                        *pad_it = 0;
+                        ++pad_it;
+                        --paddingLen;
+                    }
+                    memcpy(_data_ptr + currentOffset + offsetAfter,pad,padding);
+                    offsetAfter += padding;
+                    delete [] pad;
+                }
+                currentOffset += offsetAfter;
+            }
+        }
+        void flush() override {
+            currentOffset = 0;
             buffer_ = nil;
             _data_ptr = nullptr;
+            clearBlocks();
         }
     };
 
@@ -156,6 +257,35 @@ _NAMESPACE_BEGIN_
         GEMetalBuffer *buffer_ = nullptr;
         MTLByte *_data_ptr = nullptr;
         size_t currentOffset = 0;
+
+        size_t structRelativeOffset = 0;
+
+        size_t biggestSizeOffset = 0;
+
+        size_t biggestSize = 0,paddingBefore = 0,paddingAfter = 0;
+
+        size_t fieldIndex = 0;
+
+        bool inStruct = false;
+
+        OmegaCommon::Vector<omegasl_data_type> structLayout;
+        inline void readBeforePaddingIfPossible(){
+            if(structRelativeOffset == biggestSizeOffset){
+                currentOffset += paddingBefore;
+                structRelativeOffset += paddingBefore;
+            }
+        }
+        inline void readAfterPaddingIfPossible(){
+            if(structLayout.size() == (fieldIndex + 1)){
+                currentOffset += paddingAfter;
+                structRelativeOffset += paddingAfter;
+            }
+        }
+        inline void offsetAndIncrement(size_t n){
+            structRelativeOffset += n;
+            currentOffset += n;
+            ++fieldIndex;
+        }
     public:
         GEMetalBufferReader() = default;
         void setInputBuffer(SharedHandle<GEBuffer> &buffer) override {
@@ -163,46 +293,120 @@ _NAMESPACE_BEGIN_
             buffer_= (GEMetalBuffer *)buffer.get();
             _data_ptr = (MTLByte *)[NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer_->metalBuffer.handle()) contents];
         }
-        void structBegin() override {
+        void setStructLayout(OmegaCommon::Vector<omegasl_data_type> fields) override {
+            structLayout = fields;
+            OmegaCommon::Vector<size_t> sizes;
+            for(auto & f : fields){
+                size_t s = 0;
+                switch (f) {
+                    case OMEGASL_INT:
+                    case OMEGASL_FLOAT : {
+                        s = sizeof(float);
+                        break;
+                    }
+                    case OMEGASL_INT2 :
+                    case OMEGASL_FLOAT2 : {
+                        s = sizeof(simd_float2);
+                        break;
+                    }
+                    case OMEGASL_INT3 :
+                    case OMEGASL_FLOAT3 : {
+                        s = sizeof(simd_float3);
+                        break;
+                    }
+                    case OMEGASL_INT4 :
+                    case OMEGASL_FLOAT4 :
+                    {
+                        s = sizeof(simd_float4);
+                        break;
+                    }
+                }
+                if(s > biggestSize){
+                    s = biggestSize;
+                }
+                sizes.push_back(s);
+            }
 
+            bool afterBiggest = false;
+
+            size_t relOffsetBeg = 0,relOffsetEnd = 0;
+
+            for(auto & s : sizes){
+                if(afterBiggest){
+                    relOffsetEnd += s;
+                }
+                else {
+                    if (s == biggestSize) {
+                        paddingBefore = relOffsetBeg % biggestSize;
+                        biggestSizeOffset = relOffsetBeg;
+                       afterBiggest = true;
+                    } else {
+                        relOffsetBeg += s;
+                    }
+                }
+            }
+            paddingAfter = relOffsetEnd % biggestSize;
+        }
+        void structBegin() override {
+            inStruct = true;
+            structRelativeOffset = 0;
+            fieldIndex = 0;
         }
         void getFloat(float &v) override {
+            assert(structLayout[fieldIndex] == OMEGASL_FLOAT && "Field is not a type of float");
+            readBeforePaddingIfPossible();
+
             memcpy(&v,_data_ptr + currentOffset,sizeof(v));
-            currentOffset += sizeof(v);
+            offsetAndIncrement(sizeof(v));
+            readAfterPaddingIfPossible();
         }
         void getFloat2(FVec<2> &v) override {
+            assert(structLayout[fieldIndex] == OMEGASL_FLOAT2 && "Field is not a type of float2");
+            readBeforePaddingIfPossible();
+
             simd_float2 _v;
             memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
-            currentOffset += sizeof(_v);
+            offsetAndIncrement(sizeof(_v));
             
             v[0][0] = _v.x;
             v[1][0] = _v.y;
+            readAfterPaddingIfPossible();
         }
         void getFloat3(FVec<3> &v) override {
+            assert(structLayout[fieldIndex] == OMEGASL_FLOAT3 && "Field is not a type of float3");
+            readBeforePaddingIfPossible();
+
             simd_float3 _v;
             memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
-            currentOffset += sizeof(_v);
+            offsetAndIncrement(sizeof(_v));
 
             v[0][0] = _v.x;
             v[1][0] = _v.y;
             v[2][0] = _v.z;
+            readAfterPaddingIfPossible();
         }
         void getFloat4(FVec<4> &v) override {
+            assert(structLayout[fieldIndex] == OMEGASL_FLOAT4 && "Field is not a type of float4");
+            readBeforePaddingIfPossible();
+
+
             simd_float4 _v;
             memcpy(&_v,_data_ptr + currentOffset,sizeof(_v));
-            currentOffset += sizeof(_v);
+            offsetAndIncrement(sizeof(_v));
 
             v[0][0] = _v.x;
             v[1][0] = _v.y;
             v[2][0] = _v.z;
             v[3][0] = _v.w;
+            readAfterPaddingIfPossible();
         }
         void structEnd() override {
-
+            inStruct = false;
         }
-        void finish() override {
+        void reset() override {
             _data_ptr = nullptr;
             buffer_ = nullptr;
+            structRelativeOffset = 0;
         }
     };
 

@@ -30,7 +30,7 @@ struct OMEGAGTE_EXPORT GEBufferWriter {
 
 struct OMEGAGTE_EXPORT GEBufferReader {
     virtual void setInputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
-    virtual void setStructLayout(std::initializer_list<omegasl_data_type> fields) = 0;
+    virtual void setStructLayout(OmegaCommon::Vector<omegasl_data_type> fields) = 0;
     virtual void structBegin() = 0;
     virtual void getFloat(float & v) = 0;
     virtual void getFloat2(FVec<2> & v) = 0;

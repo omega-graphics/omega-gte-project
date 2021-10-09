@@ -12,7 +12,7 @@ static OmegaGTE::SharedHandle<OmegaGTE::GTEShaderLibrary> funcLib;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
-static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessalationEngineContext> tessContext;
+static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessellationEngineContext> tessContext;
 static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
 
 
@@ -29,14 +29,11 @@ static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> &coord){
 
     std::cout << "Write Vertex" << std::endl;
 
-    float padding = 0.f;
-
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(pos_vec);
     bufferWriter->writeFloat2(coord);
-    bufferWriter->writeFloat(padding);
-    bufferWriter->writeFloat(padding);
     bufferWriter->structEnd();
+    bufferWriter->sendToBuffer();
     
 }
 
@@ -49,15 +46,18 @@ static void render(id<MTLDevice> dev){
     rect.w = 100;
     rect.pos.x = 0;
     rect.pos.y = 0;
-    auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessalationParams::Rect(rect));
+    auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessellationParams::Rect(rect));
 
 
     auto coord = OmegaGTE::FVec<2>::Create();
     coord[0][0] = 0.f;
     coord[1][0] = 0.f;
 
+    size_t structSize = OmegaGTE::omegaSLStructSize({OMEGASL_FLOAT4,OMEGASL_FLOAT2});
 
-    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * (FLOAT4_SIZE + FLOAT2_SIZE + FLOAT2_SIZE),(FLOAT4_SIZE + FLOAT2_SIZE + FLOAT2_SIZE)};
+    std::cout << "STRUCT SIZE:" << structSize << std::endl;
+
+    OmegaGTE::BufferDescriptor bufferDescriptor {OmegaGTE::BufferDescriptor::Upload,6 * structSize,structSize};
     auto vertexBuffer = gte.graphicsEngine->makeBuffer(bufferDescriptor);
 
     bufferWriter->setOutputBuffer(vertexBuffer);
@@ -69,25 +69,25 @@ static void render(id<MTLDevice> dev){
         for(auto &tri : mesh.vertexTriangles){
             std::ostringstream ss;
             ss << "Triangle: {\n  A:";
-            formatGPoint3D(ss,tri.a);
+            formatGPoint3D(ss,tri.a.pt);
             ss << "\n  B:";
-            formatGPoint3D(ss,tri.b);
+            formatGPoint3D(ss,tri.b.pt);
             ss << "\n  C:";
-            formatGPoint3D(ss,tri.c);
+            formatGPoint3D(ss,tri.c.pt);
             ss << "\n}";
             std::cout << ss.str() << std::endl;
 
-            writeVertex(tri.a,coord);
+            writeVertex(tri.a.pt,coord);
 
             coord[0][0] = 0.f;
             coord[1][0] = 1.f;
 
-            writeVertex(tri.b,coord);
+            writeVertex(tri.b.pt,coord);
 
             coord[0][0] = 1.f;
             coord[1][0] = 0.f;
 
-            writeVertex(tri.c,coord);
+            writeVertex(tri.c.pt,coord);
 
             otherSide = true;
             coord[0][0] = 1.f;
@@ -95,7 +95,7 @@ static void render(id<MTLDevice> dev){
         };
     };
 
-    bufferWriter->finish();
+    bufferWriter->flush();
 
 
 

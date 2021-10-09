@@ -23,7 +23,7 @@ _NAMESPACE_BEGIN_
 // };
 
 
-class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
+class MetalNativeRenderTargetTEContext : public OmegaTessellationEngineContext {
     SharedHandle<GEMetalNativeRenderTarget> target;
     public:
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
@@ -34,7 +34,7 @@ class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
     //     },std::move(prom));
     //     return fut;
     // };
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params,GEViewport * viewport){
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params,GEViewport * viewport){
 
     };
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
@@ -74,13 +74,13 @@ class MetalNativeRenderTargetTEContext : public OmegaTessalationEngineContext {
     MetalNativeRenderTargetTEContext(SharedHandle<GEMetalNativeRenderTarget> target):target(target){};
 };
 
-class MetalTextureRenderTargetTEContext : public OmegaTessalationEngineContext {
+class MetalTextureRenderTargetTEContext : public OmegaTessellationEngineContext {
     SharedHandle<GEMetalTextureRenderTarget> target;
     public:
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
         
     // };
-    std::future<TETessalationResult> tessalateOnGPU(const TETessalationParams &params, GEViewport * viewport){};
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GEViewport * viewport){};
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
     //     return _tessalatePriv(params,viewport);
     // };
@@ -95,11 +95,11 @@ class MetalTextureRenderTargetTEContext : public OmegaTessalationEngineContext {
     MetalTextureRenderTargetTEContext(SharedHandle<GEMetalTextureRenderTarget> target):target(target){};
 };
 
-SharedHandle<OmegaTessalationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){
+SharedHandle<OmegaTessellationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){
     return std::make_shared<MetalNativeRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalNativeRenderTarget>(renderTarget));
 };
 
-SharedHandle<OmegaTessalationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> &renderTarget){
+SharedHandle<OmegaTessellationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> &renderTarget){
     return std::make_shared<MetalTextureRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalTextureRenderTarget>(renderTarget));
 };
 

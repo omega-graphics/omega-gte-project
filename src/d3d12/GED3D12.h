@@ -57,7 +57,7 @@ _NAMESPACE_BEGIN_
     };
 
     class GED3D12Engine;
-    class GTED3D12Device;
+    struct GTED3D12Device;
 
 //    class GED3D12Heap : public GEHeap {
 //        GED3D12Engine *engine;

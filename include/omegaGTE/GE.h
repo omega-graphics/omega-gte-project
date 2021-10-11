@@ -42,8 +42,8 @@ _NAMESPACE_BEGIN_
     struct GTEShaderLibrary;
     struct GTEDevice;
     class GETexture;
-    typedef class __GEComputePipelineState GEComputePipelineState;
-    typedef class __GERenderPipelineState  GERenderPipelineState;
+    typedef struct __GEComputePipelineState GEComputePipelineState;
+    typedef struct __GERenderPipelineState  GERenderPipelineState;
     class GENativeRenderTarget;
     class GETextureRenderTarget;
     class GECommandQueue;

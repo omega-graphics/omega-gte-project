@@ -327,7 +327,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
             _buffer->buffer->Map(0,&range,(void **)&_data_buffer);
         }
-        void setStructLayout(std::initializer_list<omegasl_data_type> fields) override {
+        void setStructLayout(OmegaCommon::Vector<omegasl_data_type> fields) override {
 
         }
         void structBegin() override {
@@ -658,7 +658,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         
 
-        return std::make_shared<GED3D12NativeRenderTarget>(swapChain,renderTargetHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size(),desc.hwnd);
+        return SharedHandle<GENativeRenderTarget>(new GED3D12NativeRenderTarget(swapChain,renderTargetHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size(),desc.hwnd));
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
@@ -666,7 +666,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     };
 
     SharedHandle<GECommandQueue> GED3D12Engine::makeCommandQueue(unsigned int maxBufferCount){
-        return std::make_shared<GED3D12CommandQueue>(this,maxBufferCount);
+        return SharedHandle<GECommandQueue>(new GED3D12CommandQueue(this,maxBufferCount));
     };
 
     SharedHandle<GETexture> GED3D12Engine::makeTexture(const TextureDescriptor &desc){

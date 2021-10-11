@@ -4,6 +4,10 @@
 #include "GED3D12Texture.h"
 
 _NAMESPACE_BEGIN_
+
+#ifndef D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
+#define D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+#endif
     // GED3D12CommandBuffer::GED3D12CommandBuffer(){};
     // void GED3D12CommandBuffer::commitToBuffer(){};
     GED3D12CommandQueue::GED3D12CommandQueue(GED3D12Engine *engine,unsigned size):GECommandQueue(size),engine(engine),currentCount(0){
@@ -690,7 +694,7 @@ _NAMESPACE_BEGIN_
              std::cout << "ERROR:" << std::hex << hr << std::endl;
             exit(1);
         };
-        return std::make_shared<GED3D12CommandBuffer>(commandList,commandAllocator,this);
+        return SharedHandle<GECommandBuffer>(new GED3D12CommandBuffer(commandList,commandAllocator,this));
 
     };
 

@@ -91,12 +91,15 @@ namespace omegasl {
 
         struct FuncDecl;
         struct StructDecl;
+        struct Expr;
 
         /// @brief Provides useful semantics info about AST Nodes.
         /// @paragraph This includes resolving ast::Type using ast::TypeExpr
         /// and retrieving StructDecls used in a ShaderDecl
         class SemFrontend {
         public:
+            virtual TypeExpr *evalExprForTypeExpr(Expr *expr) = 0;
+
             virtual void getStructsInFuncDecl(FuncDecl *funcDecl,std::vector<std::string> & out) = 0;
             /** @brief Retrieves the underlying Type associated with this TypeExpr
              * @param expr The TypeExpr to evalutate.

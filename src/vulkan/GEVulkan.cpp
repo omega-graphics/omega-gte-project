@@ -13,6 +13,10 @@
 
 #include "OmegaGTE.h"
 
+#include <glm/glm.hpp>
+
+#include "../BufferIO.h"
+
 
 _NAMESPACE_BEGIN_
 
@@ -70,6 +74,8 @@ _NAMESPACE_BEGIN_
         GEVulkanBuffer *_buffer = nullptr;
         VulkanByte *mem_map = nullptr;
         size_t currentOffset = 0;
+
+        OmegaCommon::Vector<DataBlock> blocks;
     public:
         void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
             _buffer = (GEVulkanBuffer *)buffer.get();
@@ -102,7 +108,11 @@ _NAMESPACE_BEGIN_
             currentOffset += sizeof(vec);
         }
 
-        void finish() override {
+        void sendToBuffer() override {
+
+        }
+
+        void flush() override {
             vmaUnmapMemory(_buffer->engine->memAllocator,_buffer->alloc);
             _buffer = nullptr;
         }
@@ -287,10 +297,10 @@ _NAMESPACE_BEGIN_
         
         vmaCreateBuffer(memAllocator,&buffer_desc,&alloc_info,&buffer,&allocation,&allocationInfo);
 
-        VkBufferViewCreateInfo bufferViewInfo {};
+        VkBufferViewCreateInfo bufferViewInfo {VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO};
         bufferViewInfo.format = VK_FORMAT_UNDEFINED;
         bufferViewInfo.buffer = buffer;
-        bufferViewInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+        bufferViewInfo.pNext = nullptr;
         bufferViewInfo.offset = 0;
         bufferViewInfo.range = VK_WHOLE_SIZE;
 
@@ -501,13 +511,12 @@ _NAMESPACE_BEGIN_
 
             OmegaCommon::ArrayRef<omegasl_shader_layout_desc> layouts {s.pLayout,s.pLayout + s.nLayout};
             VkDescriptorSetLayout set_layout;
+            OmegaCommon::Vector<VkDescriptorSetLayoutBinding> bindings;
             for(auto & l : layouts){
                 b.pImmutableSamplers = nullptr;
-
                 switch (l.type) {
                     case OMEGASL_SHADER_BUFFER_DESC : {
-                          b.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-                       
+                        b.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                         break;
                     }
                     case OMEGASL_SHADER_SAMPLER1D_DESC : 
@@ -531,19 +540,18 @@ _NAMESPACE_BEGIN_
                 b.binding = l.gpu_relative_loc;
                 resourceIDs.push_back(l.location);
                 b.stageFlags = shaderStageFlags;
-                desc_layout_info.pNext = nullptr;
-                desc_layout_info.bindingCount = 1;
-                desc_layout_info.pBindings = &b;
-                desc_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-                vkCreateDescriptorSetLayout(device,&desc_layout_info,nullptr,&set_layout);
-                descLayout.push_back(set_layout);
                 setCount += 1;
 
                 VkDescriptorPoolSize poolSize {};
-                poolSize.descriptorCount = 1;
+                poolSize.descriptorCount = bindings.size();
                 poolSize.type = b.descriptorType;
                 poolSizes.push_back(poolSize);
             }
+            desc_layout_info.pNext = nullptr;
+            desc_layout_info.bindingCount = bindings.size();
+            desc_layout_info.pBindings = bindings.data();
+            desc_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            vkCreateDescriptorSetLayout(device,&desc_layout_info,nullptr,&set_layout);
 
         }
 
@@ -617,8 +625,14 @@ _NAMESPACE_BEGIN_
         }
 
 
-        VkPipelineDynamicStateCreateInfo dynamicState {};
-        dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        VkPipelineDynamicStateCreateInfo dynamicState {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+        OmegaCommon::Vector<VkDynamicState> dynamicStates = {
+                VK_DYNAMIC_STATE_VIEWPORT,
+                VK_DYNAMIC_STATE_SCISSOR,
+                VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY_EXT};
+        dynamicState.dynamicStateCount = dynamicStates.size();
+        dynamicState.pNext = nullptr;
+        dynamicState.pDynamicStates = dynamicStates.data();
 
 
         auto *vertexShader = (GTEVulkanShader *)desc.vertexFunc.get();

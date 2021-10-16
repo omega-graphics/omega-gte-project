@@ -1,4 +1,5 @@
 #include "GEVulkanRenderTarget.h"
+#include "vulkan/vulkan_core.h"
 
 _NAMESPACE_BEGIN_
 
@@ -83,25 +84,25 @@ void GEVulkanNativeRenderTarget::commitAndPresent() {
     presentInfoKhr.pImageIndices = &currentFrameIndex;
     presentInfoKhr.swapchainCount = 1;
     presentInfoKhr.pSwapchains = &swapchainKHR;
-    presentInfoKhr.waitSemaphoreCount = 1;
-    presentInfoKhr.pWaitSemaphores = &semaphore;
-    vkQueuePresentKHR(commandQueue->vkQueue, &presentInfoKhr);
+    presentInfoKhr.waitSemaphoreCount = 0;
+    presentInfoKhr.pWaitSemaphores = nullptr;
+   
 
-    commandQueue->commitToGPU();
+    commandQueue->commitToGPUPresent(&presentInfoKhr);
 
     /// Wait for value to increment!!
-    val += 1;
+    // val += 1;
 
-    VkSemaphoreWaitInfo waitInfo {VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
-    waitInfo.pSemaphores = &semaphore;
-    waitInfo.semaphoreCount = 1;
-    waitInfo.pNext = nullptr;
-    waitInfo.pValues = &val;
-    waitInfo.flags = VK_SEMAPHORE_WAIT_ANY_BIT;
+    // VkSemaphoreWaitInfo waitInfo {VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+    // waitInfo.pSemaphores = &semaphore;
+    // waitInfo.semaphoreCount = 1;
+    // waitInfo.pNext = nullptr;
+    // waitInfo.pValues = &val;
+    // waitInfo.flags = VK_SEMAPHORE_WAIT_ANY_BIT;
 
     // Wait forever until frame is finished
 
-    vkWaitSemaphores(parentEngine->device,&waitInfo,UINT64_MAX);
+    // vkWaitSemaphores(parentEngine->device,&waitInfo,UINT64_MAX);
 
     vkAcquireNextImageKHR(parentEngine->device,swapchainKHR,UINT64_MAX,VK_NULL_HANDLE,frameIsReadyFence,&currentFrameIndex);
 }
@@ -115,6 +116,32 @@ GEVulkanNativeRenderTarget::~GEVulkanNativeRenderTarget() {
     vkDestroySwapchainKHR(parentEngine->device,swapchainKHR,nullptr);
     vkDestroySurfaceKHR(GEVulkanEngine::instance,surface,nullptr);
 
+}
+
+GEVulkanTextureRenderTarget::GEVulkanTextureRenderTarget(GEVulkanEngine * engine,
+                                SharedHandle<GEVulkanTexture> & texture,
+                                VkFramebuffer & framebuffer):parentEngine(engine),
+                                                             texture(texture),
+                                                             frameBuffer(framebuffer){
+    
+}
+
+SharedHandle<GERenderTarget::CommandBuffer> GEVulkanTextureRenderTarget::commandBuffer(){
+    return SharedHandle<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,
+        GERenderTarget::CommandBuffer::GERTType::Texture,
+        commandQueue->getAvailableBuffer()));
+}
+
+void GEVulkanTextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){
+    commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
+}
+
+void GEVulkanTextureRenderTarget::commit(){
+    commandQueue->commitToGPU();
+}
+
+GEVulkanTextureRenderTarget::~GEVulkanTextureRenderTarget(){
+    vkDestroyFramebuffer(parentEngine->device,frameBuffer,nullptr);
 }
 
 _NAMESPACE_END_

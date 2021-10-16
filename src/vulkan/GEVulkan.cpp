@@ -1,3 +1,4 @@
+#include "vulkan/vulkan_core.h"
 #define VMA_IMPLEMENTATION 1
 
 #include "GEVulkan.h"
@@ -75,6 +76,8 @@ _NAMESPACE_BEGIN_
         VulkanByte *mem_map = nullptr;
         size_t currentOffset = 0;
 
+        bool inStruct = false;
+
         OmegaCommon::Vector<DataBlock> blocks;
     public:
         void setOutputBuffer(SharedHandle<GEBuffer> &buffer) override {
@@ -83,33 +86,57 @@ _NAMESPACE_BEGIN_
             currentOffset = 0;
         }
         void structBegin() override {
-
+            if(!blocks.empty()){
+                blocks.clear();
+            }
+            inStruct = true;
         }
         void structEnd() override {
-
+            inStruct = false;
         }
         void writeFloat(float &v) override {
-            memcpy(mem_map + currentOffset,&v,sizeof(v));
-            currentOffset += sizeof(v);
+            blocks.push_back(DataBlock {OMEGASL_FLOAT,new float(v)});
         }
         void writeFloat2(FVec<2> &v) override {
             glm::vec2 vec {v[0][0],v[1][0]};
-            memcpy(mem_map + currentOffset,&vec,sizeof(vec));
-            currentOffset += sizeof(vec);
+            blocks.push_back(DataBlock {OMEGASL_FLOAT2,new glm::vec2(vec)});
         }
         void writeFloat3(FVec<3> &v) override {
             glm::vec3 vec {v[0][0],v[1][0],v[2][0]};
-            memcpy(mem_map + currentOffset,&vec,sizeof(vec));
-            currentOffset += sizeof(vec);
+            blocks.push_back(DataBlock {OMEGASL_FLOAT3,new glm::vec3(vec)});
         }
         void writeFloat4(FVec<4> &v) override {
             glm::vec4 vec {v[0][0],v[1][0],v[2][0],v[3][0]};
-            memcpy(mem_map + currentOffset,&vec,sizeof(vec));
-            currentOffset += sizeof(vec);
+            blocks.push_back(DataBlock {OMEGASL_FLOAT4,new glm::vec4(vec)});
         }
 
         void sendToBuffer() override {
-
+            assert(inStruct && "Struct Record must be finished before sending object to buffer");
+            size_t biggestWord = 1;
+            bool afterBiggest = false;
+            for(auto & b : blocks){
+                size_t si = 0;
+                switch (b.type) {
+                    case OMEGASL_FLOAT : {
+                        si = sizeof(float);
+                        break;
+                    }
+                    case OMEGASL_FLOAT2 : {
+                        si = sizeof(glm::vec2);
+                        break;
+                    }
+                    case OMEGASL_FLOAT3 : {
+                        si = sizeof(glm::vec3);
+                        break;
+                    }
+                    case OMEGASL_FLOAT4 : {
+                        si = sizeof(glm::vec4);
+                        break;
+                    }
+                }
+                memcpy(mem_map + currentOffset,b.data,si);
+                currentOffset += si;
+            }
         }
 
         void flush() override {
@@ -131,6 +158,9 @@ _NAMESPACE_BEGIN_
             _buffer = (GEVulkanBuffer *)buffer.get();
             vmaMapMemory(_buffer->engine->memAllocator,_buffer->alloc,(void **)&mem_map);
             currentOffset = 0;
+        }
+        void setStructLayout(OmegaCommon::Vector<omegasl_data_type> fields) override {
+
         }
         void structBegin() override {
 
@@ -166,7 +196,7 @@ _NAMESPACE_BEGIN_
             v[3][0] = vec.w;
             currentOffset += sizeof(vec);
         }
-        void finish() override {
+        void reset() override {
             vmaUnmapMemory(_buffer->engine->memAllocator,_buffer->alloc);
             _buffer = nullptr;
         }
@@ -218,13 +248,16 @@ _NAMESPACE_BEGIN_
         for(auto & q : queueFamilyProps){
             if(q.queueFlags & VK_QUEUE_GRAPHICS_BIT || q.queueFlags & VK_QUEUE_COMPUTE_BIT){
                 queueFamilyIndices.push_back(id);
+                VkDeviceQueueCreateInfo queueInfo {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+                queueInfo.pNext = nullptr;
+                queueInfo.queueFamilyIndex = id;
+                queueInfo.queueCount = q.queueCount;
+                deviceQueues.push_back(queueInfo);
             }
-            VkDeviceQueueCreateInfo queueInfo {};
-            queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-            queueInfo.pNext = nullptr;
-            queueInfo.queueFamilyIndex = id;
-            queueInfo.queueCount = q.queueCount;
-            ++id;
+            else {
+                continue;
+            }
+             ++id;
         }
 
         
@@ -238,6 +271,32 @@ _NAMESPACE_BEGIN_
         info.enabledLayerCount = layer_props.size();
 
         vkCreateDevice(physicalDevice,&info,nullptr,&this->device);
+
+        unsigned queueFamilyIndex = 0;
+        for(auto & dq : deviceQueues){
+            std::vector<std::pair<VkSemaphore,VkQueue>> queues;
+            for(unsigned i = 0;i < dq.queueCount;i++){
+                VkSemaphore sem;
+                VkQueue queue;
+
+                VkSemaphoreCreateInfo semaphoreInfo {VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO};
+                semaphoreInfo.flags = VK_SEMAPHORE_TYPE_TIMELINE;
+                semaphoreInfo.pNext = nullptr;
+                vkCreateSemaphore(this->device,&semaphoreInfo,nullptr,&sem);
+
+                VkDeviceQueueInfo2 queueInfo {VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2};
+                queueInfo.pNext = nullptr;
+                queueInfo.queueFamilyIndex = queueFamilyIndex;
+                queueInfo.queueIndex = i;
+                queueInfo.flags = 0;
+                vkGetDeviceQueue2(this->device,&queueInfo,&queue);
+
+                queues.push_back(std::make_pair(sem,queue));
+            }
+            deviceQueuefamilies.push_back(queues);
+            queueFamilyIndex += 1;
+
+        }
 
 
         VmaAllocatorCreateInfo allocator_info {};
@@ -371,35 +430,47 @@ _NAMESPACE_BEGIN_
         VkImageLayout layout;
         VmaMemoryUsage memoryUsage;
 
-        VkDescriptorType descType;
 
         switch (desc.usage) {
+            case GETexture::GPUAccessOnly : {
+                usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT 
+                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT 
+                | VK_IMAGE_USAGE_SAMPLED_BIT;
+                memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+                break;
+            }
             case GETexture::ToGPU : {
-                usageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+                usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_CPU_TO_GPU;
                 layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-                descType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        
                 break;
             }
             case GETexture::FromGPU : {
-                usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_GPU_TO_CPU;
                 layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-                descType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+         
                 break;
             }
             case GETexture::RenderTarget : {
-                usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-                memoryUsage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+                usageFlags = 
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | 
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                VK_IMAGE_USAGE_SAMPLED_BIT;
+
+                memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
                 layout = VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR;
-                descType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                
                 break;
             }
             case GETexture::MSResolveSrc : {
-                usageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
+                usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
                 memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY;
                 layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-                descType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                
                 break;
             }
         }
@@ -414,7 +485,7 @@ _NAMESPACE_BEGIN_
         VkImageView imageView;
         
 
-        VmaAllocationCreateInfo create_alloc_info;
+        VmaAllocationCreateInfo create_alloc_info {};
         create_alloc_info.usage = memoryUsage;
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
@@ -893,10 +964,40 @@ _NAMESPACE_BEGIN_
     };
 
     SharedHandle<GETextureRenderTarget> GEVulkanEngine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
-        return nullptr;
+        SharedHandle<GETexture> tex;
+        if(!desc.renderToExistingTexture){
+            TextureDescriptor texDesc {GETexture::Texture2D,OmegaGTE::Shared,GETexture::GPUAccessOnly};
+            tex = makeTexture(texDesc);
+        }
+        else {
+            tex = desc.texture;
+        }
+
+        auto vk_tex = std::dynamic_pointer_cast<GEVulkanTexture>(tex);
+
+        VkFramebuffer fb;
+
+        VkFramebufferCreateInfo fbInfo {VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+        fbInfo.renderPass = VK_NULL_HANDLE;
+        fbInfo.pNext = nullptr;
+        fbInfo.width = desc.rect.w;
+        fbInfo.height = desc.rect.h;
+        fbInfo.attachmentCount = 1;
+        fbInfo.pAttachments = &vk_tex->img_view;
+        fbInfo.layers = 1;
+        fbInfo.flags = 0;
+
+        vkCreateFramebuffer(device,&fbInfo,nullptr, &fb);
+
+        return SharedHandle<GETextureRenderTarget>(new GEVulkanTextureRenderTarget(this,vk_tex,fb));
     };
 
     GEVulkanEngine::~GEVulkanEngine(){
+        for(auto & qf : deviceQueuefamilies){
+            for(auto & q : qf){
+                vkDestroySemaphore(device,q.first,nullptr);
+            }
+        }
         vkDestroyDevice(device,nullptr);
         vmaDestroyAllocator(memAllocator);
     }

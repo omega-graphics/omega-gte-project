@@ -66,7 +66,7 @@ static void render(id<MTLDevice> dev){
 
     for(auto & mesh : rect_mesh.meshes){
         std::cout << "Mesh 1:" << std::endl;
-        for(auto &tri : mesh.vertexTriangles){
+        for(auto &tri : mesh.vertexPolygons){
             std::ostringstream ss;
             ss << "Triangle: {\n  A:";
             formatGPoint3D(ss,tri.a.pt);

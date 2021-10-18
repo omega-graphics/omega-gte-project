@@ -134,13 +134,20 @@ struct OMEGAGTE_EXPORT TETessellationResult {
         FVec<3> texture3Dcoord;
     };
     struct OMEGAGTE_EXPORT TEMesh {
-        struct OMEGAGTE_EXPORT Triangle {
+        enum : int {
+            TopologyTriangle,
+            TopologyTriangleStrip
+        } topology;
+        struct OMEGAGTE_EXPORT Polygon {
             struct {
                 GPoint3D pt;
                 std::optional<AttachmentData> attachment;
             } a,b,c;
         };
-        std::vector<Triangle> vertexTriangles;
+        std::vector<Polygon> vertexPolygons;
+        void translate(float x,float y,float z,const GEViewport & viewport);
+        void rotate(float pitch,float yaw,float roll);
+        void scale(float w,float h,float l);
     };
     std::vector<TEMesh> meshes;
 };
@@ -153,10 +160,16 @@ protected:
     GEViewport defaultViewport;
     std::vector<std::thread *> activeThreads;
 
+    float arcStep = 0.01;
+
     void translateCoordsDefaultImpl(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result);
     virtual void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result) = 0;
-    inline TETessellationResult _tessalatePriv(const TETessellationParams & params, GEViewport * viewport);
+    inline void _tessalatePriv(const TETessellationParams & params, GEViewport * viewport,TETessellationResult & result);
 public:
+    // Default Value: 0.01 radians.
+    void setArcStep(float newArcStep){
+        arcStep = newArcStep;
+    };
     ~OmegaTessellationEngineContext();
     /**
      Tessalate according to the parameters and viewport.

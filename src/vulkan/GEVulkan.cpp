@@ -1,4 +1,7 @@
 
+#include "glm/fwd.hpp"
+#include "vulkan/vulkan_core.h"
+#include <stdint.h>
 #define VMA_IMPLEMENTATION 1
 
 #include "GEVulkan.h"
@@ -26,7 +29,47 @@ _NAMESPACE_BEGIN_
     bool vulkanInit = false;
 
     void initVulkan(){
-        vkCreateInstance(nullptr,nullptr,&GEVulkanEngine::instance);
+        OmegaCommon::Vector<VkLayerProperties> layers;
+        uint32_t count;
+        vkEnumerateInstanceLayerProperties(&count,nullptr);
+        layers.resize(count);
+        vkEnumerateInstanceLayerProperties(&count,layers.data());
+        OmegaCommon::Vector<VkExtensionProperties> extensions;
+         OmegaCommon::Vector<char *> layerNames,extensionNames; 
+        for(auto & layer : layers){
+            layerNames.push_back(layer.layerName);
+            vkEnumerateInstanceExtensionProperties(layer.layerName,&count,nullptr);
+            auto oldSize = extensions.size();
+            extensions.resize(oldSize + count);
+            vkEnumerateInstanceExtensionProperties(layer.layerName,&count,extensions.data() + oldSize);
+        }
+
+        for(auto & ext : extensions){
+            extensionNames.push_back(ext.extensionName);
+        }
+
+        uint32_t apiVersion;
+
+        vkEnumerateInstanceVersion(&apiVersion);
+
+        VkApplicationInfo appInfo {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+        appInfo.apiVersion = apiVersion;
+        appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
+        appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);
+        appInfo.pNext = nullptr;
+        appInfo.pEngineName = "OmegaGTE";
+
+
+        VkInstanceCreateInfo instanceInfo {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+        instanceInfo.pNext = nullptr;
+        instanceInfo.flags = 0;
+        instanceInfo.pApplicationInfo = &appInfo;
+        instanceInfo.enabledLayerCount = layerNames.size();
+        instanceInfo.ppEnabledLayerNames = layerNames.data();
+        instanceInfo.enabledExtensionCount = extensionNames.size();
+        instanceInfo.ppEnabledExtensionNames = extensionNames.data();
+
+        vkCreateInstance(&instanceInfo,nullptr,&GEVulkanEngine::instance);
         vulkanInit = true;
     }
 

@@ -52,7 +52,7 @@ TETessellationParams TETessellationParams::RoundedRect(GRoundedRect &roundedRect
 TETessellationParams TETessellationParams::RectangularPrism(GRectangularPrism &prism){
     TETessellationParams params;
     params.params = &prism;
-    params.type = TESSALATE_RECTANGULAR_PRISM;
+    params.type = TESSELLATE_RECTANGULAR_PRISM;
     return params;
 };
 
@@ -175,7 +175,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             _tessalatePriv(middle_rect_params,viewport,result);
 
-            auto tessalateArc = [&](GPoint2D start,float rad_x,float rad_y,float angle_start,float angle_end,float _arcStep){
+            auto tessellateArc = [&](GPoint2D start, float rad_x, float rad_y, float angle_start, float angle_end, float _arcStep){
                 TETessellationResult::TEMesh m {TETessellationResult::TEMesh::TopologyTriangleStrip};
                 GPoint3D pt_a {start.x,start.y,0.f};
                 auto _angle_it = angle_start;
@@ -208,7 +208,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             };
 
             /// Bottom Left Arc
-            tessalateArc(GPoint2D {object->rad_x,object->rad_y},object->rad_x,object->rad_y,float(3.f * PI)/2.f,PI,-arcStep);
+            tessellateArc(GPoint2D {object->rad_x, object->rad_y}, object->rad_x, object->rad_y, float(3.f * PI) / 2.f, PI, -arcStep);
 
             /// Left Rect
             middle_rect = GRect {GPoint2D{0.f,object->rad_y},object->rad_x,object->h - (2 * object->rad_y)};
@@ -216,7 +216,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             _tessalatePriv(middle_rect_params,viewport,result);
             /// Top Left Arc
-            tessalateArc(GPoint2D {object->rad_x,object->h - object->rad_y},object->rad_x,object->rad_y,PI,float(PI)/2.f,-arcStep);
+            tessellateArc(GPoint2D {object->rad_x, object->h - object->rad_y}, object->rad_x, object->rad_y, PI, float(PI) / 2.f, -arcStep);
 
             /// Top Rect
             middle_rect = GRect {GPoint2D{object->rad_x,object->h - object->rad_y},object->w - (object->rad_x * 2),object->rad_y};
@@ -224,7 +224,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             _tessalatePriv(middle_rect_params,viewport,result);
             /// Top Right Arc
-            tessalateArc(GPoint2D {object->w - object->rad_x,object->h - (object->rad_y)},object->rad_x,object->rad_y,float(PI)/2.f,0,-arcStep);
+            tessellateArc(GPoint2D {object->w - object->rad_x, object->h - (object->rad_y)}, object->rad_x, object->rad_y, float(PI) / 2.f, 0, -arcStep);
 
             /// Right Rect
             middle_rect = GRect {GPoint2D{object->w - object->rad_x,object->rad_y},object->rad_x,object->h - (2 * object->rad_y)};
@@ -233,7 +233,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             _tessalatePriv(middle_rect_params,viewport,result);
 
             /// Bottom Right Arc
-            tessalateArc(GPoint2D {object->w - object->rad_x,object->rad_y},object->rad_x,object->rad_y,0,-float(PI)/2.f,-arcStep);
+            tessellateArc(GPoint2D {object->w - object->rad_x, object->rad_y}, object->rad_x, object->rad_y, 0, -float(PI) / 2.f, -arcStep);
 
             /// Bottom Rect
             middle_rect = GRect {GPoint2D{0.f,0.f},object->w - (object->rad_x * 2),object->rad_y};
@@ -241,12 +241,110 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             break;
         }
-        case TETessellationParams::TESSALATE_RECTANGULAR_PRISM : {
+        case TETessellationParams::TESSELLATE_RECTANGULAR_PRISM : {
+            auto object = (GRectangularPrism *)params.params;
+
+
+            TETessellationResult::TEMesh mesh {TETessellationResult::TEMesh::TopologyTriangle};
+            TETessellationResult::TEMesh::Polygon tri {};
+
+            if(!params.attachments.empty()){
+                auto & attachment = params.attachments.front();
+                if(attachment.type == TETessellationParams::Attachment::TypeColor) {
+                    tri.a.attachment = tri.b.attachment = tri.c.attachment = std::make_optional<TETessellationResult::AttachmentData>(
+                            {attachment.colorData.color, FVec<2>::Create(), FVec<3>::Create()});
+                }
+            }
+
+            float x0,x1,y0,y1,z0,z1;
+            translateCoords(object->pos.x,object->pos.y,object->pos.z,viewport,&x0,&y0,&z0);
+            translateCoords(object->pos.x + object->w,
+                            object->pos.y + object->h,
+                            object->pos.z + object->d,
+                             viewport,&x1,&y1,&z1);
+
+            /// Bottom Side
+
+            tri.a.pt = GPoint3D {x0,y0,z0};
+            tri.b.pt = GPoint3D {x1,y0,z0};
+            tri.c.pt = GPoint3D {x1,y0,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x0,y0,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Front Side
+
+            tri.b.pt = GPoint3D {x0,y1,z0};
+            tri.c.pt = GPoint3D {x1,y1,z0};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x1,y0,z0};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Left Side
+
+            tri.a.pt = GPoint3D {x1,y0,z0};
+            tri.b.pt = GPoint3D {x1,y1,z0};
+            tri.c.pt = GPoint3D {x1,y1,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x1,y0,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Right Side
+
+            tri.a.pt = GPoint3D {x0,y0,z0};
+            tri.b.pt = GPoint3D {x0,y1,z0};
+            tri.c.pt = GPoint3D {x0,y1,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x0,y0,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Back Side
+
+            tri.a.pt = GPoint3D {x0,y0,z1};
+            tri.b.pt = GPoint3D {x0,y1,z1};
+            tri.c.pt = GPoint3D {x1,y1,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x1,y0,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Top Side
+
+            tri.a.pt = GPoint3D {x0,y1,z0};
+            tri.b.pt = GPoint3D {x0,y1,z1};
+            tri.c.pt = GPoint3D {x1,y1,z1};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            tri.b.pt = GPoint3D {x1,y1,z0};
+
+            mesh.vertexPolygons.push_back(tri);
+
+            /// Finish
+            result.meshes.push_back(mesh);
 
             break;
         }
-        default:
+        case TETessellationParams::TESSALATE_PYRAMID : {
             break;
+        }
+        default: {
+            break;
+        }
     }
 
 };

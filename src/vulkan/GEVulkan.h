@@ -40,6 +40,8 @@ _NAMESPACE_BEGIN_
         VkDevice device;
         VkPhysicalDevice physicalDevice;
 
+        OmegaCommon::Vector<OmegaCommon::Vector<std::pair<VkSemaphore,VkQueue>>> deviceQueuefamilies;
+
         VkSurfaceCapabilitiesKHR capabilitiesKhr;
 
         OmegaCommon::Vector<VkQueueFamilyProperties> queueFamilyProps;

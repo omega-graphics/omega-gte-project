@@ -13,11 +13,13 @@ include(./OmegaGTE.cmake)
 
 file(GLOB MAIN_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
+set(PUBLIC_DEFS)
+
 if(WIN32)
 
 	set(TARGET_DIRECTX TRUE)
 
-	add_compile_definitions("TARGET_DIRECTX")
+	set(PUBLIC_DEFS "TARGET_DIRECTX")
 
 	file(GLOB RHI_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/d3d12/*.cpp")
 
@@ -25,7 +27,7 @@ elseif(APPLE)
 
 	set(TARGET_METAL TRUE)
 
-	add_compile_definitions("TARGET_METAL")
+	set(PUBLIC_DEFS "TARGET_METAL")
 
 	file(GLOB RHI_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/metal/*.mm")
 
@@ -48,7 +50,7 @@ else()
 	endif()
 
 
-	add_compile_definitions("TARGET_VULKAN")
+	set(PUBLIC_DEFS "TARGET_VULKAN")
 
 	file(GLOB RHI_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/*.cpp")
 endif()
@@ -71,6 +73,8 @@ set(OMEGASLC_RUNTIME_COMPILE TRUE)
 
 add_omega_graphics_module("OmegaGTE" FRAMEWORK INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist" VERSION "0.5" HEADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" DEPENDS "OmegaCommon" SOURCES ${MAIN_SRCS})
 target_compile_definitions("OmegaGTE" PRIVATE OMEGAGTE__BUILD__)
+target_compile_definitions("OmegaGTE" PUBLIC ${PUBLIC_DEFS})
+target_compile_definitions("omegaslc" PUBLIC ${PUBLIC_DEFS})
 if (${OMEGASLC_RUNTIME_COMPILE})
 	add_compile_definitions(RUNTIME_SHADER_COMP_SUPPORT=1)
 	target_sources("OmegaGTE" PRIVATE ${OMEGASL_SRCS})
@@ -79,11 +83,11 @@ target_link_libraries("OmegaGTE" PUBLIC "OmegaCommon")
 if(TARGET_VULKAN)
 	set(VULKAN_SDK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external-libs/vulkan_sdk/1.2.189.0)
 	set(VULKAN_INCLUDE_DIRECTORY "${VULKAN_SDK_DIR}/${CMAKE_SYSTEM_PROCESSOR}/include")
-	target_link_directories("OmegaGTE" PUBLIC "${VULKAN_SDK_DIR}/${CMAKE_SYSTEM_PROCESSOR}/lib")
-	target_link_libraries("omegaslc" PUBLIC "${VULKAN_SDK_DIR}/${CMAKE_SYSTEM_PROCESSOR}/lib/libshaderc_shared.so.1")
+	target_link_directories("OmegaGTE" PRIVATE "${VULKAN_SDK_DIR}/${CMAKE_SYSTEM_PROCESSOR}/lib")
+	target_link_libraries("omegaslc" PRIVATE "${VULKAN_SDK_DIR}/${CMAKE_SYSTEM_PROCESSOR}/lib/libshaderc_shared.so.1")
 	target_include_directories("omegaslc" PRIVATE ${VULKAN_INCLUDE_DIRECTORY})
-	target_include_directories("OmegaGTE" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/external-libs/vulkan-memory-allocator/include" "${CMAKE_CURRENT_SOURCE_DIR}/external-libs/glm" ${VULKAN_INCLUDE_DIRECTORY})
-	target_link_libraries("OmegaGTE" PUBLIC libvulkan.so.1 libshaderc_shared.so.1)
+	target_include_directories("OmegaGTE" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/external-libs/vulkan-memory-allocator/include" "${CMAKE_CURRENT_SOURCE_DIR}/external-libs/glm" ${VULKAN_INCLUDE_DIRECTORY})
+	target_link_libraries("OmegaGTE" PRIVATE libvulkan.so.1 libshaderc_shared.so.1)
 endif()
 if(TARGET_METAL)
 	target_link_system_frameworks("omegaslc" Metal Foundation)

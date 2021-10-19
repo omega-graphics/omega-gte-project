@@ -85,11 +85,11 @@ _NAMESPACE_BEGIN_
         unsigned currentBufferIndex;
         friend class GEVulkanCommandBuffer;
     public:
-        VkQueue vkQueue;
         void notifyCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &waitFence) override;
         void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer) override;
         void submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer, SharedHandle<GEFence> &signalFence) override;
         void commitToGPU() override;
+        void commitToGPUPresent(VkPresentInfoKHR * info);
         void commitToGPUAndWait() override;
         void present();
         VkCommandBuffer &getLastCommandBufferInQueue();

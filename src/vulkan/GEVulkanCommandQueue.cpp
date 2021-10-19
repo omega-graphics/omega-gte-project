@@ -3,6 +3,7 @@
 #include "GEVulkanPipeline.h"
 #include "GEVulkan.h"
 #include "GEVulkanTexture.h"
+#include "glm/fwd.hpp"
 #include "vulkan/vulkan_core.h"
 #include <cstdint>
 
@@ -193,6 +194,11 @@ _NAMESPACE_BEGIN_
 
 
             switch (desc.colorAttachment->loadAction) {
+                case GERenderTarget::RenderPassDesc::ColorAttachment::Clear : {
+                    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                    attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                    break;
+                }
                 case GERenderTarget::RenderPassDesc::ColorAttachment::Load : {
                     attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                     attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -336,7 +342,7 @@ _NAMESPACE_BEGIN_
         VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->vertexShader->internal);
         writeInfo.descriptorCount = 1;
-        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         writeInfo.pNext = nullptr;
         writeInfo.dstArrayElement = 0;
         writeInfo.pBufferInfo = nullptr;
@@ -344,7 +350,7 @@ _NAMESPACE_BEGIN_
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  0,1,&writeInfo);
     };
 
     void GEVulkanCommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned id){
@@ -381,7 +387,7 @@ _NAMESPACE_BEGIN_
         writeInfo.pImageInfo = &imgInfo;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  0,1,&writeInfo);
     };
 
     void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned id){
@@ -392,7 +398,7 @@ _NAMESPACE_BEGIN_
         VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         writeInfo.dstBinding = getBindingForResourceID(id,renderPipelineState->fragmentShader->internal);
         writeInfo.descriptorCount = 1;
-        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         writeInfo.pNext = nullptr;
         writeInfo.dstArrayElement = 0;
         writeInfo.pBufferInfo = nullptr;
@@ -400,7 +406,7 @@ _NAMESPACE_BEGIN_
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  1,1,&writeInfo);
     };
 
     void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned id){
@@ -436,7 +442,7 @@ _NAMESPACE_BEGIN_
         writeInfo.pImageInfo = &imgInfo;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  1,1,&writeInfo);
     };
 
 
@@ -533,7 +539,7 @@ _NAMESPACE_BEGIN_
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,computePipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  0,1,&writeInfo);
     }
 
     void GEVulkanCommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int id) {
@@ -567,11 +573,12 @@ _NAMESPACE_BEGIN_
         writeInfo.pImageInfo = &imgInfo;
 
         vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,computePipelineState->layout,
-                                  getDescriptorSetIndexForResourceID(id),1,&writeInfo);
+                                  0,1,&writeInfo);
     }
 
     void GEVulkanCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
         vkCmdDispatch(commandBuffer,x,y,z);
+        
     }
 
     void GEVulkanCommandBuffer::finishComputePass() {
@@ -582,8 +589,58 @@ _NAMESPACE_BEGIN_
         inBlitPass = true;
     }
 
+    inline void addResourceBarrierForTextureCopy(VkCommandBuffer commandBuffer,GEVulkanTexture *src_img,GEVulkanTexture *dest_img){
+        std::vector<VkImageMemoryBarrier2KHR> memBarriers;
+        VkDependencyInfoKHR dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
+        dep_info.pNext = nullptr;
+
+        if(!(src_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_READ_BIT_KHR)){
+            VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
+            img_mem_barrier.srcAccessMask = src_img->priorShaderAccess;
+            img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
+            img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            img_mem_barrier.srcStageMask = src_img->priorPipelineAccess;
+            img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
+            img_mem_barrier.image = src_img->img;
+            img_mem_barrier.oldLayout = src_img->layout;
+            img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+            src_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
+            src_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+            src_img->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+            memBarriers.push_back(img_mem_barrier);
+        }
+
+        if(!(dest_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR)){
+            VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
+            img_mem_barrier.srcAccessMask = dest_img->priorShaderAccess;
+            img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
+            img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            img_mem_barrier.srcStageMask = dest_img->priorPipelineAccess;
+            img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
+            img_mem_barrier.image = dest_img->img;
+            img_mem_barrier.oldLayout = dest_img->layout;
+            img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+            dest_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
+            dest_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+            dest_img->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+            memBarriers.push_back(img_mem_barrier);
+        }
+
+        dep_info.imageMemoryBarrierCount = memBarriers.size();
+        dep_info.pImageMemoryBarriers = memBarriers.data();
+        vkCmdPipelineBarrier2KHR(commandBuffer,&dep_info);
+    }
+
     void GEVulkanCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
+        assert(inBlitPass && "Must be in a blit pass");
         auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
+
+        addResourceBarrierForTextureCopy(commandBuffer,src_img,dest_img);
+
         VkImageCopy imgCopy {};
         imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imgCopy.srcSubresource.baseArrayLayer = 0;
@@ -602,6 +659,9 @@ _NAMESPACE_BEGIN_
     void GEVulkanCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest,
                                                      const TextureRegion &region, const GPoint3D &destCoord) {
         auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
+
+        addResourceBarrierForTextureCopy(commandBuffer,src_img,dest_img);
+
         VkImageCopy imgCopy {};
         imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imgCopy.srcSubresource.baseArrayLayer = 0;
@@ -665,7 +725,46 @@ _NAMESPACE_BEGIN_
             vkEndCommandBuffer(cb);
         }
 
+        auto queueFamily = engine->deviceQueuefamilies.front();
+        uint64_t lowestSemCounter = UINT64_MAX;
+        bool waitForCompletion = false;
+        /// Finds an available queue, else will submit queue at the bottom of family.
+        auto availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+            uint64_t v;
+            vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+            if(v == 0){
+                lowestSemCounter = v;
+                waitForCompletion = false;
+                return true;
+            }
+            else if(v < lowestSemCounter){
+                lowestSemCounter = v;
+            }
+            return false;
+        });
+
+
+        if(lowestSemCounter > 0){
+            waitForCompletion = true;
+            availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+                uint64_t v;
+                vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+                return lowestSemCounter == v;
+            });
+        }
+
+        auto & vkQueue = availableQueue->second;
+
        VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+       submission.signalSemaphoreCount = 1;
+       submission.pSignalSemaphores = &availableQueue->first;
+       if(waitForCompletion){
+          submission.waitSemaphoreCount = 1;
+          submission.pWaitSemaphores = &availableQueue->first;
+       }
+       else {
+          submission.waitSemaphoreCount = 0;
+       }
        submission.commandBufferCount = commandQueue.size();
        submission.pCommandBuffers = commandQueue.data();
        submission.pNext = nullptr;
@@ -681,12 +780,112 @@ _NAMESPACE_BEGIN_
     
    };
 
+   void GEVulkanCommandQueue::commitToGPUPresent(VkPresentInfoKHR *info){
+         for(auto cb : commandQueue){
+            vkEndCommandBuffer(cb);
+        }
+
+        auto queueFamily = engine->deviceQueuefamilies.front();
+        uint64_t lowestSemCounter = UINT64_MAX;
+        bool waitForCompletion = false;
+        /// Finds an available queue, else will submit queue at the bottom of family.
+        auto availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+            uint64_t v;
+            vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+            if(v == 0){
+                lowestSemCounter = v;
+                waitForCompletion = false;
+                return true;
+            }
+            else if(v < lowestSemCounter){
+                lowestSemCounter = v;
+            }
+            return false;
+        });
+
+
+        if(lowestSemCounter > 0){
+            waitForCompletion = true;
+            availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+                uint64_t v;
+                vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+                return lowestSemCounter == v;
+            });
+        }
+
+        auto & vkQueue = availableQueue->second;
+
+       VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+       submission.signalSemaphoreCount = 1;
+       submission.pSignalSemaphores = &availableQueue->first;
+       if(waitForCompletion){
+          submission.waitSemaphoreCount = 1;
+          submission.pWaitSemaphores = &availableQueue->first;
+       }
+       else {
+          submission.waitSemaphoreCount = 0;
+       }
+       submission.commandBufferCount = commandQueue.size();
+       submission.pCommandBuffers = commandQueue.data();
+       submission.pNext = nullptr;
+
+       auto res = vkQueueSubmit(vkQueue, 1, &submission,submitFence);
+       vkQueuePresentKHR(vkQueue,info);
+       if(!VK_RESULT_SUCCEEDED(res)){
+           printf("Failed to Submit Command Buffers to GPU");
+           exit(1);
+       };
+
+       commandQueue.clear();
+       vkWaitForFences(engine->device,1,&submitFence,VK_TRUE,UINT64_MAX);
+
+   }
+
    void GEVulkanCommandQueue::commitToGPUAndWait(){
         for(auto cb : commandQueue){
             vkEndCommandBuffer(cb);
         }
 
+        auto queueFamily = engine->deviceQueuefamilies.front();
+        uint64_t lowestSemCounter = UINT64_MAX;
+        bool waitForCompletion = false;
+        /// Finds an available queue, else will submit queue at the bottom of family.
+        auto availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+            uint64_t v;
+            vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+            if(v == 0){
+                lowestSemCounter = v;
+                waitForCompletion = false;
+                return true;
+            }
+            else if(v < lowestSemCounter){
+                lowestSemCounter = v;
+            }
+            return false;
+        });
+
+
+        if(lowestSemCounter > 0){
+            waitForCompletion = true;
+            availableQueue = std::find_if(queueFamily.begin(),queueFamily.end(),[&](std::pair<VkSemaphore,VkQueue> & p){
+                uint64_t v;
+                vkGetSemaphoreCounterValue(engine->device,p.first,&v);
+                return lowestSemCounter == v;
+            });
+        }
+
+        auto & vkQueue = availableQueue->second;
+
        VkSubmitInfo submission {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+       submission.signalSemaphoreCount = 1;
+       submission.pSignalSemaphores = &availableQueue->first;
+       if(waitForCompletion){
+          submission.waitSemaphoreCount = 1;
+          submission.pWaitSemaphores = &availableQueue->first;
+       }
+       else {
+          submission.waitSemaphoreCount = 0;
+       }
        submission.commandBufferCount = commandQueue.size();
        submission.pCommandBuffers = commandQueue.data();
        submission.pNext = nullptr;
@@ -730,7 +929,7 @@ _NAMESPACE_BEGIN_
        commandBufferCreateInfo.commandPool = commandPool;
        commandBufferCreateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
        commandBufferCreateInfo.pNext = nullptr;
-       commandBuffers.reserve(size);
+       commandBuffers.resize(size);
 
        res = vkAllocateCommandBuffers(engine->device,&commandBufferCreateInfo,commandBuffers.data());
 
@@ -746,5 +945,6 @@ _NAMESPACE_BEGIN_
        vkFreeCommandBuffers(engine->device,commandPool,commandBuffers.size(),commandBuffers.data());
        commandBuffers.resize(0);
        vkDestroyCommandPool(engine->device,commandPool,nullptr);
+       vkDestroyFence(engine->device,submitFence,nullptr);
    }
 _NAMESPACE_END_

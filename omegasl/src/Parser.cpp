@@ -727,6 +727,10 @@ namespace omegasl {
             return returnType;
         }
 
+        ast::TypeExpr * evalExprForTypeExpr(ast::Expr *expr) override {
+            return performSemForExpr(expr,nullptr);
+        }
+
         ast::TypeExpr * performSemForBlock(ast::Block &block,ast::FuncDecl *funcContext){
 
             std::vector<ast::TypeExpr *> allTypes;

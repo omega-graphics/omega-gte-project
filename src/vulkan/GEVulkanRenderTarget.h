@@ -49,9 +49,23 @@ public:
 class GEVulkanTextureRenderTarget : public GETextureRenderTarget {
     GEVulkanEngine *parentEngine;
 public:
+
+    SharedHandle<GEVulkanCommandQueue> commandQueue;
+
+
     SharedHandle<GEVulkanTexture> texture;
     VkFramebuffer frameBuffer;
     VkFence fence;
+
+    GEVulkanTextureRenderTarget(GEVulkanEngine * engine,
+                                SharedHandle<GEVulkanTexture> & texture,
+                                VkFramebuffer & framebuffer);
+
+    SharedHandle<CommandBuffer> commandBuffer() override;
+    void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer) override;
+    void commit() override;
+
+    ~GEVulkanTextureRenderTarget();
 };
 
 _NAMESPACE_END_

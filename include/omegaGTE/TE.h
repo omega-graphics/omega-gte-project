@@ -20,7 +20,7 @@ struct OMEGAGTE_EXPORT TETessellationParams {
     typedef enum : unsigned char {
         TESSALATE_RECT,
         TESSALATE_ROUNDEDRECT,
-        TESSALATE_RECTANGULAR_PRISM,
+        TESSELLATE_RECTANGULAR_PRISM,
         TESSALATE_PYRAMID,
         TESSALATE_ELLIPSOID,
         TESSALATE_CYLINDER,

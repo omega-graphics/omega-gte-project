@@ -1,4 +1,7 @@
+
+#include "glm/fwd.hpp"
 #include "vulkan/vulkan_core.h"
+#include <stdint.h>
 #define VMA_IMPLEMENTATION 1
 
 #include "GEVulkan.h"
@@ -26,9 +29,51 @@ _NAMESPACE_BEGIN_
     bool vulkanInit = false;
 
     void initVulkan(){
-        vkCreateInstance(nullptr,nullptr,&GEVulkanEngine::instance);
+        OmegaCommon::Vector<VkLayerProperties> layers;
+        uint32_t count;
+        vkEnumerateInstanceLayerProperties(&count,nullptr);
+        layers.resize(count);
+        vkEnumerateInstanceLayerProperties(&count,layers.data());
+        OmegaCommon::Vector<VkExtensionProperties> extensions;
+         OmegaCommon::Vector<char *> layerNames,extensionNames; 
+        for(auto & layer : layers){
+            layerNames.push_back(layer.layerName);
+            vkEnumerateInstanceExtensionProperties(layer.layerName,&count,nullptr);
+            auto oldSize = extensions.size();
+            extensions.resize(oldSize + count);
+            vkEnumerateInstanceExtensionProperties(layer.layerName,&count,extensions.data() + oldSize);
+        }
+
+        for(auto & ext : extensions){
+            extensionNames.push_back(ext.extensionName);
+        }
+
+        uint32_t apiVersion;
+
+        vkEnumerateInstanceVersion(&apiVersion);
+
+        VkApplicationInfo appInfo {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+        appInfo.apiVersion = apiVersion;
+        appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);
+        appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);
+        appInfo.pNext = nullptr;
+        appInfo.pEngineName = "OmegaGTE";
+
+
+        VkInstanceCreateInfo instanceInfo {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+        instanceInfo.pNext = nullptr;
+        instanceInfo.flags = 0;
+        instanceInfo.pApplicationInfo = &appInfo;
+        instanceInfo.enabledLayerCount = layerNames.size();
+        instanceInfo.ppEnabledLayerNames = layerNames.data();
+        instanceInfo.enabledExtensionCount = extensionNames.size();
+        instanceInfo.ppEnabledExtensionNames = extensionNames.data();
+
+        vkCreateInstance(&instanceInfo,nullptr,&GEVulkanEngine::instance);
         vulkanInit = true;
     }
+
+
 
     void cleanupVulkan(){
         vkDestroyInstance(GEVulkanEngine::instance,nullptr);
@@ -89,6 +134,7 @@ _NAMESPACE_BEGIN_
             if(!blocks.empty()){
                 blocks.clear();
             }
+
             inStruct = true;
         }
         void structEnd() override {
@@ -223,18 +269,33 @@ _NAMESPACE_BEGIN_
 
 
     GEVulkanEngine::GEVulkanEngine(SharedHandle<GTEVulkanDevice> device){
-        VkResult res;
-        OmegaCommon::Vector<VkExtensionProperties> ext_props;
+
+        physicalDevice = device->device;
+
         std::uint32_t count;
-        vkEnumerateInstanceExtensionProperties(nullptr,&count,nullptr);
-        ext_props.resize(count);
-        vkEnumerateInstanceExtensionProperties(nullptr,&count,ext_props.data());
+
+        std::vector<char *> extensionNames,layerNames;
 
         OmegaCommon::Vector<VkLayerProperties> layer_props;
         count = 0;
-        vkEnumerateInstanceLayerProperties(&count,nullptr);
+        vkEnumerateDeviceLayerProperties(physicalDevice,&count,nullptr);
         layer_props.resize(count);
-        vkEnumerateInstanceLayerProperties(&count,layer_props.data());
+        vkEnumerateDeviceLayerProperties(physicalDevice,&count,layer_props.data());
+
+        VkResult res;
+        OmegaCommon::Vector<VkExtensionProperties> ext_props;
+
+        for(auto layer : layer_props) {
+
+            layerNames.push_back(layer.layerName);
+
+            vkEnumerateDeviceExtensionProperties(physicalDevice, layer.layerName, &count, nullptr);
+            auto prevSize = ext_props.size();
+            ext_props.resize(prevSize + count);
+            vkEnumerateDeviceExtensionProperties(physicalDevice, layer.layerName, &count, ext_props.data() + prevSize);
+
+        }
+
 
         count = 0;
 
@@ -260,7 +321,22 @@ _NAMESPACE_BEGIN_
              ++id;
         }
 
-        
+        for(auto & ext : ext_props){
+            extensionNames.push_back(ext.extensionName);
+            auto str_ref = StrRef(ext.extensionName);
+            if(str_ref == VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME){
+                hasPushDescriptorExt = true;
+            }
+            else if(str_ref == VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME){
+                hasSynchronization2Ext = true;
+            }
+            else if(str_ref == VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME){
+                hasExtendedDynamicState = true;
+            }
+        }
+
+        VkPhysicalDeviceFeatures features;
+        vkGetPhysicalDeviceFeatures(physicalDevice,&features);
 
         VkDeviceCreateInfo info{};
         info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -269,6 +345,9 @@ _NAMESPACE_BEGIN_
         info.queueCreateInfoCount = deviceQueues.size();
         info.enabledExtensionCount = ext_props.size();
         info.enabledLayerCount = layer_props.size();
+        info.ppEnabledLayerNames = layerNames.data();
+        info.ppEnabledExtensionNames = extensionNames.data();
+        info.pEnabledFeatures = &features;
 
         vkCreateDevice(physicalDevice,&info,nullptr,&this->device);
 
@@ -291,11 +370,23 @@ _NAMESPACE_BEGIN_
                 queueInfo.flags = 0;
                 vkGetDeviceQueue2(this->device,&queueInfo,&queue);
 
-                queues.push_back(std::make_pair(sem,queue));
+                queues.emplace_back(std::make_pair(sem,queue));
             }
             deviceQueuefamilies.push_back(queues);
             queueFamilyIndex += 1;
 
+        }
+
+        if(hasPushDescriptorExt){
+            vkCmdPushDescriptorSetKhr = (PFN_vkCmdPushDescriptorSetKHR) vkGetDeviceProcAddr(this->device,"vkCmdPushDescriptorSetKHR");
+        }
+
+        if(hasSynchronization2Ext){
+            vkCmdPipelineBarrier2Khr = (PFN_vkCmdPipelineBarrier2KHR) vkGetDeviceProcAddr(this->device,"vkCmdPipelineBarrier2KHR");
+        }
+
+        if(hasExtendedDynamicState){
+            vkCmdSetPrimitiveTopologyExt = (PFN_vkCmdSetPrimitiveTopologyEXT) vkGetDeviceProcAddr(this->device,"vkCmdSetPrimitiveTopologyEXT");
         }
 
 
@@ -546,7 +637,6 @@ _NAMESPACE_BEGIN_
                                                                          omegasl_shader *shaders,
                                                                          VkDescriptorPool * descriptorPool,
                                                                          OmegaCommon::Vector<VkDescriptorSet> & descs,
-                                                                         OmegaCommon::Map<unsigned,VkDescriptorSet> & descsMap,
                                                                          OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout){
         VkPipelineLayoutCreateInfo layout_info {};
 
@@ -651,10 +741,6 @@ _NAMESPACE_BEGIN_
 
         vkAllocateDescriptorSets(device,&descSetAllocInfo,descs.data());
 
-        for(unsigned i = 0;i < descs.size();i++){
-            descsMap.insert(std::make_pair(resourceIDs[i],descs[i]));
-        }
-
         return pipeline_layout;
 
     }
@@ -667,10 +753,9 @@ _NAMESPACE_BEGIN_
         OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
         
         OmegaCommon::Vector<VkDescriptorSet> descs;
-        OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
         VkDescriptorPool descriptorPool;
 
-        VkPipelineLayout layout = createPipelineLayoutFromShaderDescs(2,shaders,&descriptorPool,descs,descMap,descLayouts);
+        VkPipelineLayout layout = createPipelineLayoutFromShaderDescs(2,shaders,&descriptorPool,descs,descLayouts);
 
         VkGraphicsPipelineCreateInfo createInfo {};
         createInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -735,7 +820,6 @@ _NAMESPACE_BEGIN_
                                                                                    pipeline,
                                                                                    layout,
                                                                                    descriptorPool,
-                                                                                   descMap,
                                                                                    descs,
                                                                                    descLayouts));
     };
@@ -743,10 +827,9 @@ _NAMESPACE_BEGIN_
 
         OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
         OmegaCommon::Vector<VkDescriptorSet> descs;
-        OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
         VkDescriptorPool descriptorPool;
 
-        VkPipelineLayout pipeline_layout = createPipelineLayoutFromShaderDescs(1,&desc.computeFunc->internal,&descriptorPool,descs,descMap,descLayouts);
+        VkPipelineLayout pipeline_layout = createPipelineLayoutFromShaderDescs(1,&desc.computeFunc->internal,&descriptorPool,descs,descLayouts);
 
         
 
@@ -774,8 +857,7 @@ _NAMESPACE_BEGIN_
                                                                                      pipeline,
                                                                                      pipeline_layout,
                                                                                      descriptorPool,
-                                                                                     descMap,
-                                                                                     descs,
+                                                                                     descs.front(),
                                                                                      descLayouts));
     };
 

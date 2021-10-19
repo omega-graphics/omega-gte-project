@@ -23,8 +23,14 @@ public:
 
     VmaMemoryUsage memoryUsage;
 
-    VkAccessFlags2KHR priorShaderAccess = 0;
-    VkPipelineStageFlags2KHR priorPipelineAccess = 0;
+    /// Sync 2.0 Extension
+
+    VkAccessFlags2KHR priorShaderAccess2 = 0;
+    VkPipelineStageFlags2KHR priorPipelineAccess2 = 0;
+
+    /// Standard Sync
+    VkAccessFlags priorShaderAccess = 0;
+    VkPipelineStageFlags priorPipelineAccess = 0;
 
     void copyBytes(void *bytes, size_t len) override;
 

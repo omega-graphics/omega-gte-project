@@ -30,9 +30,21 @@ _NAMESPACE_BEGIN_
 
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
 
-        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,omegasl_shader *shaders,VkDescriptorPool * descriptorPool,OmegaCommon::Vector<VkDescriptorSet> & descs,OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
+        VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,
+                                                             omegasl_shader *shaders,
+                                                             VkDescriptorPool * descriptorPool,
+                                                             OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                                             OmegaCommon::Vector<VkDescriptorSetLayout> & descLayout);
     public:
         static VkInstance instance;
+
+        bool hasPushDescriptorExt = false;
+        bool hasSynchronization2Ext = false;
+        bool hasExtendedDynamicState = false;
+
+        PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKhr;
+        PFN_vkCmdSetPrimitiveTopologyEXT vkCmdSetPrimitiveTopologyExt;
+        PFN_vkCmdPipelineBarrier2KHR vkCmdPipelineBarrier2Khr;
 
         VmaAllocator memAllocator;
         unsigned resource_count;
@@ -85,8 +97,15 @@ _NAMESPACE_BEGIN_
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
 
-        VkAccessFlags2KHR priorAccess;
-        VkPipelineStageFlags2KHR priorPipelineAccess;
+        /// Sync 2.0 Extension
+
+        VkAccessFlags2KHR priorAccess2;
+        VkPipelineStageFlags2KHR priorPipelineAccess2;
+
+        // Standard Sync
+
+        VkAccessFlags priorAccess;
+        VkPipelineStageFlags priorPipelineAccess;
 
         size_t size() override {
             return alloc_info.size;

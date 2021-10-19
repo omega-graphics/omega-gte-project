@@ -25,7 +25,6 @@ _NAMESPACE_BEGIN_
         bool inComputePass = false;
 
         unsigned getBindingForResourceID(unsigned & id,omegasl_shader & shader);
-        unsigned getDescriptorSetIndexForResourceID(unsigned & id);
 
         omegasl_shader_layout_desc_io_mode getResourceIOModeForResourceID(unsigned & id,omegasl_shader & shader);
 

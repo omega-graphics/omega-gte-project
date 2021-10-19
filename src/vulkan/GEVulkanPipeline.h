@@ -24,8 +24,6 @@ public:
 
     OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
 
-    OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
-
     OmegaCommon::Vector<VkDescriptorSet> descs;
 
     GEVulkanRenderPipelineState(SharedHandle<GTEShader> & vertexShader,
@@ -34,7 +32,6 @@ public:
                                 VkPipeline & pipeline,
                                 VkPipelineLayout & layout,
                                 VkDescriptorPool & descriptorPool,
-                                OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
                                 OmegaCommon::Vector<VkDescriptorSet> & descs,
                                 OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
     ~GEVulkanRenderPipelineState();
@@ -50,17 +47,14 @@ public:
 
     OmegaCommon::Vector<VkDescriptorSetLayout> descLayouts;
 
-    OmegaCommon::Map<unsigned,VkDescriptorSet> descMap;
-
-    OmegaCommon::Vector<VkDescriptorSet> descs;
+    VkDescriptorSet descSet;
     
     GEVulkanComputePipelineState(SharedHandle<GTEShader> & computeShader,
                                  GEVulkanEngine *parentEngine,
                                  VkPipeline & pipeline,
                                  VkPipelineLayout & layout,
                                  VkDescriptorPool & descriptorPool,
-                                 OmegaCommon::Map<unsigned,VkDescriptorSet> & descMap,
-                                 OmegaCommon::Vector<VkDescriptorSet> & descs,
+                                 VkDescriptorSet & descSet,
                                  OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts);
     ~GEVulkanComputePipelineState();
 };

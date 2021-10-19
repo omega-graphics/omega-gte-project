@@ -3,8 +3,7 @@
 #include "GEVulkanPipeline.h"
 #include "GEVulkan.h"
 #include "GEVulkanTexture.h"
-#include "glm/fwd.hpp"
-#include "vulkan/vulkan_core.h"
+
 #include <cstdint>
 
 _NAMESPACE_BEGIN_
@@ -16,29 +15,6 @@ _NAMESPACE_BEGIN_
             }
         }
         return 0;
-    }
-
-    unsigned int GEVulkanCommandBuffer::getDescriptorSetIndexForResourceID(unsigned int &id) {
-        if(renderPipelineState != nullptr){
-            auto desc = renderPipelineState->descMap[id];
-            unsigned idx = 0;
-            for(;idx != renderPipelineState->descs.size();idx++){
-                if(renderPipelineState->descs[idx] == desc){
-                    break;
-                }
-            }
-            return idx;
-        }
-        else {
-            auto desc = computePipelineState->descMap[id];
-            unsigned idx = 0;
-            for(;idx != computePipelineState->descs.size();idx++){
-                if(computePipelineState->descs[idx] == desc){
-                    break;
-                }
-            }
-            return idx;
-        }
     }
 
     omegasl_shader_layout_desc_io_mode
@@ -56,113 +32,196 @@ _NAMESPACE_BEGIN_
                                                               omegasl_shader &shader) {
         auto ioMode = getResourceIOModeForResourceID(resource_id,shader);
 
-        VkAccessFlags2KHR shaderAccess;
-        VkPipelineStageFlags2KHR pipelineStage;
+        if(parentQueue->engine->hasSynchronization2Ext) {
 
-        if(shader.type == OMEGASL_SHADER_VERTEX){
-            pipelineStage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR;
-        }
-        else if(shader.type == OMEGASL_SHADER_FRAGMENT){
-            pipelineStage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR;
+
+            VkAccessFlags2KHR shaderAccess;
+            VkPipelineStageFlags2KHR pipelineStage;
+
+            if (shader.type == OMEGASL_SHADER_VERTEX) {
+                pipelineStage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR;
+            } else if (shader.type == OMEGASL_SHADER_FRAGMENT) {
+                pipelineStage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR;
+            } else {
+                pipelineStage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
+            }
+
+            bool hasPipelineAccess = buffer->priorPipelineAccess2 != 0;
+
+            if (ioMode == OMEGASL_SHADER_DESC_IO_IN) {
+                shaderAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR;
+            } else if (ioMode == OMEGASL_SHADER_DESC_IO_INOUT) {
+                shaderAccess = VK_ACCESS_2_SHADER_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_READ_BIT_KHR;
+            } else {
+                shaderAccess = VK_ACCESS_2_SHADER_WRITE_BIT_KHR;
+            }
+
+            if (buffer->priorAccess2 != 0 && hasPipelineAccess) {
+                VkBufferMemoryBarrier2KHR bufferMemoryBarrier2Khr{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
+                bufferMemoryBarrier2Khr.srcQueueFamilyIndex = bufferMemoryBarrier2Khr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                bufferMemoryBarrier2Khr.buffer = buffer->buffer;
+                bufferMemoryBarrier2Khr.offset = buffer->alloc_info.offset;
+                bufferMemoryBarrier2Khr.size = buffer->alloc_info.size;
+                bufferMemoryBarrier2Khr.srcAccessMask = buffer->priorAccess2;
+                bufferMemoryBarrier2Khr.dstAccessMask = shaderAccess;
+                bufferMemoryBarrier2Khr.srcStageMask = buffer->priorPipelineAccess2;
+                bufferMemoryBarrier2Khr.dstStageMask = pipelineStage;
+                bufferMemoryBarrier2Khr.pNext = nullptr;
+
+                VkDependencyInfoKHR dependencyInfoKhr{VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
+                dependencyInfoKhr.pNext = nullptr;
+                dependencyInfoKhr.bufferMemoryBarrierCount = 1;
+                dependencyInfoKhr.pBufferMemoryBarriers = &bufferMemoryBarrier2Khr;
+                parentQueue->engine->vkCmdPipelineBarrier2Khr(commandBuffer, &dependencyInfoKhr);
+            }
+
+            buffer->priorPipelineAccess2 = pipelineStage;
+            buffer->priorAccess2 = shaderAccess;
+
         }
         else {
-            pipelineStage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
-        }
+            VkAccessFlags shaderAccess;
+            VkPipelineStageFlags pipelineStage;
 
-        bool hasPipelineAccess = buffer->priorPipelineAccess != 0;
+            if (shader.type == OMEGASL_SHADER_VERTEX) {
+                pipelineStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            } else if (shader.type == OMEGASL_SHADER_FRAGMENT) {
+                pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            } else {
+                pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            }
 
-        if(ioMode == OMEGASL_SHADER_DESC_IO_IN){
-            shaderAccess = VK_ACCESS_2_SHADER_READ_BIT_KHR;
-        }
-        else if(ioMode == OMEGASL_SHADER_DESC_IO_INOUT){
-            shaderAccess = VK_ACCESS_2_SHADER_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_READ_BIT_KHR;
-        }
-        else {
-            shaderAccess = VK_ACCESS_2_SHADER_WRITE_BIT_KHR;
-        }
+            bool hasPipelineAccess = buffer->priorPipelineAccess != 0;
 
-        if(buffer->priorAccess != 0 && hasPipelineAccess){
-            VkBufferMemoryBarrier2KHR bufferMemoryBarrier2Khr {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR};
-            bufferMemoryBarrier2Khr.srcQueueFamilyIndex = bufferMemoryBarrier2Khr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            bufferMemoryBarrier2Khr.buffer = buffer->buffer;
-            bufferMemoryBarrier2Khr.offset = buffer->alloc_info.offset;
-            bufferMemoryBarrier2Khr.size = buffer->alloc_info.size;
-            bufferMemoryBarrier2Khr.srcAccessMask = buffer->priorAccess;
-            bufferMemoryBarrier2Khr.dstAccessMask = shaderAccess;
-            bufferMemoryBarrier2Khr.srcStageMask = buffer->priorPipelineAccess;
-            bufferMemoryBarrier2Khr.dstStageMask = pipelineStage;
-            bufferMemoryBarrier2Khr.pNext = nullptr;
+            if (ioMode == OMEGASL_SHADER_DESC_IO_IN) {
+                shaderAccess = VK_ACCESS_SHADER_READ_BIT;
+            } else if (ioMode == OMEGASL_SHADER_DESC_IO_INOUT) {
+                shaderAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+            } else {
+                shaderAccess = VK_ACCESS_SHADER_WRITE_BIT;
+            }
 
-            VkDependencyInfoKHR dependencyInfoKhr {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
-            dependencyInfoKhr.pNext = nullptr;
-            dependencyInfoKhr.bufferMemoryBarrierCount = 1;
-            dependencyInfoKhr.pBufferMemoryBarriers = &bufferMemoryBarrier2Khr;
-            vkCmdPipelineBarrier2KHR(commandBuffer,&dependencyInfoKhr);
+            if (buffer->priorAccess != 0 && hasPipelineAccess) {
+                VkBufferMemoryBarrier bufferMemoryBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+                bufferMemoryBarrier.srcQueueFamilyIndex = bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                bufferMemoryBarrier.buffer = buffer->buffer;
+                bufferMemoryBarrier.offset = buffer->alloc_info.offset;
+                bufferMemoryBarrier.size = buffer->alloc_info.size;
+                bufferMemoryBarrier.srcAccessMask = buffer->priorAccess;
+                bufferMemoryBarrier.dstAccessMask = shaderAccess;
+                bufferMemoryBarrier.pNext = nullptr;
+
+                vkCmdPipelineBarrier(commandBuffer,buffer->priorPipelineAccess,shaderAccess,VK_DEPENDENCY_DEVICE_GROUP_BIT,0,0,1,&bufferMemoryBarrier,0,nullptr);
+            }
+
+            buffer->priorPipelineAccess = pipelineStage;
+            buffer->priorAccess = shaderAccess;
         }
-
-        buffer->priorPipelineAccess = pipelineStage;
-        buffer->priorAccess = shaderAccess;
     }
 
     void GEVulkanCommandBuffer::insertResourceBarrierIfNeeded(GEVulkanTexture *texture, unsigned int &resource_id,
                                                               omegasl_shader &shader) {
 
         auto ioMode = getResourceIOModeForResourceID(resource_id,shader);
-
-        /// Use Pipeline Barrier if Access changes
-        VkAccessFlags2KHR shaderAccess;
         VkImageLayout layout;
-        VkPipelineStageFlags2KHR pipelineStage;
 
-        if(shader.type == OMEGASL_SHADER_VERTEX){
-            pipelineStage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR;
-        }
-        else if(shader.type == OMEGASL_SHADER_FRAGMENT){
-            pipelineStage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR;
+        if(parentQueue->engine->hasSynchronization2Ext) {
+
+            /// Use Pipeline Barrier if Access changes
+            VkAccessFlags2KHR shaderAccess;
+            VkPipelineStageFlags2KHR pipelineStage;
+
+            if (shader.type == OMEGASL_SHADER_VERTEX) {
+                pipelineStage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT_KHR;
+            } else if (shader.type == OMEGASL_SHADER_FRAGMENT) {
+                pipelineStage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT_KHR;
+            } else {
+                pipelineStage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
+            }
+
+            bool hasPipelineAccess = texture->priorPipelineAccess2 != 0;
+
+            if (ioMode == OMEGASL_SHADER_DESC_IO_IN) {
+                shaderAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            } else if (ioMode == OMEGASL_SHADER_DESC_IO_INOUT) {
+                shaderAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR;
+                layout = VK_IMAGE_LAYOUT_GENERAL;
+            } else {
+                shaderAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            }
+            /// If not first time access, pipeline barrier must be inserted before binding.
+            if (texture->priorShaderAccess2 != 0 && hasPipelineAccess) {
+                VkImageMemoryBarrier2KHR imageMemoryBarrier2Khr{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
+                imageMemoryBarrier2Khr.pNext = nullptr;
+                imageMemoryBarrier2Khr.srcAccessMask = texture->priorShaderAccess2;
+                imageMemoryBarrier2Khr.dstAccessMask = shaderAccess;
+                imageMemoryBarrier2Khr.image = texture->img;
+                imageMemoryBarrier2Khr.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier2Khr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier2Khr.oldLayout = texture->layout;
+                imageMemoryBarrier2Khr.newLayout = layout;
+                imageMemoryBarrier2Khr.srcStageMask = texture->priorPipelineAccess2;
+                imageMemoryBarrier2Khr.dstStageMask = pipelineStage;
+
+
+                VkDependencyInfoKHR dependencyInfoKhr{VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
+                dependencyInfoKhr.pNext = nullptr;
+                dependencyInfoKhr.imageMemoryBarrierCount = 1;
+                dependencyInfoKhr.pImageMemoryBarriers = &imageMemoryBarrier2Khr;
+                parentQueue->engine->vkCmdPipelineBarrier2Khr(commandBuffer, &dependencyInfoKhr);
+            }
+
+            texture->layout = layout;
+            texture->priorShaderAccess2 = shaderAccess;
+            texture->priorPipelineAccess2 = pipelineStage;
         }
         else {
-            pipelineStage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR;
-        }
 
-        bool hasPipelineAccess = texture->priorPipelineAccess != 0;
+            /// Use Pipeline Barrier if Access changes
+            VkAccessFlags shaderAccess;
+            VkPipelineStageFlags pipelineStage;
 
-        if(ioMode == OMEGASL_SHADER_DESC_IO_IN){
-            shaderAccess = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT_KHR;
-            layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        }
-        else if(ioMode == OMEGASL_SHADER_DESC_IO_INOUT){
-            shaderAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR | VK_ACCESS_2_SHADER_STORAGE_READ_BIT_KHR;
-            layout = VK_IMAGE_LAYOUT_GENERAL;
-        }
-        else {
-            shaderAccess = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT_KHR;
-            layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        }
-        /// If not first time access, pipeline barrier must be inserted before binding.
-        if(texture->priorShaderAccess != 0 && hasPipelineAccess){
-            VkImageMemoryBarrier2KHR imageMemoryBarrier2Khr {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
-            imageMemoryBarrier2Khr.pNext = nullptr;
-            imageMemoryBarrier2Khr.srcAccessMask = texture->priorShaderAccess;
-            imageMemoryBarrier2Khr.dstAccessMask = shaderAccess;
-            imageMemoryBarrier2Khr.image = texture->img;
-            imageMemoryBarrier2Khr.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier2Khr.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageMemoryBarrier2Khr.oldLayout = texture->layout;
-            imageMemoryBarrier2Khr.newLayout = layout;
-            imageMemoryBarrier2Khr.srcStageMask = texture->priorPipelineAccess;
-            imageMemoryBarrier2Khr.dstStageMask = pipelineStage;
+            if (shader.type == OMEGASL_SHADER_VERTEX) {
+                pipelineStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+            } else if (shader.type == OMEGASL_SHADER_FRAGMENT) {
+                pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            } else {
+                pipelineStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            }
 
+            bool hasPipelineAccess = texture->priorPipelineAccess != 0;
 
-            VkDependencyInfoKHR dependencyInfoKhr {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
-            dependencyInfoKhr.pNext = nullptr;
-            dependencyInfoKhr.imageMemoryBarrierCount = 1;
-            dependencyInfoKhr.pImageMemoryBarriers = &imageMemoryBarrier2Khr;
-            vkCmdPipelineBarrier2KHR(commandBuffer,&dependencyInfoKhr);
+            if (ioMode == OMEGASL_SHADER_DESC_IO_IN) {
+                shaderAccess = VK_ACCESS_SHADER_READ_BIT;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            } else if (ioMode == OMEGASL_SHADER_DESC_IO_INOUT) {
+                shaderAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                layout = VK_IMAGE_LAYOUT_GENERAL;
+            } else {
+                shaderAccess = VK_ACCESS_SHADER_WRITE_BIT;
+                layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            }
+            /// If not first time access, pipeline barrier must be inserted before binding.
+            if (texture->priorShaderAccess != 0 && hasPipelineAccess) {
+                VkImageMemoryBarrier imageMemoryBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+                imageMemoryBarrier.pNext = nullptr;
+                imageMemoryBarrier.srcAccessMask = texture->priorShaderAccess;
+                imageMemoryBarrier.dstAccessMask = shaderAccess;
+                imageMemoryBarrier.image = texture->img;
+                imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageMemoryBarrier.oldLayout = texture->layout;
+                imageMemoryBarrier.newLayout = layout;
+
+                vkCmdPipelineBarrier(commandBuffer,texture->priorPipelineAccess,shaderAccess,VK_DEPENDENCY_DEVICE_GROUP_BIT,0,nullptr,0,nullptr,1,&imageMemoryBarrier);
+            }
+
+            texture->layout = layout;
+            texture->priorShaderAccess = shaderAccess;
+            texture->priorPipelineAccess = pipelineStage;
         }
-
-        texture->layout = layout;
-        texture->priorShaderAccess = shaderAccess;
-        texture->priorPipelineAccess = pipelineStage;
 }
 
     GEVulkanCommandBuffer::GEVulkanCommandBuffer(VkCommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue):commandBuffer(commandBuffer),parentQueue(parentQueue){
@@ -349,8 +408,16 @@ _NAMESPACE_BEGIN_
         writeInfo.pImageInfo = nullptr;
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  0,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                      0,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.front();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
+
+
     };
 
     void GEVulkanCommandBuffer::bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned id){
@@ -386,8 +453,14 @@ _NAMESPACE_BEGIN_
         writeInfo.pBufferInfo = nullptr;
         writeInfo.pImageInfo = &imgInfo;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  0,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                                           0,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.front();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
     };
 
     void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned id){
@@ -405,8 +478,14 @@ _NAMESPACE_BEGIN_
         writeInfo.pImageInfo = nullptr;
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  1,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                                           1,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.back();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
     };
 
     void GEVulkanCommandBuffer::bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned id){
@@ -441,8 +520,14 @@ _NAMESPACE_BEGIN_
         writeInfo.pBufferInfo = nullptr;
         writeInfo.pImageInfo = &imgInfo;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
-                                  1,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,renderPipelineState->layout,
+                                                           1,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.back();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
     };
 
 
@@ -460,7 +545,9 @@ _NAMESPACE_BEGIN_
             }
         }
 
-        vkCmdSetPrimitiveTopologyEXT(commandBuffer,topology);
+        if(parentQueue->engine->hasExtendedDynamicState) {
+            parentQueue->engine->vkCmdSetPrimitiveTopologyExt(commandBuffer, topology);
+        }
         vkCmdDraw(commandBuffer,vertexCount,1,startIdx,0);
     };
 
@@ -516,8 +603,8 @@ _NAMESPACE_BEGIN_
                                 VK_PIPELINE_BIND_POINT_COMPUTE,
                                 vkPipelineState->layout,
                                 0,
-                                vkPipelineState->descs.size(),
-                                vkPipelineState->descs.data(),
+                                1,
+                                &vkPipelineState->descSet,
                                 0,
                                 nullptr);
         computePipelineState = vkPipelineState;
@@ -531,15 +618,21 @@ _NAMESPACE_BEGIN_
         VkWriteDescriptorSet writeInfo {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
         writeInfo.dstBinding = getBindingForResourceID(id,computePipelineState->computeShader->internal);
         writeInfo.descriptorCount = 1;
-        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         writeInfo.pNext = nullptr;
         writeInfo.dstArrayElement = 0;
         writeInfo.pBufferInfo = nullptr;
         writeInfo.pImageInfo = nullptr;
         writeInfo.pTexelBufferView = &vk_buffer->bufferView;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,computePipelineState->layout,
-                                  0,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,renderPipelineState->layout,
+                                                           0,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.back();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
     }
 
     void GEVulkanCommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int id) {
@@ -572,8 +665,14 @@ _NAMESPACE_BEGIN_
         writeInfo.pBufferInfo = nullptr;
         writeInfo.pImageInfo = &imgInfo;
 
-        vkCmdPushDescriptorSetKHR(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,computePipelineState->layout,
-                                  0,1,&writeInfo);
+        if(parentQueue->engine->hasPushDescriptorExt){
+            parentQueue->engine->vkCmdPushDescriptorSetKhr(commandBuffer,VK_PIPELINE_BIND_POINT_COMPUTE,renderPipelineState->layout,
+                                                           0,1,&writeInfo);
+        }
+        else {
+            writeInfo.dstSet = renderPipelineState->descs.back();
+            vkUpdateDescriptorSets(parentQueue->engine->device,1,&writeInfo,0,nullptr);
+        }
     }
 
     void GEVulkanCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
@@ -589,57 +688,100 @@ _NAMESPACE_BEGIN_
         inBlitPass = true;
     }
 
-    inline void addResourceBarrierForTextureCopy(VkCommandBuffer commandBuffer,GEVulkanTexture *src_img,GEVulkanTexture *dest_img){
-        std::vector<VkImageMemoryBarrier2KHR> memBarriers;
-        VkDependencyInfoKHR dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
-        dep_info.pNext = nullptr;
+    inline void addResourceBarrierForTextureCopy(GEVulkanEngine *engine,VkCommandBuffer commandBuffer,GEVulkanTexture *src_img,GEVulkanTexture *dest_img){
 
-        if(!(src_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_READ_BIT_KHR)){
-            VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
-            img_mem_barrier.srcAccessMask = src_img->priorShaderAccess;
-            img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
-            img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            img_mem_barrier.srcStageMask = src_img->priorPipelineAccess;
-            img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
-            img_mem_barrier.image = src_img->img;
-            img_mem_barrier.oldLayout = src_img->layout;
-            img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-            src_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
-            src_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
-            src_img->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        if(engine->hasSynchronization2Ext){
+            std::vector<VkImageMemoryBarrier2KHR> memBarriers2;
+            VkDependencyInfoKHR dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR};
+            dep_info.pNext = nullptr;
 
-            memBarriers.push_back(img_mem_barrier);
+            if(!(src_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_READ_BIT_KHR)){
+                VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
+                img_mem_barrier.srcAccessMask = src_img->priorShaderAccess;
+                img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
+                img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                img_mem_barrier.srcStageMask = src_img->priorPipelineAccess;
+                img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
+                img_mem_barrier.image = src_img->img;
+                img_mem_barrier.oldLayout = src_img->layout;
+                img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+                src_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
+                src_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+                src_img->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+                memBarriers2.push_back(img_mem_barrier);
+            }
+
+            if(!(dest_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR)){
+                VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
+                img_mem_barrier.srcAccessMask = dest_img->priorShaderAccess;
+                img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
+                img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                img_mem_barrier.srcStageMask = dest_img->priorPipelineAccess;
+                img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
+                img_mem_barrier.image = dest_img->img;
+                img_mem_barrier.oldLayout = dest_img->layout;
+                img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+                dest_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
+                dest_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+                dest_img->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+                memBarriers2.push_back(img_mem_barrier);
+            }
+
+            dep_info.imageMemoryBarrierCount = memBarriers2.size();
+            dep_info.pImageMemoryBarriers = memBarriers2.data();
+            engine->vkCmdPipelineBarrier2Khr(commandBuffer,&dep_info);
+        }
+        else {
+
+            std::vector<VkImageMemoryBarrier> memBarriers;
+
+            if(!(src_img->priorShaderAccess & VK_ACCESS_TRANSFER_READ_BIT)){
+                VkImageMemoryBarrier img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+                img_mem_barrier.srcAccessMask = src_img->priorShaderAccess;
+                img_mem_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                img_mem_barrier.image = src_img->img;
+                img_mem_barrier.oldLayout = src_img->layout;
+                img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+                src_img->priorShaderAccess = VK_ACCESS_TRANSFER_READ_BIT;
+                src_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+                src_img->layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+                memBarriers.push_back(img_mem_barrier);
+            }
+
+            if(!(dest_img->priorShaderAccess & VK_ACCESS_TRANSFER_WRITE_BIT)){
+                VkImageMemoryBarrier img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+                img_mem_barrier.srcAccessMask = dest_img->priorShaderAccess;
+                img_mem_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                img_mem_barrier.image = dest_img->img;
+                img_mem_barrier.oldLayout = dest_img->layout;
+                img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+                dest_img->priorShaderAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+                dest_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
+                dest_img->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+                memBarriers.push_back(img_mem_barrier);
+            }
+
+            vkCmdPipelineBarrier(commandBuffer,VK_SHADER_STAGE_ALL,VK_SHADER_STAGE_ALL,VK_DEPENDENCY_DEVICE_GROUP_BIT,0,nullptr,0,nullptr,memBarriers.size(),memBarriers.data());
         }
 
-        if(!(dest_img->priorShaderAccess & VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR)){
-            VkImageMemoryBarrier2KHR img_mem_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR};
-            img_mem_barrier.srcAccessMask = dest_img->priorShaderAccess;
-            img_mem_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
-            img_mem_barrier.srcQueueFamilyIndex = img_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            img_mem_barrier.srcStageMask = dest_img->priorPipelineAccess;
-            img_mem_barrier.dstStageMask = VK_SHADER_STAGE_ALL;
-            img_mem_barrier.image = dest_img->img;
-            img_mem_barrier.oldLayout = dest_img->layout;
-            img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-            dest_img->priorShaderAccess = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
-            dest_img->priorPipelineAccess = VK_SHADER_STAGE_ALL;
-            dest_img->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-            memBarriers.push_back(img_mem_barrier);
-        }
-
-        dep_info.imageMemoryBarrierCount = memBarriers.size();
-        dep_info.pImageMemoryBarriers = memBarriers.data();
-        vkCmdPipelineBarrier2KHR(commandBuffer,&dep_info);
     }
 
     void GEVulkanCommandBuffer::copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) {
         assert(inBlitPass && "Must be in a blit pass");
         auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
 
-        addResourceBarrierForTextureCopy(commandBuffer,src_img,dest_img);
+        addResourceBarrierForTextureCopy(parentQueue->engine,commandBuffer,src_img,dest_img);
 
         VkImageCopy imgCopy {};
         imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -660,7 +802,7 @@ _NAMESPACE_BEGIN_
                                                      const TextureRegion &region, const GPoint3D &destCoord) {
         auto src_img = (GEVulkanTexture *)src.get(),dest_img = (GEVulkanTexture *)dest.get();
 
-        addResourceBarrierForTextureCopy(commandBuffer,src_img,dest_img);
+        addResourceBarrierForTextureCopy(parentQueue->engine,commandBuffer,src_img,dest_img);
 
         VkImageCopy imgCopy {};
         imgCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;

@@ -11,7 +11,6 @@ GTEVulkanShader::~GTEVulkanShader(){
 GEVulkanRenderPipelineState::GEVulkanRenderPipelineState(SharedHandle<GTEShader> &vertexShader,
                                                          SharedHandle<GTEShader> &fragmentShader,GEVulkanEngine *parentEngine, VkPipeline &pipeline,
                                                          VkPipelineLayout &layout, VkDescriptorPool &descriptorPool,
-                                                         OmegaCommon::Map<unsigned int, VkDescriptorSet> &descMap,
                                                          OmegaCommon::Vector<VkDescriptorSet> & descs,
                                                          OmegaCommon::Vector<VkDescriptorSetLayout> & descLayouts) : __GERenderPipelineState(vertexShader,fragmentShader),
                                                          parentEngine(parentEngine),
@@ -19,7 +18,6 @@ GEVulkanRenderPipelineState::GEVulkanRenderPipelineState(SharedHandle<GTEShader>
                                                          layout(layout),
                                                          descriptorPool(descriptorPool),
                                                          descLayouts(descLayouts),
-                                                         descMap(descMap),
                                                          descs(descs){
 
 }
@@ -32,35 +30,30 @@ GEVulkanRenderPipelineState::~GEVulkanRenderPipelineState() {
         vkDestroyDescriptorSetLayout(parentEngine->device,d,nullptr);
     }
     descs.clear();
-    descMap.clear();
     vkDestroyDescriptorPool(parentEngine->device,descriptorPool,nullptr);
 }
 
 GEVulkanComputePipelineState::GEVulkanComputePipelineState(SharedHandle<GTEShader> &computeShader,
                                                            GEVulkanEngine *parentEngine, VkPipeline &pipeline,
                                                            VkPipelineLayout &layout, VkDescriptorPool &descriptorPool,
-                                                           OmegaCommon::Map<unsigned int, VkDescriptorSet> &descMap,
-                                                           OmegaCommon::Vector<VkDescriptorSet> &descs,
+                                                           VkDescriptorSet & descSet,
                                                            OmegaCommon::Vector<VkDescriptorSetLayout> &descLayouts): __GEComputePipelineState(computeShader),
                                                            parentEngine(parentEngine),
                                                            pipeline(pipeline),
                                                            layout(layout),
                                                            descriptorPool(descriptorPool),
                                                            descLayouts(descLayouts),
-                                                           descMap(descMap),
-                                                           descs(descs){
+                                                           descSet(descSet){
 
 }
 
 GEVulkanComputePipelineState::~GEVulkanComputePipelineState() {
     vkDestroyPipeline(parentEngine->device,pipeline,nullptr);
     vkDestroyPipelineLayout(parentEngine->device,layout,nullptr);
-    vkFreeDescriptorSets(parentEngine->device,descriptorPool,descs.size(),descs.data());
+    vkFreeDescriptorSets(parentEngine->device,descriptorPool,1,&descSet);
     for(auto & d : descLayouts) {
         vkDestroyDescriptorSetLayout(parentEngine->device,d,nullptr);
     }
-    descs.clear();
-    descMap.clear();
     vkDestroyDescriptorPool(parentEngine->device,descriptorPool,nullptr);
 }
 

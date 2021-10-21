@@ -173,7 +173,7 @@ _NAMESPACE_BEGIN_
     class OMEGAGTE_EXPORT OmegaGraphicsEngine {
         SharedHandle<GTEShaderLibrary> loadShaderLibraryFromInputStream(std::istream & in);
     protected:
-        virtual SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) = 0;
+        virtual SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime = false) = 0;
     public:
         /** 
         @brief Creates an Instance of the Omega Graphics Engine  
@@ -184,9 +184,18 @@ _NAMESPACE_BEGIN_
          /**
           @brief Loads an OmegaSL Shader Library,
           @param path Path to an `omegasllib` file.
-          @returns SharedHandle<GEShaderLibrary>
+          @returns SharedHandle<GTEShaderLibrary>
          */
          SharedHandle<GTEShaderLibrary> loadShaderLibrary(FS::Path path);
+
+#ifdef RUNTIME_SHADER_COMP_SUPPORT
+        /**
+         @brief Loads an OmegaSL Shader Library on Runtime.
+         @param lib A std::shared_ptr to an a runtime compiled omegasl library.
+         @returns SharedHandle<GTEShaderLibrary>
+        */
+        SharedHandle<GTEShaderLibrary> loadShaderLibraryRuntime(std::shared_ptr<omegasl_shader_lib> & lib);
+#endif
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

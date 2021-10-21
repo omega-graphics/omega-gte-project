@@ -6,6 +6,7 @@ namespace omegasl {
         id<MTLDevice> device = (__bridge id)mtl_device;
         NSError *error;
         MTLCompileOptions *compileOptions = [[MTLCompileOptions alloc] init];
+
         id<MTLLibrary> library = [device newLibraryWithSource:[[NSString alloc] initWithUTF8String:string] options:compileOptions error:&error];
         *pDest = (__bridge void *)library;
     }

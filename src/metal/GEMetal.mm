@@ -424,13 +424,21 @@ _NAMESPACE_BEGIN_
 
     class GEMetalEngine : public OmegaGraphicsEngine {
         NSSmartPtr metalDevice;
-        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override {
-            auto data = dispatch_data_create(shaderDesc->data,shaderDesc->dataSize,nullptr,DISPATCH_DATA_DESTRUCTOR_DEFAULT);
-            NSError *error;
-            NSSmartPtr library = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithData:data error:&error]};
-            
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) override {
+            NSSmartPtr library;
             NSString *str = [[NSString alloc] initWithUTF8String:shaderDesc->name];
             NSLog(@"Loading Function %@",str);
+            if(runtime){
+                /// Field `data` is an id<MTLLibrary>
+                library = NSObjectHandle {shaderDesc->data};
+            }
+            else {
+                auto data = dispatch_data_create(shaderDesc->data,shaderDesc->dataSize,nullptr,DISPATCH_DATA_DESTRUCTOR_DEFAULT);
+                NSError *error;
+                library = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newLibraryWithData:data error:&error]};
+                dispatch_release(data);
+
+            }
             NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:str] };
             auto _shader = new GEMetalShader(library,func);
             _shader->internal = *shaderDesc;

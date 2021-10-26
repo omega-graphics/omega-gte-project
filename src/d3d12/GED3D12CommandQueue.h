@@ -52,6 +52,7 @@ _NAMESPACE_BEGIN_
         void bindResourceAtVertexShader(SharedHandle<GETexture> &texture, unsigned int id) override;
         void bindResourceAtFragmentShader(SharedHandle<GEBuffer> &buffer, unsigned int id) override;
         void bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned int id) override;
+        void setStencilRef(unsigned int ref) override;
        
         void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned int vertexCount, size_t startIdx) override;
         void setViewports(std::vector<GEViewport> viewports) override;

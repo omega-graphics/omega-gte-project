@@ -429,6 +429,10 @@ _NAMESPACE_BEGIN_
 
     };
 
+    void GED3D12CommandBuffer::setStencilRef(unsigned int ref) {
+        commandList->OMSetStencilRef(ref);
+    }
+
     void GED3D12CommandBuffer::setViewports(std::vector<GEViewport> viewports){
         std::vector<D3D12_VIEWPORT> d3d12_viewports;
         auto viewports_it = viewports.begin();

@@ -139,6 +139,12 @@ struct omegasl_shader {
 
 #include <omega-common/common.h>
 
+#ifdef OMEGAGTE__BUILD__
+#define OMEGASLC_EXPORT _declspec(dllexport)
+#else
+#define OMEGASLC_EXPORT __declspec(dllimport)
+#endif
+
 
 struct omegasl_shader_lib {
     omegasl_lib_header header;
@@ -155,9 +161,9 @@ struct omegasl_shader_lib {
     on Apple Devices,
  *  and shaderc::CompilerGlslToSpv() on Android and Linux.)
  * */
-class OmegaSLCompiler {
+class OMEGASLC_EXPORT OmegaSLCompiler {
 public:
-    struct Source {
+    struct OMEGASLC_EXPORT Source {
         static std::shared_ptr<Source> fromFile(OmegaCommon::FS::Path path);
         static std::shared_ptr<Source> fromString(OmegaCommon::String & buffer);
     };

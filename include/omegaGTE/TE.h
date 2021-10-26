@@ -112,8 +112,7 @@ public:
       @param[in] vectorPaths A small array with *only* 2 GVectorPath2D objects.
       @returns TETessalationParams
     */
-    static TETessellationParams GraphicsPath2D(GVectorPath2D * const vectorPaths);
-
+    static TETessellationParams GraphicsPath2D(GVectorPath2D & path,float strokeWidth = 1.f,bool contour = false,bool fill = false);
     /**
       Tessalate 3D vector paths
       @param[in] vectorPathCount The number of vectorPathes to tessalate 

@@ -8,9 +8,17 @@ _NAMESPACE_BEGIN_
 
 
 struct TETessellationParams::GraphicsPath2DParams {
-    GVectorPath2D *const pathes;
-    unsigned pathCount;
-    GraphicsPath2DParams(GVectorPath2D *const pathes,unsigned pathCount):pathes(pathes),pathCount(pathCount){};
+    GVectorPath2D path;
+    bool treatAsContour;
+    bool fill;
+    float strokeWidth;
+    GraphicsPath2DParams(GVectorPath2D & path,bool treatAsContour,bool fill,float strokeWidth):
+    path(path),
+    treatAsContour(treatAsContour),
+    fill(fill),
+    strokeWidth(strokeWidth){
+
+    };
 };
 
 struct TETessellationParams::GraphicsPath3DParams {
@@ -84,9 +92,9 @@ TETessellationParams TETessellationParams::Cone(GCone &cone){
     return params;
 };
 
-TETessellationParams TETessellationParams::GraphicsPath2D(GVectorPath2D *const vectorPaths){
+TETessellationParams TETessellationParams::GraphicsPath2D(GVectorPath2D & path,float strokeWidth,bool contour,bool fill){
     TETessellationParams params;
-    GraphicsPath2DParams * _params = new GraphicsPath2DParams(vectorPaths,2);
+    auto * _params = new GraphicsPath2DParams(path,contour,fill,strokeWidth);
     params.params = _params;
     params.type = TESSALATE_GRAPHICSPATH2D;
     return params;
@@ -339,7 +347,145 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             break;
         }
-        case TETessellationParams::TESSALATE_PYRAMID : {
+        case TETessellationParams::TESSALATE_GRAPHICSPATH2D : {
+            auto object = (TETessellationParams::GraphicsPath2DParams *)params.params;
+
+            TETessellationResult::TEMesh mesh {TETessellationResult::TEMesh::TopologyTriangle};
+
+            float deviceCoordStrokeWidthX = object->strokeWidth/(2 * viewport->width);
+            float deviceCoordStrokeWidthY = object->strokeWidth/(2 * viewport->height);
+
+            TETessellationResult::TEMesh::Polygon polygon{};
+            /// 1. Triangulate Stroke of Path.
+
+            GVectorPath2D path_a{GPoint2D {0,0}},path_b{GPoint2D{0,0}};
+
+            for(auto path_it = object->path.begin();path_it != object->path.end();path_it.operator++()){
+                auto segment = *path_it;
+                auto tan_m =  -(segment.pt_B->x - segment.pt_A->x)/(segment.pt_B->y - segment.pt_A->y);
+                auto tan_m_sq = tan_m * tan_m;
+                auto cos_m_sq = 1.f/(1 + (tan_m_sq));
+                auto cos_m = std::sqrt(cos_m_sq);
+                float stroke_x = deviceCoordStrokeWidthX * std::sqrt(cos_m_sq);
+                float stroke_y = deviceCoordStrokeWidthY * (cos_m * tan_m);
+
+                auto pt_a = GPoint3D {segment.pt_A->x + stroke_x,segment.pt_A->y + stroke_y,0.f};
+                auto pt_b = GPoint3D {segment.pt_A->x - stroke_x,segment.pt_A->y - stroke_y,0.f};
+
+                if(path_a.size() == 0){
+                    auto & pt = path_a.firstPt();
+                    pt.x = pt_a.x;
+                    pt.y = pt_a.y;
+
+                    pt = path_b.firstPt();
+                    pt.x = pt_b.x;
+                    pt.y = pt_b.y;
+
+                }
+
+                auto pt_c = GPoint3D {segment.pt_B->x + stroke_x,segment.pt_B->y + stroke_y,0.f};
+                auto pt_d = GPoint3D {segment.pt_B->x - stroke_x,segment.pt_B->y - stroke_y,0.f};
+
+                path_a.append(GPoint2D {pt_c.x,pt_c.y});
+                path_b.append(GPoint2D {pt_d.x,pt_d.y});
+
+                polygon.a.pt = pt_a;
+                polygon.b.pt = pt_b;
+                polygon.c.pt = pt_c;
+
+                mesh.vertexPolygons.push_back(polygon);
+
+                polygon.a.pt = pt_c;
+                polygon.b.pt = pt_b;
+                polygon.c.pt = pt_d;
+
+                mesh.vertexPolygons.push_back(polygon);
+            }
+
+            /// 2. If it is a contour, close the path.
+
+            if(object->treatAsContour){
+                auto & start_pt = object->path.firstPt();
+                auto & end_pt = object->path.lastPt();
+
+                auto tan_m = -(end_pt.x - start_pt.x)/(end_pt.y - start_pt.y);
+                auto tan_m_sq = tan_m * tan_m;
+                auto cos_m_sq = 1.f/(1 + (tan_m_sq));
+                auto cos_m = std::sqrt(cos_m_sq);
+                float stroke_x = deviceCoordStrokeWidthX * std::sqrt(cos_m_sq);
+                float stroke_y = deviceCoordStrokeWidthY * (cos_m * tan_m);
+
+                auto pt_a = GPoint3D {start_pt.x + stroke_x,start_pt.y + stroke_y,0.f};
+                auto pt_b = GPoint3D {start_pt.x- stroke_x,start_pt.y - stroke_y,0.f};
+
+                auto pt_c = GPoint3D {end_pt.x + stroke_x,end_pt.y + stroke_y,0.f};
+                auto pt_d = GPoint3D {end_pt.x - stroke_x,end_pt.y - stroke_y,0.f};
+
+                polygon.a.pt = pt_a;
+                polygon.b.pt = pt_b;
+                polygon.c.pt = pt_c;
+
+                mesh.vertexPolygons.push_back(polygon);
+
+                polygon.a.pt = pt_c;
+                polygon.b.pt = pt_b;
+                polygon.c.pt = pt_d;
+
+                mesh.vertexPolygons.push_back(polygon);
+
+                /// 3. Fill the contour if needed.
+
+                if(object->fill){
+                    GVectorPath2D *inner_path;
+                    if(object->strokeWidth > 0){
+                        if(path_a.mag() > path_b.mag()){
+                            inner_path = &path_b;
+                        }
+                        else {
+                            inner_path = &path_a;
+                        }
+                    }
+                    else {
+                        inner_path = &object->path;
+                    }
+
+                    if(inner_path->size() == 2){
+
+                    }
+                    else if(inner_path->size() > 1) {
+
+                        GVectorPath2D trace_path{*inner_path};
+                        GVectorPath2D trace_path_record{trace_path.firstPt()};
+                        while (trace_path.size() > 3) {
+                            for (auto path_it = trace_path.begin(); path_it != trace_path.end(); path_it.operator++()) {
+                                GPoint2D a, b, c;
+
+                                auto seg = *path_it;
+                                a = *seg.pt_A;
+                                b = *seg.pt_B;
+                                path_it.operator++();
+                                if (path_it == trace_path.end()) {
+                                    c = trace_path.firstPt();
+                                } else {
+                                    c = *(*path_it).pt_B;
+                                }
+                                FVector3D vec_a{b.x - a.x, b.y - a.y, 0.f}, vec_b{c.x - b.x, c.y - b.y, 0.f};
+                                auto res = vec_a.cross(vec_b);
+
+                            }
+                        }
+                    }
+
+                }
+
+            }
+
+
+
+            /// Finish
+            result.meshes.push_back(mesh);
+            
+
             break;
         }
         default: {

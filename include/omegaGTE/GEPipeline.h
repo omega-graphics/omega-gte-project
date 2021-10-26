@@ -27,15 +27,45 @@ _NAMESPACE_BEGIN_
         Solid
     };
 
+    enum class CompareFunc : int {
+        Less,
+        LessEqual,
+        Greater,
+        GreaterEqual
+    };
+
+    enum class StencilOperation : int {
+        Retain,
+        Zero,
+        Replace,
+        IncrementWrap,
+        DecrementWrap
+    };
+
+    enum class DepthWriteAmount : int {
+        Zero,
+        All
+    };
+
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
         SharedHandle<GTEShader> vertexFunc;
         SharedHandle<GTEShader> fragmentFunc;
         unsigned rasterSampleCount = 0;
         RasterCullMode cullMode = RasterCullMode::None;
         TriangleFillMode triangleFillMode = TriangleFillMode::Solid;
-        struct {
+        struct DepthStencilDesc {
             bool enableDepth = false;
             bool enableStencil = false;
+            DepthWriteAmount writeAmount = DepthWriteAmount::All;
+            CompareFunc depthOperation = CompareFunc::Less;
+            unsigned stencilReadMask = 0,stencilWriteMask = 0;
+            struct StencilDesc {
+                StencilOperation
+                        stencilFail = StencilOperation::Replace,
+                        depthFail = StencilOperation::Replace,
+                        pass = StencilOperation::Retain;
+                CompareFunc func = CompareFunc::Less;
+            } frontFaceStencil,backFaceStencil;
         } depthAndStencilDesc;
     };
 

@@ -51,6 +51,8 @@ _NAMESPACE_BEGIN_
         
         virtual void bindResourceAtFragmentShader(SharedHandle<GEBuffer> & buffer,unsigned id) = 0;
         virtual void bindResourceAtFragmentShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
+
+        virtual void setStencilRef(unsigned ref) = 0;
         
         virtual void setViewports(std::vector<GEViewport> viewport) = 0;
         virtual void setScissorRects(std::vector<GEScissorRect> scissorRects) = 0;

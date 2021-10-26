@@ -144,10 +144,10 @@ _NAMESPACE_BEGIN_
             Vector2D_Base v(cos(angle) * mag,sin(angle) * mag);
             return v;
         };
-        Num_Ty & getI() const{
+        Num_Ty & getI(){
             return i;
         };
-        Num_Ty & getJ() const{
+        Num_Ty & getJ(){
             return j;
         };
         /// Get magnitude
@@ -214,7 +214,7 @@ _NAMESPACE_BEGIN_
             v.k = sin(angle_h) * mag;
             return v;
         };
-        Num_Ty & getK() const{
+        Num_Ty & getK(){
             return k;
         };
         /// Get magnitude
@@ -362,6 +362,9 @@ _NAMESPACE_BEGIN_
 
     template<class Pt_Ty>
     class  GVectorPath_Base {
+        struct Magnitude {
+            static float calc(Pt_Ty & a,Pt_Ty & b);
+        };
         public:
         struct Node {
             Pt_Ty *pt;
@@ -384,14 +387,15 @@ _NAMESPACE_BEGIN_
             Node *pt_A;
             Node *pt_B;
             unsigned pos;
-            public:
+        public:
             explicit Path_Iterator(Node *_data):pt_A(_data),pt_B(pt_A->next),pos(0){
                 
             };
-            void operator++(){
+            Path_Iterator & operator++(){
                 pt_A = pt_A->next;
                 pt_B = pt_B->next;
                 ++pos;
+                return *this;
             };
             bool operator==(const Path_Iterator & r){
 //                    std::cout << "Self Pos:" << pos << ", Other Pos:" << r.pos << std::endl;
@@ -498,6 +502,20 @@ _NAMESPACE_BEGIN_
             };
             return out_.str();
         };
+        float mag(){
+            float sum = 0;
+            for(auto it = begin();it != end();it.operator++()){
+                auto seg = *it;
+                sum += Magnitude::calc(*seg.pt_A,*seg.pt_B);
+            }
+            return sum;
+        }
+        void reset(const Pt_Ty & start){
+            delete first;
+            len = 0;
+            numPoints = 1;
+            first = new Node(new Pt_Ty(std::move(start)));
+        };
         GVectorPath_Base(const Pt_Ty & start):first(new Node(new Pt_Ty(std::move(start)))),len(0),numPoints(1){};
         GVectorPath_Base(Pt_Ty &&start):first(new Node(new Pt_Ty(std::move(start)))),len(0),numPoints(1){};
         GVectorPath_Base() = delete;
@@ -525,9 +543,30 @@ _NAMESPACE_BEGIN_
             delete first;
         };
     };
+
+    template<>
+    struct GVectorPath_Base<GPoint2D>::Magnitude {
+        static float calc(GPoint2D & a,GPoint2D & b){
+            auto x = (b.x - a.x);
+            auto y = (b.y - a.y);
+            return std::sqrt((x * x) + (y * y));
+        };
+    };
     
     typedef GVectorPath_Base<GPoint2D> GVectorPath2D;
+
+    template<>
+    struct GVectorPath_Base<GPoint3D>::Magnitude {
+        static float calc(GPoint3D & a,GPoint3D & b){
+            auto x = (b.x - a.x);
+            auto y = (b.y - a.y);
+            auto z = (b.z - a.z);
+            return std::sqrt((x * x) + (y * y) + (z * z));
+        };
+    };
+
     typedef GVectorPath_Base<GPoint3D> GVectorPath3D;
+
 
 
 

@@ -219,7 +219,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
     };
 
-    SharedHandle<GTEShader> GED3D12Engine::_loadShaderFromDesc(omegasl_shader *shaderDesc) {
+    SharedHandle<GTEShader> GED3D12Engine::_loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) {
         auto shader = new GED3D12Shader();
         shader->internal = *shaderDesc;
         shader->shaderBytecode.pShaderBytecode = shaderDesc->data;
@@ -393,7 +393,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     }
 
     IDXGISwapChain3 *GED3D12Engine::createSwapChainFromHWND(HWND hwnd,DXGI_SWAP_CHAIN_DESC1 *desc,SharedHandle<GECommandQueue> & commandQueue){
-        GED3D12CommandQueue *d3d12_queue = (GED3D12CommandQueue *)commandQueue.get();
+        auto *d3d12_queue = (GED3D12CommandQueue *)commandQueue.get();
         IDXGISwapChain1 *swapChain;
         HRESULT hr = dxgi_factory->CreateSwapChainForHwnd(d3d12_queue->commandQueue.Get(),hwnd,desc,NULL,NULL,&swapChain);
         if(FAILED(hr)){
@@ -422,6 +422,56 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     SharedHandle<GEHeap> GED3D12Engine::makeHeap(const HeapDescriptor &desc){
         return nullptr;
     };
+
+    inline D3D12_COMPARISON_FUNC convertCompareFunc(CompareFunc & func){
+        D3D12_COMPARISON_FUNC res;
+        switch (func) {
+            case CompareFunc::Greater : {
+                res = D3D12_COMPARISON_FUNC_GREATER;
+                break;
+            }
+            case CompareFunc::GreaterEqual : {
+                res = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+                break;
+            }
+            case CompareFunc::Less : {
+                res = D3D12_COMPARISON_FUNC_LESS;
+                break;
+            }
+            case CompareFunc::LessEqual : {
+                res = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+                break;
+            }
+        }
+        return res;
+    }
+
+    inline D3D12_STENCIL_OP convertStencilOperation(StencilOperation & op){
+        D3D12_STENCIL_OP res;
+        switch (op) {
+            case StencilOperation::Retain : {
+                res = D3D12_STENCIL_OP_KEEP;
+                break;
+            }
+            case StencilOperation::Replace : {
+                res = D3D12_STENCIL_OP_REPLACE;
+                break;
+            }
+            case StencilOperation::IncrementWrap : {
+                res = D3D12_STENCIL_OP_INCR;
+                break;
+            }
+            case StencilOperation::DecrementWrap : {
+                res = D3D12_STENCIL_OP_DECR;
+                break;
+            }
+            case StencilOperation::Zero : {
+                res = D3D12_STENCIL_OP_ZERO;
+                break;
+            }
+        }
+        return res;
+    }
 
     SharedHandle<GERenderPipelineState> GED3D12Engine::makeRenderPipelineState(RenderPipelineDescriptor &desc){
         auto & vertexFunc = desc.vertexFunc->internal;
@@ -494,7 +544,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         };
 
 
-        MessageBoxA(GetForegroundWindow(),"Creating Pipeline State","NOTE",MB_OK);
+//        MessageBoxA(GetForegroundWindow(),"Creating Pipeline State","NOTE",MB_OK);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d {};
         d.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
@@ -559,6 +609,30 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         d.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         d.DepthStencilState.StencilEnable = desc.depthAndStencilDesc.enableStencil;
         d.DepthStencilState.DepthEnable = desc.depthAndStencilDesc.enableDepth;
+        d.DepthStencilState.DepthFunc = convertCompareFunc(desc.depthAndStencilDesc.depthOperation);
+        if(desc.depthAndStencilDesc.writeAmount == DepthWriteAmount::All) {
+            d.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        }
+        else {
+            d.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        }
+
+        d.DepthStencilState.StencilReadMask = desc.depthAndStencilDesc.stencilReadMask;
+        d.DepthStencilState.StencilWriteMask = desc.depthAndStencilDesc.stencilWriteMask;
+
+        /// Front Face Stencil
+        d.DepthStencilState.FrontFace.StencilDepthFailOp = convertStencilOperation(desc.depthAndStencilDesc.frontFaceStencil.depthFail);
+        d.DepthStencilState.FrontFace.StencilFailOp = convertStencilOperation(desc.depthAndStencilDesc.frontFaceStencil.stencilFail);
+        d.DepthStencilState.FrontFace.StencilPassOp = convertStencilOperation(desc.depthAndStencilDesc.frontFaceStencil.pass);
+        d.DepthStencilState.FrontFace.StencilFunc = convertCompareFunc(desc.depthAndStencilDesc.frontFaceStencil.func);
+
+        /// Back Face Stencil
+        d.DepthStencilState.BackFace.StencilDepthFailOp = convertStencilOperation(desc.depthAndStencilDesc.backFaceStencil.depthFail);
+        d.DepthStencilState.BackFace.StencilFailOp = convertStencilOperation(desc.depthAndStencilDesc.backFaceStencil.stencilFail);
+        d.DepthStencilState.BackFace.StencilPassOp = convertStencilOperation(desc.depthAndStencilDesc.backFaceStencil.pass);
+        d.DepthStencilState.BackFace.StencilFunc = convertCompareFunc(desc.depthAndStencilDesc.backFaceStencil.func);
+
+
         d.SampleMask = UINT_MAX;
         d.SampleDesc.Quality = 0;
         d.SampleDesc.Count = 1;

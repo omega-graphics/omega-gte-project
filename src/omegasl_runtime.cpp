@@ -4,6 +4,7 @@
 
 #ifdef RUNTIME_SHADER_COMP_SUPPORT
 
+
 struct SourceImpl : public OmegaSLCompiler::Source {
     bool file;
     std::ifstream in_file;

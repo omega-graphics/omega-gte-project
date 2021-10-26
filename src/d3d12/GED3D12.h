@@ -73,7 +73,7 @@ _NAMESPACE_BEGIN_
 //    };
 
     class GED3D12Engine : public OmegaGraphicsEngine {
-        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) override;
     public:
         ComPtr<IDXGIFactory6> dxgi_factory;
         explicit GED3D12Engine(SharedHandle<GTED3D12Device> device);

@@ -163,7 +163,7 @@ protected:
 
     void translateCoordsDefaultImpl(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result);
     virtual void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result) = 0;
-    inline void _tessalatePriv(const TETessellationParams & params, GEViewport * viewport,TETessellationResult & result);
+    inline void _tessalatePriv(const TETessellationParams & params,GTEPolygonFrontFaceRotation frontFaceRotation, GEViewport * viewport,TETessellationResult & result);
 public:
     // Default Value: 0.01 radians.
     void setArcStep(float newArcStep){
@@ -172,29 +172,32 @@ public:
     ~OmegaTessellationEngineContext();
     /**
      Tessalate according to the parameters and viewport.
-     @param params 
+     @param params
+      @param frontFaceRotation
      @param viewport
      @returns TETessellationResult
     */
-    TETessellationResult tessalateSync(const TETessellationParams & params, GEViewport * viewport = nullptr);
+    TETessellationResult tessalateSync(const TETessellationParams & params, GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise,GEViewport * viewport = nullptr);
 
     /**
       Performs tessalation like `tessalateSync` (@see tessalateSync), 
       however it performs the computation in a compute pipeline.
-     @param params 
+     @param params
+      @param frontFaceRotation
      @param viewport
      @returns std::future<TETessellationResult>
     */
-    virtual std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams & params, GEViewport * viewport = nullptr) = 0;
+    virtual std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams & params,GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise, GEViewport * viewport = nullptr) = 0;
 
     /**
       Performs tessalation like `tessalateSync` (@see tessalateSync), 
       however it performs the computation in a seperate thread
-     @param params 
+     @param params
+     @param frontFaceRotation
      @param viewport
      @returns std::future<TETessellationResult>
     */
-    std::future<TETessellationResult> tessalateAsync(const TETessellationParams & params, GEViewport * viewport = nullptr);
+    std::future<TETessellationResult> tessalateAsync(const TETessellationParams & params,GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise, GEViewport * viewport = nullptr);
 
 };
 

@@ -422,6 +422,56 @@ _NAMESPACE_BEGIN_
 
     }
 
+    inline MTLCompareFunction convertCompareFunc(CompareFunc & compareFunc){
+        MTLCompareFunction res;
+        switch (compareFunc) {
+            case CompareFunc::Less : {
+                res = MTLCompareFunctionLess;
+                break;
+            }
+            case CompareFunc::LessEqual : {
+                res = MTLCompareFunctionLessEqual;
+                break;
+            }
+            case CompareFunc::Greater : {
+                res = MTLCompareFunctionGreater;
+                break;
+            }
+            case CompareFunc::GreaterEqual : {
+                res = MTLCompareFunctionGreaterEqual;
+                break;
+            }
+        }
+        return res;
+    }
+
+    inline MTLStencilOperation convertStencilOp(StencilOperation & op){
+        MTLStencilOperation res;
+        switch (op) {
+            case StencilOperation::Retain : {
+                res = MTLStencilOperationKeep;
+                break;
+            }
+            case StencilOperation::Replace : {
+                res = MTLStencilOperationReplace;
+                break;
+            }
+            case StencilOperation::IncrementWrap : {
+                res = MTLStencilOperationIncrementWrap;
+                break;
+            }
+            case StencilOperation::DecrementWrap : {
+                res = MTLStencilOperationDecrementWrap;
+                break;
+            }
+            case StencilOperation::Zero : {
+                res = MTLStencilOperationZero;
+                break;
+            }
+        }
+        return res;
+    }
+
     class GEMetalEngine : public OmegaGraphicsEngine {
         NSSmartPtr metalDevice;
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) override {
@@ -526,9 +576,50 @@ _NAMESPACE_BEGIN_
             auto commandQueue = makeCommandQueue(100);
             return std::shared_ptr<GENativeRenderTarget>(new GEMetalNativeRenderTarget(commandQueue,desc.metalLayer));
         };
+
         SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override{
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+
+            bool hasDepthStencilState = desc.depthAndStencilDesc.enableDepth || desc.depthAndStencilDesc.enableStencil;
+            NSSmartPtr depthStencilState = NSObjectHandle{nullptr};
+            if(hasDepthStencilState){
+                MTLDepthStencilDescriptor *stencilDepthDesc = [[MTLDepthStencilDescriptor alloc] init];
+                if(!desc.depthAndStencilDesc.enableDepth){
+                    stencilDepthDesc.depthWriteEnabled = NO;
+                    stencilDepthDesc.depthCompareFunction = MTLCompareFunctionNever;
+                }
+
+                if(!desc.depthAndStencilDesc.enableStencil){
+                    stencilDepthDesc.frontFaceStencil = nil;
+                    stencilDepthDesc.backFaceStencil = nil;
+                }
+                else {
+                    MTLStencilDescriptor *frontFaceStencil = [[MTLStencilDescriptor alloc] init],*backFaceStencil = [[MTLStencilDescriptor alloc] init];
+                    backFaceStencil.readMask = frontFaceStencil.readMask = desc.depthAndStencilDesc.stencilReadMask;
+                    backFaceStencil.writeMask = frontFaceStencil.writeMask = desc.depthAndStencilDesc.stencilWriteMask;
+
+                    frontFaceStencil.stencilCompareFunction = convertCompareFunc(desc.depthAndStencilDesc.frontFaceStencil.func);
+                    frontFaceStencil.stencilFailureOperation = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.stencilFail);
+                    frontFaceStencil.depthFailureOperation = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.depthFail);
+                    frontFaceStencil.depthStencilPassOperation = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.pass);
+
+                    backFaceStencil.stencilCompareFunction = convertCompareFunc(desc.depthAndStencilDesc.backFaceStencil.func);
+                    backFaceStencil.stencilFailureOperation = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.stencilFail);
+                    backFaceStencil.depthFailureOperation = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.depthFail);
+                    backFaceStencil.depthStencilPassOperation = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.pass);
+
+                    stencilDepthDesc.frontFaceStencil = frontFaceStencil;
+                    stencilDepthDesc.backFaceStencil = backFaceStencil;
+                }
+
+                stencilDepthDesc.depthWriteEnabled = desc.depthAndStencilDesc.writeAmount == DepthWriteAmount::All? YES : NO;
+                stencilDepthDesc.depthCompareFunction = convertCompareFunc(desc.depthAndStencilDesc.depthOperation);
+
+
+
+                depthStencilState = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newDepthStencilStateWithDescriptor:stencilDepthDesc]};
+            }
             
             auto *vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
             auto *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
@@ -539,6 +630,37 @@ _NAMESPACE_BEGIN_
             pipelineDesc.fragmentFunction = NSOBJECT_OBJC_BRIDGE(id<MTLFunction>,fragmentFunc->function.handle());
             pipelineDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 
+
+            MTLCullMode cullMode;
+
+            if(desc.cullMode == RasterCullMode::Front){
+                cullMode = MTLCullModeFront;
+            }
+            else if(desc.cullMode == RasterCullMode::Back){
+                cullMode = MTLCullModeBack;
+            }
+            else {
+                cullMode = MTLCullModeNone;
+            }
+
+            MTLTriangleFillMode fillMode;
+            if(desc.triangleFillMode == TriangleFillMode::Wireframe){
+                fillMode = MTLTriangleFillModeLines;
+            }
+            else {
+                fillMode = MTLTriangleFillModeFill;
+            }
+
+            MTLWinding winding;
+
+            if(desc.polygonFrontFaceRotation == GTEPolygonFrontFaceRotation::Clockwise){
+                winding = MTLWindingClockwise;
+            }
+            else {
+                winding = MTLWindingCounterClockwise;
+            }
+
+            GEMetalRasterizerState rasterizerState {winding,cullMode,fillMode,desc.depthAndStencilDesc.depthBias,desc.depthAndStencilDesc.slopeScale,desc.depthAndStencilDesc.depthClamp};
             
             NSError *error;
             NSSmartPtr pipelineState =  NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newRenderPipelineStateWithDescriptor:pipelineDesc error:&error]};
@@ -548,7 +670,7 @@ _NAMESPACE_BEGIN_
                 exit(1);
             };
             
-            return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(desc.vertexFunc,desc.fragmentFunc,pipelineState));
+            return std::shared_ptr<GERenderPipelineState>(new GEMetalRenderPipelineState(desc.vertexFunc,desc.fragmentFunc,pipelineState,hasDepthStencilState,depthStencilState,rasterizerState));
         };
 
         SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc) override {
@@ -591,6 +713,7 @@ _NAMESPACE_BEGIN_
                     break;
                 }
                 case GETexture::RenderTarget :
+                case GETexture::RenderTargetAndDepthStencil :
                 case GETexture::MSResolveSrc : {
                     usage = MTLTextureUsageRenderTarget;
                     break;

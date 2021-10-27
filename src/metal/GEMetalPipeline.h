@@ -14,12 +14,23 @@ struct GEMetalShader : public GTEShader {
     GEMetalShader(NSSmartPtr & lib,NSSmartPtr & func);
 };
 
+struct GEMetalRasterizerState {
+    MTLWinding winding;
+    MTLCullMode cullMode;
+    MTLTriangleFillMode fillMode;
+    float depthBias,slopeScale,depthClamp;
+};
+
 class GEMetalRenderPipelineState : public __GERenderPipelineState {
 public:
     NSSmartPtr renderPipelineState;
+    bool hasDepthStencilState;
+    NSSmartPtr depthStencilState;
+    GEMetalRasterizerState rasterizerState;
     GEMetalRenderPipelineState(SharedHandle<GTEShader> & _vertexShader,
                                SharedHandle<GTEShader> & _fragmentShader,
-                               NSSmartPtr & renderPipelineState);
+                               NSSmartPtr & renderPipelineState,bool hasDepthStencilState,
+                                NSSmartPtr & depthStencilState,GEMetalRasterizerState & rasterizerState);
 };
 
 class GEMetalComputePipelineState : public __GEComputePipelineState {

@@ -24,7 +24,8 @@ _NAMESPACE_BEGIN_
             FromGPU = 0x01,
             GPUAccessOnly = 0x02,
             RenderTarget = 0x03,
-            MSResolveSrc = 0x04
+            MSResolveSrc = 0x04,
+            RenderTargetAndDepthStencil = 0x05
         } GETextureUsage;
     protected:
         GETextureType type;

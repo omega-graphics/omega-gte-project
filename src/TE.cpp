@@ -129,7 +129,7 @@ void OmegaTessellationEngineContext::translateCoordsDefaultImpl(float x, float y
     };
 };
 
-inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationParams &params, GEViewport * viewport,TETessellationResult & result){
+inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationParams &params,GTEPolygonFrontFaceRotation frontFaceRotation, GEViewport * viewport,TETessellationResult & result){
     assert(params.attachments.size() <= 1 && "Only 1 attachment is allowed for each tessellation params");
 
     switch(params.type){
@@ -181,7 +181,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
 
             auto middle_rect_params = TETessellationParams::Rect(middle_rect);
 
-            _tessalatePriv(middle_rect_params,viewport,result);
+            _tessalatePriv(middle_rect_params,frontFaceRotation,viewport,result);
 
             auto tessellateArc = [&](GPoint2D start, float rad_x, float rad_y, float angle_start, float angle_end, float _arcStep){
                 TETessellationResult::TEMesh m {TETessellationResult::TEMesh::TopologyTriangleStrip};
@@ -222,7 +222,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             middle_rect = GRect {GPoint2D{0.f,object->rad_y},object->rad_x,object->h - (2 * object->rad_y)};
             middle_rect_params = TETessellationParams::Rect(middle_rect);
 
-            _tessalatePriv(middle_rect_params,viewport,result);
+            _tessalatePriv(middle_rect_params,frontFaceRotation,viewport,result);
             /// Top Left Arc
             tessellateArc(GPoint2D {object->rad_x, object->h - object->rad_y}, object->rad_x, object->rad_y, PI, float(PI) / 2.f, -arcStep);
 
@@ -230,7 +230,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             middle_rect = GRect {GPoint2D{object->rad_x,object->h - object->rad_y},object->w - (object->rad_x * 2),object->rad_y};
             middle_rect_params = TETessellationParams::Rect(middle_rect);
 
-            _tessalatePriv(middle_rect_params,viewport,result);
+            _tessalatePriv(middle_rect_params,frontFaceRotation,viewport,result);
             /// Top Right Arc
             tessellateArc(GPoint2D {object->w - object->rad_x, object->h - (object->rad_y)}, object->rad_x, object->rad_y, float(PI) / 2.f, 0, -arcStep);
 
@@ -238,7 +238,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             middle_rect = GRect {GPoint2D{object->w - object->rad_x,object->rad_y},object->rad_x,object->h - (2 * object->rad_y)};
             middle_rect_params = TETessellationParams::Rect(middle_rect);
 
-            _tessalatePriv(middle_rect_params,viewport,result);
+            _tessalatePriv(middle_rect_params,frontFaceRotation,viewport,result);
 
             /// Bottom Right Arc
             tessellateArc(GPoint2D {object->w - object->rad_x, object->rad_y}, object->rad_x, object->rad_y, 0, -float(PI) / 2.f, -arcStep);
@@ -506,19 +506,19 @@ SharedHandle<OmegaTessellationEngineContext> OmegaTessellationEngine::createTECo
     return CreateTextureRenderTargetTEContext(renderTarget);
 };
 
-std::future<TETessellationResult> OmegaTessellationEngineContext::tessalateAsync(const TETessellationParams &params, GEViewport * viewport){
+std::future<TETessellationResult> OmegaTessellationEngineContext::tessalateAsync(const TETessellationParams &params,GTEPolygonFrontFaceRotation frontFaceRotation, GEViewport * viewport){
     std::promise<TETessellationResult> prom;
     auto fut = prom.get_future();
     activeThreads.emplace_back(new std::thread([&](std::promise<TETessellationResult> promise, size_t idx){
-        promise.set_value_at_thread_exit(tessalateSync(params,viewport));
+        promise.set_value_at_thread_exit(tessalateSync(params,frontFaceRotation,viewport));
         activeThreads.erase(activeThreads.begin() + idx);
     },std::move(prom),activeThreads.size()));
     return fut;
 };
 
-TETessellationResult OmegaTessellationEngineContext::tessalateSync(const TETessellationParams &params, GEViewport * viewport){
+TETessellationResult OmegaTessellationEngineContext::tessalateSync(const TETessellationParams &params,GTEPolygonFrontFaceRotation frontFaceRotation, GEViewport * viewport){
     TETessellationResult res;
-    _tessalatePriv(params,viewport,res);
+    _tessalatePriv(params,frontFaceRotation,viewport,res);
     return res;
 };
 

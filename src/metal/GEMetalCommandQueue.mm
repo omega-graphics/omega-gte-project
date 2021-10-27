@@ -180,6 +180,13 @@ _NAMESPACE_BEGIN_
         auto *ps = (GEMetalRenderPipelineState *)pipelineState.get();
         ps->renderPipelineState.assertExists();
         [rp setRenderPipelineState:NSOBJECT_OBJC_BRIDGE(id<MTLRenderPipelineState>,ps->renderPipelineState.handle())];
+        [rp setFrontFacingWinding:ps->rasterizerState.winding];
+        [rp setCullMode:ps->rasterizerState.cullMode];
+        [rp setTriangleFillMode:ps->rasterizerState.fillMode];
+        if(ps->hasDepthStencilState){
+            [rp setDepthStencilState:NSOBJECT_OBJC_BRIDGE(id<MTLDepthStencilState>,ps->depthStencilState.handle())];
+            [rp setDepthBias:ps->rasterizerState.depthBias slopeScale:ps->rasterizerState.slopeScale clamp:ps->rasterizerState.depthClamp];
+        }
         renderPipelineState = ps;
     };
 

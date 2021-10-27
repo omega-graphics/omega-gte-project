@@ -8,9 +8,15 @@ GEMetalShader::GEMetalShader(NSSmartPtr & lib,NSSmartPtr & func):library(lib), f
 
 GEMetalRenderPipelineState::GEMetalRenderPipelineState(SharedHandle<GTEShader> & _vertexShader,
                                                        SharedHandle<GTEShader> & _fragmentShader,
-                                                       NSSmartPtr & renderPipelineState):
+                                                       NSSmartPtr & renderPipelineState,
+                                                       bool hasDepthStencilState,
+                                                       NSSmartPtr & depthStencilState,
+                                                       GEMetalRasterizerState & rasterizerState):
         __GERenderPipelineState(_vertexShader,_fragmentShader),
-        renderPipelineState(renderPipelineState){
+        renderPipelineState(renderPipelineState),
+        hasDepthStencilState(hasDepthStencilState),
+        depthStencilState(depthStencilState),
+        rasterizerState(rasterizerState){
     
 };
 

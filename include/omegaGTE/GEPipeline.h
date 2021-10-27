@@ -53,11 +53,13 @@ _NAMESPACE_BEGIN_
         unsigned rasterSampleCount = 0;
         RasterCullMode cullMode = RasterCullMode::None;
         TriangleFillMode triangleFillMode = TriangleFillMode::Solid;
+        GTEPolygonFrontFaceRotation polygonFrontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise;
         struct DepthStencilDesc {
             bool enableDepth = false;
             bool enableStencil = false;
             DepthWriteAmount writeAmount = DepthWriteAmount::All;
             CompareFunc depthOperation = CompareFunc::Less;
+            float depthBias = 0.f,slopeScale = 0.f,depthClamp = 0.f;
             unsigned stencilReadMask = 0,stencilWriteMask = 0;
             struct StencilDesc {
                 StencilOperation

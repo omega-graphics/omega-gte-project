@@ -87,11 +87,11 @@ _NAMESPACE_BEGIN_
         /// @enum Usage
         Usage usage = Upload;
         /// The length of the buffer (in bytes).
-        size_t len;
+        size_t len = 0;
         /// The stride of each object in the buffer (in bytes).
-        size_t objectStride;
+        size_t objectStride = 0;
         /// The storage options of the resource.
-        StorageOpts opts;
+        StorageOpts opts = Shared;
     };
     /// @brief A GPU Buffer Resource
     class  OMEGAGTE_EXPORT GEBuffer {
@@ -254,41 +254,36 @@ _NAMESPACE_BEGIN_
     };
 
 
-    
 
 
-    #ifdef TARGET_DIRECTX
     struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
+        bool allowDepthStencilTesting = false;
+#ifdef TARGET_DIRECTX
         bool isHwnd;
         HWND hwnd;
         unsigned width;
         unsigned height;
-    };
+#endif
 
-    #endif
-
-    #if defined(TARGET_METAL) && defined(__OBJC__)
-    struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
+#if defined(TARGET_METAL) && defined(__OBJC__)
         CAMetalLayer *metalLayer;
-    };
-    #endif
+#endif
 
-    #if defined(TARGET_VULKAN)
-    struct OMEGAGTE_EXPORT NativeRenderTargetDescriptor {
-    #ifdef VULKAN_TARGET_X11
+#if defined(TARGET_VULKAN)
+#ifdef VULKAN_TARGET_X11
         Window x_window;
         Display *x_display;
-    #endif
-    #ifdef VULKAN_TARGET_WAYLAND
+#endif
+#ifdef VULKAN_TARGET_WAYLAND
         wl_surface *wl_surface = nullptr;
         wl_display *wl_display = nullptr;
         unsigned width;
         unsigned height;
-    #endif
-    #ifdef VULKAN_TARGET_ANDROID
-    #endif
+#endif
+#ifdef VULKAN_TARGET_ANDROID
+#endif
+#endif
     };
-    #endif
 
 
 _NAMESPACE_END_

@@ -139,10 +139,18 @@ struct omegasl_shader {
 
 #include <omega-common/common.h>
 
+#if _WIN32
+
 #ifdef OMEGAGTE__BUILD__
 #define OMEGASLC_EXPORT _declspec(dllexport)
 #else
 #define OMEGASLC_EXPORT __declspec(dllimport)
+#endif
+
+#else 
+
+#define OMEGASLC_EXPORT
+
 #endif
 
 

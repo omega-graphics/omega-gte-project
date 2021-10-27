@@ -1,6 +1,7 @@
 
 #include "glm/fwd.hpp"
 #include "vulkan/vulkan_core.h"
+#include <X11/X.h>
 #include <stdint.h>
 #define VMA_IMPLEMENTATION 1
 
@@ -253,7 +254,7 @@ _NAMESPACE_BEGIN_
     }
 
 
-    SharedHandle<GTEShader> GEVulkanEngine::_loadShaderFromDesc(omegasl_shader *shaderDesc){
+    SharedHandle<GTEShader> GEVulkanEngine::_loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime){
         VkShaderModuleCreateInfo shaderModuleDesc {};
 
         shaderModuleDesc.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -517,7 +518,7 @@ _NAMESPACE_BEGIN_
         image_desc.mipLevels = desc.mipLevels;
         image_desc.arrayLayers = 1;
 
-        VkImageUsageFlags usageFlags;
+        VkImageUsageFlags usageFlags = 0;
         VkImageLayout layout;
         VmaMemoryUsage memoryUsage;
 
@@ -546,6 +547,8 @@ _NAMESPACE_BEGIN_
          
                 break;
             }
+            case GETexture::RenderTargetAndDepthStencil :
+                usageFlags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             case GETexture::RenderTarget : {
                 usageFlags = 
                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | 
@@ -745,6 +748,48 @@ _NAMESPACE_BEGIN_
 
     }
 
+    inline VkCompareOp convertCompareFunc(CompareFunc & func){
+        VkCompareOp res;
+        switch (func) {
+            case CompareFunc::Less : {
+                res = VK_COMPARE_OP_LESS;
+                break;
+            }
+            case CompareFunc::LessEqual : {
+                res = VK_COMPARE_OP_LESS_OR_EQUAL;
+                break;
+            }
+            case CompareFunc::Greater : {
+                res = VK_COMPARE_OP_GREATER;
+                break;
+            }
+            case CompareFunc::GreaterEqual : {
+                res = VK_COMPARE_OP_GREATER_OR_EQUAL;
+                break;
+            }
+        }
+        return res;
+    }
+
+    inline VkStencilOp convertStencilOp(StencilOperation & op){
+        VkStencilOp res;
+        switch (op) {
+            case StencilOperation::Retain : {
+                res = VK_STENCIL_OP_KEEP;
+                break;
+            }
+            case StencilOperation::Replace : {
+                res = VK_STENCIL_OP_REPLACE;
+                break;
+            }
+            case StencilOperation::Zero : {
+                res = VK_STENCIL_OP_ZERO;
+                break;
+            }
+        }
+        return res;
+    }
+
 
     SharedHandle<GERenderPipelineState> GEVulkanEngine::makeRenderPipelineState(RenderPipelineDescriptor &desc){
         
@@ -763,6 +808,7 @@ _NAMESPACE_BEGIN_
         createInfo.layout = layout;
         createInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
+        /// Rasterizer State
         VkPipelineRasterizationStateCreateInfo rasterState {};
         rasterState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         switch(desc.cullMode){
@@ -780,12 +826,29 @@ _NAMESPACE_BEGIN_
             }
         }
 
+        if(desc.triangleFillMode == TriangleFillMode::Wireframe){
+            rasterState.polygonMode = VK_POLYGON_MODE_LINE;
+        }
+        else {
+            rasterState.polygonMode = VK_POLYGON_MODE_FILL;
+        }
+
+        if(desc.polygonFrontFaceRotation == GTEPolygonFrontFaceRotation::Clockwise){
+            rasterState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        }
+        else {
+            rasterState.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        }
+
+
+
 
         VkPipelineDynamicStateCreateInfo dynamicState {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
         OmegaCommon::Vector<VkDynamicState> dynamicStates = {
                 VK_DYNAMIC_STATE_VIEWPORT,
                 VK_DYNAMIC_STATE_SCISSOR,
-                VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY_EXT};
+                VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY_EXT,
+                VK_DYNAMIC_STATE_STENCIL_REFERENCE};
         dynamicState.dynamicStateCount = dynamicStates.size();
         dynamicState.pNext = nullptr;
         dynamicState.pDynamicStates = dynamicStates.data();
@@ -804,11 +867,40 @@ _NAMESPACE_BEGIN_
         fragmentStage.pName = "main";
         
         VkPipelineShaderStageCreateInfo stages[] = {vertexStage,fragmentStage};
+
+        VkPipelineDepthStencilStateCreateInfo depthStencilStateDesc {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+
+        depthStencilStateDesc.minDepthBounds = 0.f;
+        depthStencilStateDesc.maxDepthBounds = 1.f;
+        depthStencilStateDesc.pNext = nullptr;
+        
+        depthStencilStateDesc.depthBoundsTestEnable = (VkBool32)desc.depthAndStencilDesc.enableDepth;
+        depthStencilStateDesc.depthCompareOp = convertCompareFunc(desc.depthAndStencilDesc.depthOperation);
+        depthStencilStateDesc.depthWriteEnable = desc.depthAndStencilDesc.writeAmount == DepthWriteAmount::All ? VK_TRUE : VK_FALSE;
+        depthStencilStateDesc.depthTestEnable = (VkBool32)desc.depthAndStencilDesc.enableDepth;
+        depthStencilStateDesc.stencilTestEnable = (VkBool32)desc.depthAndStencilDesc.enableStencil;
+
+        depthStencilStateDesc.front.reference = 0;
+        depthStencilStateDesc.front.compareMask = desc.depthAndStencilDesc.stencilReadMask;
+        depthStencilStateDesc.front.compareOp = convertCompareFunc(desc.depthAndStencilDesc.frontFaceStencil.func);
+        depthStencilStateDesc.front.writeMask = desc.depthAndStencilDesc.stencilWriteMask;
+        depthStencilStateDesc.front.depthFailOp = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.depthFail);
+        depthStencilStateDesc.front.failOp = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.stencilFail);
+        depthStencilStateDesc.front.passOp = convertStencilOp(desc.depthAndStencilDesc.frontFaceStencil.pass);
+
+        depthStencilStateDesc.back.reference = 0;
+        depthStencilStateDesc.back.compareMask = desc.depthAndStencilDesc.stencilReadMask;
+        depthStencilStateDesc.back.compareOp = convertCompareFunc(desc.depthAndStencilDesc.backFaceStencil.func);
+        depthStencilStateDesc.back.writeMask = desc.depthAndStencilDesc.stencilWriteMask;
+        depthStencilStateDesc.back.depthFailOp = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.depthFail);
+        depthStencilStateDesc.back.failOp = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.stencilFail);
+        depthStencilStateDesc.back.passOp = convertStencilOp(desc.depthAndStencilDesc.backFaceStencil.pass);
         
         createInfo.pStages = stages;
         createInfo.stageCount = 2;
         createInfo.pDynamicState = &dynamicState;
         createInfo.pRasterizationState = &rasterState;
+        createInfo.pDepthStencilState = &depthStencilStateDesc;
 
         VkPipeline pipeline;
 

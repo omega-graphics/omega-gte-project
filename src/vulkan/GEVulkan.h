@@ -28,7 +28,7 @@ _NAMESPACE_BEGIN_
     #define VK_RESULT_SUCCEEDED(val) (val == VK_SUCCESS)
     class GEVulkanEngine : public OmegaGraphicsEngine {
 
-        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc) override;
+        SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) override;
 
         VkPipelineLayout createPipelineLayoutFromShaderDescs(unsigned shaderN,
                                                              omegasl_shader *shaders,

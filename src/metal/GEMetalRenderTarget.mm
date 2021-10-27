@@ -53,6 +53,10 @@ void GEMetalTextureRenderTarget::commit(){
     commandQueue->commitToGPU();
 };
 
+SharedHandle<GETexture> GEMetalTextureRenderTarget::underlyingTexture() {
+    return std::static_pointer_cast<GETexture>(texturePtr);
+}
+
 
 
 

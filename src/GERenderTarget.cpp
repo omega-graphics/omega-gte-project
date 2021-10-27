@@ -19,6 +19,14 @@ commandBuffer(std::move(commandBuffer)){
     
 };
 
+void *GERenderTarget::CommandBuffer::native() {
+    return commandBuffer->native();
+}
+
+void GERenderTarget::CommandBuffer::setName(OmegaCommon::StrRef name) {
+    commandBuffer->setName(name);
+}
+
 void GERenderTarget::CommandBuffer::startRenderPass(const GERenderTarget::RenderPassDesc & desc){
     GERenderPassDescriptor renderPassDesc;
     if(renderTargetTy == Native){

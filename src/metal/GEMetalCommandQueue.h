@@ -29,6 +29,15 @@ _NAMESPACE_BEGIN_
         void _commit();
     public:
         NSSmartPtr buffer;
+
+        void setName(OmegaCommon::StrRef name) override{
+            NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()).label = [[NSString alloc] initWithUTF8String:name.data()];
+        }
+
+        void *native() override {
+            return const_cast<void *>(buffer.handle());
+        };
+
         void startBlitPass() override;
         void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) override;
         void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest, const TextureRegion &region, const GPoint3D &destCoord) override;
@@ -43,6 +52,7 @@ _NAMESPACE_BEGIN_
         void bindResourceAtFragmentShader(SharedHandle<GETexture> &texture, unsigned id) override;
         void setViewports(std::vector<GEViewport> viewports) override;
         void setScissorRects(std::vector<GEScissorRect> scissorRects) override;
+        void setStencilRef(unsigned ref) override;
         void drawPolygons(RenderPassDrawPolygonType polygonType, unsigned vertexCount, size_t startIdx) override;
         void finishRenderPass() override;
         
@@ -71,6 +81,13 @@ _NAMESPACE_BEGIN_
         friend class GEMetalTextureRenderTarget;
         void commitToGPUAndPresent(NSSmartPtr & drawable);
     public:
+        void setName(OmegaCommon::StrRef name) override{
+            NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,commandQueue.handle()).label = [[NSString alloc] initWithUTF8String:name.data()];
+        }
+        void *native() override {
+            return const_cast<void *>(commandQueue.handle());
+        }
+
         SharedHandle<GECommandBuffer> getAvailableBuffer() override;
         GEMetalCommandQueue(NSSmartPtr & commandQueue,unsigned size);
         ~GEMetalCommandQueue() override;

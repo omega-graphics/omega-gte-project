@@ -36,7 +36,9 @@ _NAMESPACE_BEGIN_
 
         for(id<MTLDevice> dev in mtlDevices){
             GTEDeviceFeatures features {
-                    (bool)dev.supportsRaytracing
+                    (bool)dev.supportsRaytracing,
+                    (bool)[dev supportsTextureSampleCount:4],
+                    (bool)[dev supportsTextureSampleCount:8]
             };
             GTEDevice::Type type;
             if(dev.lowPower){
@@ -78,6 +80,10 @@ _NAMESPACE_BEGIN_
         metalBuffer.assertExists();
         return NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer.handle()).length;
     };
+
+    void GEMetalBuffer::setName(OmegaCommon::StrRef name) {
+        NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer.handle()).label = [[NSString alloc] initWithUTF8String:name.data()];
+    }
 
     GEMetalBuffer::~GEMetalBuffer(){
 
@@ -542,6 +548,7 @@ _NAMESPACE_BEGIN_
             auto & threadgroup_desc = desc.computeFunc->internal.threadgroupDesc;
 
             MTLComputePipelineDescriptor *pipelineDescriptor = [[MTLComputePipelineDescriptor alloc] init];
+            pipelineDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
             pipelineDescriptor.maxTotalThreadsPerThreadgroup = (threadgroup_desc.x * threadgroup_desc.y * threadgroup_desc.z);
 
 
@@ -580,6 +587,7 @@ _NAMESPACE_BEGIN_
         SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override{
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
+            pipelineDesc.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
 
             bool hasDepthStencilState = desc.depthAndStencilDesc.enableDepth || desc.depthAndStencilDesc.enableStencil;
             NSSmartPtr depthStencilState = NSObjectHandle{nullptr};
@@ -685,8 +693,9 @@ _NAMESPACE_BEGIN_
                     Shared,
                     GETexture::RenderTarget,
                     TexturePixelFormat::RGBA8Unorm,
-                    (unsigned int)desc.rect.w,
-                    (unsigned int)desc.rect.h,1};
+                    desc.region.w,
+                    desc.region.h,
+                    desc.region.d};
 
                 texture = makeTexture(textureDescriptor);
             }
@@ -773,6 +782,7 @@ _NAMESPACE_BEGIN_
 
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override {
             MTLSamplerDescriptor *mtlSamplerDescriptor = [[MTLSamplerDescriptor alloc] init];
+            mtlSamplerDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
 
             switch (desc.filter) {
                 case SamplerDescriptor::Filter::Linear : {

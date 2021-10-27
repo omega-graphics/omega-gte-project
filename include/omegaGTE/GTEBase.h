@@ -851,6 +851,17 @@ _NAMESPACE_BEGIN_
         CounterClockwise
     };
 
+    struct OMEGAGTE_EXPORT TextureRegion {
+        unsigned x,y,z;
+        unsigned w,h,d;
+    };
+
+    struct OMEGAGTE_EXPORT GTEResource {
+        virtual void setName(OmegaCommon::StrRef name) = 0;
+        /// @brief Retrieves the underlying native type of this resource.
+        virtual void *native() = 0;
+    };
+
 _NAMESPACE_END_
 
 #endif

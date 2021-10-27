@@ -15,7 +15,14 @@ class GEMetalTexture : public GETexture {
 
     friend class GEMetalCommandBuffer;
 public:
+    void setName(OmegaCommon::StrRef name) override {
+        NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,texture.handle()).label = [[NSString alloc] initWithUTF8String:name.data()];
+    }
+    void *native() override {
+        return const_cast<void *>(texture.handle());
+    }
     void copyBytes(void *bytes,size_t len) override;
+    size_t getBytes(void *bytes, size_t bytesPerRow) override;
     explicit GEMetalTexture(const GETexture::GETextureType &type,
                    const GETexture::GETextureUsage & usage,
                    const TexturePixelFormat & pixelFormat,

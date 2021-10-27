@@ -41,7 +41,7 @@ _NAMESPACE_BEGIN_
                 unsigned level,slice,depth;
             } mutlisampleResolveDesc;
         };
-        class OMEGAGTE_EXPORT CommandBuffer {
+        class OMEGAGTE_EXPORT CommandBuffer : public GTEResource {
             GERenderTarget *renderTargetPtr;
             SharedHandle<GECommandBuffer> commandBuffer;
             friend class GERenderTarget;
@@ -72,6 +72,10 @@ _NAMESPACE_BEGIN_
             CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer);
           
         public:
+
+            void setName(OmegaCommon::StrRef name) override;
+
+            void * native() override;
 
             /// @brief Start a Render Pass
             /// @param desc A RenderPassDesc describing the pass.
@@ -136,6 +140,7 @@ _NAMESPACE_BEGIN_
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;
         virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer) = 0;
+        virtual void *nativeCommandQueue() = 0;
     };
     class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {
         public:
@@ -149,6 +154,7 @@ _NAMESPACE_BEGIN_
      class  OMEGAGTE_EXPORT GETextureRenderTarget : public GERenderTarget {
          public:
          virtual void commit() = 0;
+         virtual SharedHandle<GETexture> underlyingTexture() = 0;
      };
 
 _NAMESPACE_END_

@@ -41,6 +41,7 @@ _NAMESPACE_BEGIN_
     struct GTEShader;
     struct GTEShaderLibrary;
     struct GTEDevice;
+    struct GETextureRegion;
     class GETexture;
     typedef struct __GEComputePipelineState GEComputePipelineState;
     typedef struct __GERenderPipelineState  GERenderPipelineState;
@@ -59,7 +60,7 @@ _NAMESPACE_BEGIN_
     struct TextureRenderTargetDescriptor {
         bool renderToExistingTexture = false;
         SharedHandle<GETexture> texture = nullptr;
-        GRect rect;
+        TextureRegion region;
     };
 
     /// @brief A 3D Space sized to fixed dimensions.
@@ -94,7 +95,7 @@ _NAMESPACE_BEGIN_
         StorageOpts opts = Shared;
     };
     /// @brief A GPU Buffer Resource
-    class  OMEGAGTE_EXPORT GEBuffer {
+    class  OMEGAGTE_EXPORT GEBuffer : public GTEResource {
     protected:
         BufferDescriptor::Usage usage;
         bool checkCanWrite();
@@ -137,6 +138,7 @@ _NAMESPACE_BEGIN_
 
     /// @brief Describes a Texture Sampler
     struct OMEGAGTE_EXPORT SamplerDescriptor {
+        OmegaCommon::StrRef name;
         enum class AddressMode  : int {
             Wrap,
             ClampToEdge,

@@ -12,7 +12,9 @@ _NAMESPACE_BEGIN_
         RGBA8Unorm_SRGB
     };
 
-    class  OMEGAGTE_EXPORT GETexture {
+    /**
+     * @brief A Buffer that contains texel data arranged in regular rows.*/
+    class  OMEGAGTE_EXPORT GETexture : public GTEResource {
     public:
         typedef enum : unsigned char {
             Texture1D,
@@ -37,13 +39,24 @@ _NAMESPACE_BEGIN_
                   const GETextureUsage & usage,
                   const TexturePixelFormat & pixelFormat);
     public:
+        /** @brief Upload data to the texture stored on the device from the CPU.
+         * @param[in] bytes A pointer to the buffer
+         * @param[in] bytesPerRow The bytes per row in the data.
+         * @paragraph
+         * This function can only be and should only be invoked if the texture has a `ToGPU` usage,
+         * and for initial upload of texture data.
+        */
         virtual void copyBytes(void *bytes,size_t bytesPerRow) = 0;
-        virtual ~GETexture() = default;
-    };
 
-    struct OMEGAGTE_EXPORT TextureRegion {
-        unsigned x,y,z;
-        unsigned w,h,d;
+        /** @brief Download data from the texture stored on the device to the CPU.
+         * @param[in,out] bytes A pointer to the buffer to receive the data. (Can be nullptr when querying data size)
+         * @param[out] bytesPerRow The bytes per row in the data.
+         * @returns The size of the buffer
+         * @paragraph
+         * This function can only be called if the texture has a `FromGPU` usage.
+        */
+        virtual size_t getBytes(void *bytes,size_t bytesPerRow) = 0;
+        virtual ~GETexture() = default;
     };
 
 

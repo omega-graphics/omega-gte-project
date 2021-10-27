@@ -19,6 +19,8 @@ _NAMESPACE_BEGIN_
  * */
 struct GTEDeviceFeatures {
     bool raytracing;
+    bool msaa4x;
+    bool msaa8x;
 };
 
 /**

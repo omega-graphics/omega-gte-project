@@ -21,6 +21,9 @@ public:
     CGSize drawableSize;
     SharedHandle<CommandBuffer> commandBuffer() override;
     NSSmartPtr & getDrawable();
+    void *nativeCommandQueue() override {
+        return commandQueue->native();
+    };
     void commitAndPresent() override;
     void reset();
     void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
@@ -32,6 +35,10 @@ public:
     GEMetalTextureRenderTarget(SharedHandle<GETexture> & texture,SharedHandle<GECommandQueue> & commandQueue);
     SharedHandle<GEMetalTexture> texturePtr;
     SharedHandle<CommandBuffer> commandBuffer() override;
+    void *nativeCommandQueue() override {
+        return commandQueue->native();
+    };
+    SharedHandle<GETexture> underlyingTexture() override;
     void commit() override;
     void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
 };

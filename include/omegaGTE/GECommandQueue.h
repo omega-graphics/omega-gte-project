@@ -33,7 +33,7 @@ _NAMESPACE_BEGIN_
     /**
      A Reusable interface for directly uploading commands to a GPU.
      */
-    class  OMEGAGTE_EXPORT GECommandBuffer {
+    class  OMEGAGTE_EXPORT GECommandBuffer : public GTEResource {
         friend class GERenderTarget::CommandBuffer;
     protected:
         typedef GERenderTarget::CommandBuffer::PolygonType RenderPassDrawPolygonType;
@@ -105,7 +105,8 @@ _NAMESPACE_BEGIN_
         virtual void reset() = 0;
         virtual ~GECommandBuffer(){};
     };
-    class  OMEGAGTE_EXPORT GECommandQueue {
+
+    class  OMEGAGTE_EXPORT GECommandQueue : public GTEResource {
         unsigned size;
     protected:
         unsigned currentlyOccupied = 0;

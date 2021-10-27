@@ -296,6 +296,11 @@ _NAMESPACE_BEGIN_
         auto s = metalRects.size();
         [rp setScissorRects:metalRects.data() count:s];
     };
+
+    void GEMetalCommandBuffer::setStencilRef(unsigned int ref) {
+        assert((rp && (cp == nil)) && "Cannot Draw Polygons when not in render pass");
+        [rp setStencilReferenceValue:ref];
+    }
     
     void GEMetalCommandBuffer::drawPolygons(RenderPassDrawPolygonType polygonType,unsigned vertexCount,size_t startIdx){
         assert((rp && (cp == nil)) && "Cannot Draw Polygons when not in render pass");

@@ -48,6 +48,7 @@ _NAMESPACE_BEGIN_
     };
 
     struct  OMEGAGTE_EXPORT RenderPipelineDescriptor {
+        OmegaCommon::StrRef name;
         SharedHandle<GTEShader> vertexFunc;
         SharedHandle<GTEShader> fragmentFunc;
         unsigned rasterSampleCount = 0;
@@ -72,6 +73,7 @@ _NAMESPACE_BEGIN_
     };
 
     struct  OMEGAGTE_EXPORT ComputePipelineDescriptor {
+        OmegaCommon::StrRef name;
         SharedHandle<GTEShader> computeFunc;
 
     };

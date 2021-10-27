@@ -38,9 +38,13 @@ public:
 
     bool needsBarrier = false;
 
-    size_t size();
+    size_t size() override;
+    void setName(OmegaCommon::StrRef name) override;
+    void *native() override {
+        return const_cast<void *>(metalBuffer.handle());
+    }
     GEMetalBuffer(const BufferDescriptor::Usage & usage,NSSmartPtr & buffer,NSSmartPtr & layoutDesc);
-    ~GEMetalBuffer();
+    ~GEMetalBuffer() override;
 };
 
 class GEMetalFence : public GEFence {
@@ -51,6 +55,10 @@ public:
 
 struct GEMetalSamplerState : public GESamplerState {
     NSSmartPtr samplerState;
+    void setName(OmegaCommon::StrRef name) override;
+    void *native() override {
+        return const_cast<void *>(samplerState.handle());
+    }
     GEMetalSamplerState(NSSmartPtr & samplerState);
 };
 

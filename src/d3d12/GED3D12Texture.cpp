@@ -11,12 +11,14 @@ GED3D12Texture::GED3D12Texture(const GETextureType & type,
                                ID3D12Resource *cpuSideRes,
                                ID3D12DescriptorHeap *descHeap,
                                ID3D12DescriptorHeap *rtvDescHeap,
+                               ID3D12DescriptorHeap *dsvDescHeap,
                                D3D12_RESOURCE_STATES & currentState):
                                 GETexture(type,usage,pixelFormat),
                                 resource(res),
                                 cpuSideresource(cpuSideRes),
                                srvDescHeap(descHeap),
                                rtvDescHeap(rtvDescHeap),
+                               dsvDescHeap(dsvDescHeap),
                                currentState(currentState){
     if(usage == GPUAccessOnly){
         onGpu = true;
@@ -113,6 +115,53 @@ void GED3D12Texture::copyBytes(void *bytes,size_t bytesPerRow){
     cpuSideresource->Unmap(0,nullptr);
     dev->Release();
 
+}
+
+size_t GED3D12Texture::getBytes(void *bytes, size_t bytesPerRow) {
+    assert(usage == FromGPU && "");
+    void *mem_ptr = nullptr;
+
+    auto desc = resource->GetDesc();
+
+    if(bytes != nullptr) {
+
+        HRESULT hr = cpuSideresource->Map(0, nullptr, &mem_ptr);
+        if (FAILED(hr)) {
+            DEBUG_STREAM("Failed to Map Memory Ptr to Texture");
+            exit(1);
+        }
+    }
+
+
+    D3D12_SUBRESOURCE_DATA subresourceData {};
+    subresourceData.pData = mem_ptr;
+    subresourceData.SlicePitch = (LONG_PTR)bytesPerRow * desc.Height;
+    subresourceData.RowPitch = (LONG_PTR)bytesPerRow;
+
+    ID3D12Device *dev;
+    cpuSideresource->GetDevice(__uuidof(*dev),(void **)&dev);
+
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint {};
+
+    UINT rows;
+    UINT64 rowSize;
+
+    UINT64 totalBytes;
+
+    dev->GetCopyableFootprints(&desc,0,1,0,&footprint,&rows,&rowSize,&totalBytes);
+
+    if(bytes != nullptr) {
+
+        D3D12_MEMCPY_DEST dest{((PBYTE) bytes) + footprint.Offset, footprint.Footprint.RowPitch,
+                               footprint.Footprint.RowPitch * rows};
+        MemcpySubresource(&dest, &subresourceData, rowSize, rows, 1);
+    }
+
+    if(bytes != nullptr) {
+        cpuSideresource->Unmap(0, nullptr);
+    }
+    dev->Release();
+    return totalBytes;
 }
 
     bool GED3D12Texture::needsValidation() {

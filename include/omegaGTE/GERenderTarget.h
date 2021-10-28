@@ -35,6 +35,19 @@ _NAMESPACE_BEGIN_
                 ClearColor clearColor;
                 ColorAttachment(ClearColor clearColor,LoadAction loadAction);
             };
+            struct OMEGAGTE_EXPORT DepthStencilAttachment {
+                bool disabled = true;
+                typedef enum {
+                    Load,
+                    LoadPreserve,
+                    Clear,
+                    Discard
+                } LoadAction;
+                LoadAction depthloadAction = Discard;
+                LoadAction stencilLoadAction = Discard;
+                float clearDepth = 1.f;
+                unsigned clearStencil = 0;
+            } depthStencilAttachment;
             ColorAttachment * colorAttachment;
             struct OMEGAGTE_EXPORT MultisampleResolveDesc {
                 SharedHandle<GETexture> multiSampleTextureSrc = nullptr;

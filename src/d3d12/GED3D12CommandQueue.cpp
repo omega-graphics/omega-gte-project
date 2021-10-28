@@ -205,13 +205,24 @@ _NAMESPACE_BEGIN_
         inRenderPass = true;
         assert(!inComputePass && "Cannot start a Render Pass while in a compute pass.");
         D3D12_RENDER_PASS_RENDER_TARGET_DESC rt_desc;
+        D3D12_RENDER_PASS_DEPTH_STENCIL_DESC ds_desc;
+
+        D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_PARAMETERS resolveParams;
+
         CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE ds_cpu_handle;
 
         if(desc.nRenderTarget) {
             auto *nativeRenderTarget = (GED3D12NativeRenderTarget *)desc.nRenderTarget;
             if(desc.multisampleResolve){
+                multisampleResolvePass = true;
                 auto resolveTexture = (GED3D12Texture *)desc.resolveDesc.multiSampleTextureSrc.get();
                 cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(resolveTexture->rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+
+                if(!desc.depthStencilAttachment.disabled){
+                    ds_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(resolveTexture->dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                }
+
                 D3D12_RESOURCE_STATES resource_state;
                 if(firstRenderPass) {
                     resource_state = D3D12_RESOURCE_STATE_PRESENT;
@@ -219,14 +230,35 @@ _NAMESPACE_BEGIN_
                 else {
                     resource_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
                 }
+
                 auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
                         nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex], resource_state,
                         D3D12_RESOURCE_STATE_RESOLVE_DEST);
                 commandList->ResourceBarrier(1, &barrier);
+
+                auto dxgi_format = nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex]->GetDesc().Format;
+                RECT rc;
+                GetClientRect(nativeRenderTarget->hwnd,&rc);
+                resolveParams.pSrcResource = resolveTexture->resource.Get();
+                resolveParams.SubresourceCount = 1;
+                resolveParams.PreserveResolveSource = TRUE;
+                resolveParams.pDstResource = nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex];
+                D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS params;
+                params.DstSubresource = 0;
+                params.SrcSubresource = 0;
+                params.DstX = 0;
+                params.DstY = 0;
+                params.SrcRect = CD3DX12_RECT(rc.left,rc.top,rc.right,rc.bottom);
+                resolveParams.pSubresourceParameters = &params;
+                resolveParams.Format = dxgi_format;
+                resolveParams.ResolveMode = D3D12_RESOLVE_MODE_MAX;
             }
             else {
                 cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
-                        nativeRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
+                        nativeRenderTarget->rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                if(!desc.depthStencilAttachment.disabled){
+                    ds_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(nativeRenderTarget->dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                }
                 if(firstRenderPass) {
                     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
                             nativeRenderTarget->renderTargets[nativeRenderTarget->frameIndex],
@@ -240,47 +272,149 @@ _NAMESPACE_BEGIN_
         }
         else if(desc.tRenderTarget){
             auto *textureRenderTarget = (GED3D12TextureRenderTarget *)desc.tRenderTarget;
-            cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(textureRenderTarget->descriptorHeapForRenderTarget->GetCPUDescriptorHandleForHeapStart());
+            if(desc.multisampleResolve){
+                auto resolveTexture = (GED3D12Texture *)desc.resolveDesc.multiSampleTextureSrc.get();
+                cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                        resolveTexture->rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                if(!desc.depthStencilAttachment.disabled){
+                    ds_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(resolveTexture->dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                }
+
+                auto currentState = resolveTexture->currentState;
+
+                auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+                        textureRenderTarget->texture->resource.Get(),currentState,
+                        D3D12_RESOURCE_STATE_RESOLVE_DEST);
+                commandList->ResourceBarrier(1, &barrier);
+                resolveTexture->currentState = D3D12_RESOURCE_STATE_RESOLVE_DEST;
+
+                auto desc = textureRenderTarget->texture->resource->GetDesc();
+                auto dxgi_format = desc.Format;
+
+                resolveParams.pSrcResource = resolveTexture->resource.Get();
+                resolveParams.SubresourceCount = 1;
+                resolveParams.PreserveResolveSource = TRUE;
+                resolveParams.pDstResource = textureRenderTarget->texture->resource.Get();
+                D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS params;
+                params.DstSubresource = 0;
+                params.SrcSubresource = 0;
+                params.DstX = 0;
+                params.DstY = 0;
+                params.SrcRect = CD3DX12_RECT(0,0,desc.Width,desc.Height);
+                resolveParams.pSubresourceParameters = &params;
+                resolveParams.Format = dxgi_format;
+                resolveParams.ResolveMode = D3D12_RESOLVE_MODE_MAX;
+            }
+            else {
+                cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                        textureRenderTarget->texture->rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                if(!desc.depthStencilAttachment.disabled){
+                    ds_cpu_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(textureRenderTarget->texture->dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
+                }
+            }
             currentTarget.texture = textureRenderTarget;
         };
         rt_desc.cpuDescriptor = cpu_handle;
+        ds_desc.cpuDescriptor = ds_cpu_handle;
+
+        if(desc.multisampleResolve){
+            rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+            rt_desc.EndingAccess.Resolve = resolveParams;
+        }
+
         switch (desc.colorAttachment->loadAction) {
             case GERenderPassDescriptor::ColorAttachment::Load : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-                rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+                if(!desc.multisampleResolve)
+                    rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
                 break;
             }
             case GERenderPassDescriptor::ColorAttachment::LoadPreserve : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-                rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                if(!desc.multisampleResolve)
+                    rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
                 break;
             }
             case GERenderPassDescriptor::ColorAttachment::Discard : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-                rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+                if(!desc.multisampleResolve)
+                    rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
                 break;
             }
             case GERenderPassDescriptor::ColorAttachment::Clear : {
                 rt_desc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-                std::initializer_list<FLOAT> colors = {desc.colorAttachment->clearColor.r,desc.colorAttachment->clearColor.g,desc.colorAttachment->clearColor.b,desc.colorAttachment->clearColor.a};
-                rt_desc.BeginningAccess.Clear.ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM,colors.begin());
+                const FLOAT colors[] = {desc.colorAttachment->clearColor.r,desc.colorAttachment->clearColor.g,desc.colorAttachment->clearColor.b,desc.colorAttachment->clearColor.a};
+                rt_desc.BeginningAccess.Clear.ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM,colors);
                 /// Same as StoreAction in Metal
-                rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                if(!desc.multisampleResolve)
+                    rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
                 break;
             }
         }
 
-        hasMultisampleDesc = desc.multisampleResolve;
-        if(desc.multisampleResolve){
-            typedef decltype(desc.resolveDesc) MSResolveDesc;
-            multisampleResolveDesc = new MSResolveDesc;
-            memcpy_s(multisampleResolveDesc,sizeof(MSResolveDesc),&desc.resolveDesc,sizeof(MSResolveDesc));
+
+        if(desc.depthStencilAttachment.disabled){
+            commandList->BeginRenderPass(1,&rt_desc,nullptr,D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
         }
-        
-        commandList->BeginRenderPass(1,&rt_desc,nullptr,D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+        else {
+
+            if(desc.multisampleResolve){
+                ds_desc.DepthEndingAccess.Type = ds_desc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+                resolveParams.Format = DXGI_FORMAT_UNKNOWN;
+                ds_desc.DepthEndingAccess.Resolve = ds_desc.StencilEndingAccess.Resolve = resolveParams;
+            }
+
+            switch (desc.depthStencilAttachment.depthloadAction) {
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::Load: {
+                    ds_desc.DepthBeginningAccess.Type = ds_desc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+                    if(!desc.multisampleResolve)
+                        ds_desc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::LoadPreserve : {
+                    ds_desc.DepthBeginningAccess.Type = ds_desc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+                    if(!desc.multisampleResolve)
+                        ds_desc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::Clear: {
+                    ds_desc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+                    ds_desc.DepthBeginningAccess.Clear.ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_UNKNOWN,desc.depthStencilAttachment.clearDepth,desc.depthStencilAttachment.clearStencil);
+                    if(!desc.multisampleResolve)
+                        ds_desc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                    break;
+                }
+            }
+
+            switch (desc.depthStencilAttachment.stencilLoadAction) {
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::Load: {
+                    ds_desc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+                    if(!desc.multisampleResolve)
+                        ds_desc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::LoadPreserve : {
+                    ds_desc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+                    if(!desc.multisampleResolve)
+                        ds_desc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadAction::Clear: {
+                    ds_desc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+                    ds_desc.StencilBeginningAccess.Clear.ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_UNKNOWN,desc.depthStencilAttachment.clearDepth,desc.depthStencilAttachment.clearStencil);
+                    if(!desc.multisampleResolve)
+                        ds_desc.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                    break;
+                }
+            }
+
+            commandList->BeginRenderPass(1,&rt_desc,&ds_desc,D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+        }
+
         if(firstRenderPass){
             firstRenderPass = false;
         }
+
     };
 
     void GED3D12CommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState){
@@ -450,7 +584,7 @@ _NAMESPACE_BEGIN_
             else {
                 rect.pos.x = 0;
                 rect.pos.y = 0;
-                auto res_desc = currentTarget.texture->renderTargetView->GetDesc();
+                auto res_desc = currentTarget.texture->texture->resource->GetDesc();
                 rect.w = (float)res_desc.Width;
                 rect.h = (float)res_desc.Height;
             }
@@ -480,7 +614,7 @@ _NAMESPACE_BEGIN_
             else {
                 rect.pos.x = 0;
                 rect.pos.y = 0;
-                auto res_desc = currentTarget.texture->renderTargetView->GetDesc();
+                auto res_desc = currentTarget.texture->texture->resource->GetDesc();
                 rect.w = (float)res_desc.Width;
                 rect.h = (float)res_desc.Height;
             }
@@ -520,33 +654,19 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::finishRenderPass(){
         assert(inRenderPass && "");
         commandList->EndRenderPass();
-        if(hasMultisampleDesc) {
-            ID3D12Resource *destTarget;
+        commandList->ClearState(nullptr);
+
+        if(multisampleResolvePass){
+            ID3D12Resource *target;
             if(currentTarget.native != nullptr){
-                destTarget = currentTarget.native->renderTargets[currentTarget.native->frameIndex];
+                target = currentTarget.native->renderTargets[currentTarget.native->frameIndex];
             }
             else {
-                destTarget = currentTarget.texture->renderTargetView.Get();
+                target = currentTarget.texture->texture->resource.Get();
             }
-            auto destTargetDesc = destTarget->GetDesc();
-            auto resolveTexture = ((GED3D12Texture *)multisampleResolveDesc->multiSampleTextureSrc.get())->resource.Get();
-            auto resolveTextureDesc = resolveTexture->GetDesc();
-
-            D3D12_RESOURCE_BARRIER
-            barrierA = CD3DX12_RESOURCE_BARRIER::Transition(resolveTexture,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
-            barrierB = CD3DX12_RESOURCE_BARRIER::Transition(destTarget,D3D12_RESOURCE_STATE_RENDER_TARGET,D3D12_RESOURCE_STATE_RESOLVE_DEST);
-            D3D12_RESOURCE_BARRIER barriers[] = {barrierA,barrierB};
-            commandList->ResourceBarrier(2,barriers);
-            commandList->ResolveSubresource(destTarget,
-                                            D3D12CalcSubresource(0,0,0,destTargetDesc.MipLevels,destTargetDesc.DepthOrArraySize),
-                                            resolveTexture,
-                                            D3D12CalcSubresource(multisampleResolveDesc->slice,0,multisampleResolveDesc->level,resolveTextureDesc.MipLevels,resolveTextureDesc.DepthOrArraySize),DXGI_FORMAT_R8G8B8A8_UNORM);
-            barrierA = CD3DX12_RESOURCE_BARRIER::Transition(destTarget,D3D12_RESOURCE_STATE_RESOLVE_DEST,D3D12_RESOURCE_STATE_RENDER_TARGET);
-            commandList->ResourceBarrier(1,&barrierA);
-            hasMultisampleDesc = false;
-            delete multisampleResolveDesc;
+            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(target,D3D12_RESOURCE_STATE_RESOLVE_DEST,D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandList->ResourceBarrier(1,&barrier);
         }
-        commandList->ClearState(nullptr);
 
         currentTarget.texture = nullptr;
         currentTarget.native = nullptr;

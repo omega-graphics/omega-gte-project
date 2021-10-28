@@ -606,6 +606,11 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         
         d.RasterizerState.FillMode = fillMode;
         d.RasterizerState.ForcedSampleCount = desc.rasterSampleCount;
+        d.RasterizerState.FrontCounterClockwise = desc.polygonFrontFaceRotation == GTEPolygonFrontFaceRotation::CounterClockwise? TRUE : FALSE;
+        d.RasterizerState.DepthBias = (INT)desc.depthAndStencilDesc.depthBias;
+        d.RasterizerState.SlopeScaledDepthBias = desc.depthAndStencilDesc.slopeScale;
+        d.RasterizerState.DepthBiasClamp = desc.depthAndStencilDesc.depthClamp;
+
         d.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         d.DepthStencilState.StencilEnable = desc.depthAndStencilDesc.enableStencil;
         d.DepthStencilState.DepthEnable = desc.depthAndStencilDesc.enableDepth;
@@ -644,6 +649,8 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             MessageBoxA(GetForegroundWindow(),"Failed to Create Pipeline State","NOTE",MB_OK);
             exit(1);
         };
+        ATL::CStringW wstr(desc.name.data());
+        state->SetName(wstr);
         return SharedHandle<GERenderPipelineState>(new GED3D12RenderPipelineState(desc.vertexFunc,desc.fragmentFunc,state,signature,rootSigDesc));
     };
     SharedHandle<GEComputePipelineState> GED3D12Engine::makeComputePipelineState(ComputePipelineDescriptor &desc){
@@ -674,6 +681,8 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         if(FAILED(hr)){
             DEBUG_STREAM("Failed to Create Compute Pipeline State");
         }
+        ATL::CStringW wstr(desc.name.data());
+        state->SetName(wstr);
         return SharedHandle<GEComputePipelineState>(new GED3D12ComputePipelineState(desc.computeFunc,state,signature,rootSignatureDesc1));
     };
 
@@ -682,6 +691,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         /// Swap Chain must have 2 Frames
         auto rtv_desc_size = d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        auto dsv_desc_Size = d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
         
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc;
         heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -691,9 +701,21 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         ID3D12DescriptorHeap *renderTargetHeap;
         hr = d3d12_device->CreateDescriptorHeap(&heap_desc,IID_PPV_ARGS(&renderTargetHeap));
         if(FAILED(hr)){
-             MessageBoxA(GetForegroundWindow(),"Failed to Create Descriptor Heap","NOTE",MB_OK);
+             DEBUG_STREAM("Failed to Create RTV Desc Heap");
             exit(1);
         };
+
+        ID3D12DescriptorHeap *dsvDescHeap = nullptr;
+
+        if(desc.allowDepthStencilTesting){
+            heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+            hr = d3d12_device->CreateDescriptorHeap(&heap_desc,IID_PPV_ARGS(&dsvDescHeap));
+
+            if(FAILED(hr)){
+                DEBUG_STREAM("Failed to Create DSV Desc Heap");
+                exit(1);
+            };
+        }
 
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_cpu_handle (renderTargetHeap->GetCPUDescriptorHandleForHeapStart());
         
@@ -720,6 +742,11 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         std::vector<ID3D12Resource *> rtvs;
 
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsv_cpu_handle;
+        if(desc.allowDepthStencilTesting) {
+            dsv_cpu_handle = dsvDescHeap->GetCPUDescriptorHandleForHeapStart();
+        }
+
         for(unsigned i = 0;i < 2;i++){
             rtvs.resize(i + 1);
             hr = swapChain->GetBuffer(i,IID_PPV_ARGS(&rtvs[i]));
@@ -728,11 +755,15 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             };
             d3d12_device->CreateRenderTargetView(rtvs[i],nullptr,rtv_cpu_handle);
             rtv_cpu_handle.Offset(1,rtv_desc_size);
+            if(desc.allowDepthStencilTesting){
+                d3d12_device->CreateDepthStencilView(rtvs[i],nullptr,dsv_cpu_handle);
+                dsv_cpu_handle.Offset(1,dsv_desc_Size);
+            }
         };
 
         
 
-        return SharedHandle<GENativeRenderTarget>(new GED3D12NativeRenderTarget(swapChain,renderTargetHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size(),desc.hwnd));
+        return SharedHandle<GENativeRenderTarget>(new GED3D12NativeRenderTarget(swapChain,renderTargetHeap,dsvDescHeap,std::move(commandQueue),swapChain->GetCurrentBackBufferIndex(),rtvs.data(),rtvs.size(),desc.hwnd));
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
@@ -750,9 +781,16 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_view_desc;
+        D3D12_DEPTH_STENCIL_VIEW_DESC dsv_view_desc;
 
         bool isUAV = bool(desc.usage == GETexture::FromGPU || desc.usage == GETexture::GPUAccessOnly);
         bool isSRV = bool(desc.usage == GETexture::ToGPU || desc.usage == GETexture::GPUAccessOnly);
+        bool isDSV =  bool(desc.usage == GETexture::RenderTargetAndDepthStencil || desc.usage == GETexture::GPUAccessOnly);
+
+        if(desc.usage == GETexture::RenderTargetAndDepthStencil && desc.type == GETexture::Texture3D){
+            DEBUG_STREAM("Cannot create a 3D Texture with Depth Stencil Properties");
+            return nullptr;
+        }
 
         DXGI_FORMAT dxgiFormat;
         switch (desc.pixelFormat) {
@@ -773,6 +811,9 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         if(desc.usage == GETexture::RenderTarget){
             res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET;
         }
+        else if(desc.usage == GETexture::RenderTargetAndDepthStencil){
+            res_states |= D3D12_RESOURCE_STATE_RENDER_TARGET | D3D12_RESOURCE_STATE_DEPTH_READ | D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        }
         else if(desc.usage == GETexture::ToGPU){
             res_states |= D3D12_RESOURCE_STATE_GENERIC_READ;
         }   
@@ -792,6 +833,11 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             res_view_desc.Format = dxgiFormat;
         }
 
+        if(isDSV){
+            dsv_view_desc.Format = dxgiFormat;
+            dsv_view_desc.Flags = D3D12_DSV_FLAG_NONE;
+        }
+
         D3D12_RENDER_TARGET_VIEW_DESC view_desc {};
         if(desc.type == GETexture::Texture1D){
             d3d12_desc = CD3DX12_RESOURCE_DESC::Tex1D(dxgiFormat,desc.width,1,desc.mipLevels);
@@ -803,6 +849,11 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             if(isSRV) {
                 res_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
                 res_view_desc.Texture1D.MipLevels = desc.mipLevels;
+            }
+
+            if(isDSV){
+                dsv_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1D;
+                dsv_view_desc.Texture1D.MipSlice = desc.mipLevels;
             }
 
         }
@@ -827,6 +878,15 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                 res_view_desc.Texture2D.MostDetailedMip = desc.mipLevels - 1;
                 res_view_desc.Texture2D.PlaneSlice = 0;
                 res_view_desc.Texture2D.ResourceMinLODClamp = desc.mipLevels - 1;
+            }
+
+            if(isDSV){
+                if (desc.sampleCount > 1) {
+                    dsv_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+                } else {
+                    dsv_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+                }
+                dsv_view_desc.Texture2D.MipSlice = desc.mipLevels;
             }
 
 
@@ -951,18 +1011,31 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         }
 
-        if(desc.usage == GETexture::RenderTarget){
+        if(desc.usage == GETexture::RenderTarget || desc.usage == GETexture::RenderTargetAndDepthStencil){
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         
             hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&rtvDescHeap));
             if(FAILED(hr)){
-
+                DEBUG_STREAM("Failed to Create RTV Desc Heap");
             };
 
             d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
         };
 
-        return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,cpuSideRes,descHeap,rtvDescHeap,res_states));
+        ID3D12DescriptorHeap *dsvDescHeap = nullptr;
+
+        if(isDSV && desc.type != GETexture::Texture3D){
+            descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+
+            hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&dsvDescHeap));
+            if(FAILED(hr)){
+                DEBUG_STREAM("Failed to Create DSV Desc Heap");
+            }
+
+            d3d12_device->CreateDepthStencilView(texture,&dsv_view_desc,dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
+        }
+
+        return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,cpuSideRes,descHeap,rtvDescHeap,dsvDescHeap,res_states));
     };
 
     SharedHandle<GEBuffer> GED3D12Engine::makeBuffer(const BufferDescriptor &desc){
@@ -1224,6 +1297,9 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         samplerDesc.MaxAnisotropy = desc.maxAnisotropy;
         
         d3d12_device->CreateSampler(&samplerDesc,descHeap->GetCPUDescriptorHandleForHeapStart());
+
+        ATL::CStringW wstr(desc.name.data());
+        descHeap->SetName(wstr.GetString());
 
         return SharedHandle<GESamplerState>(new GED3D12SamplerState(descHeap,samplerDesc));
     }

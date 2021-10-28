@@ -9,6 +9,7 @@ _NAMESPACE_BEGIN_
 class GED3D12Texture : public GETexture {
 public:
     void copyBytes(void *bytes, size_t len) override;
+    size_t getBytes(void *bytes, size_t bytesPerRow) override;
 
     bool onGpu;
 
@@ -17,6 +18,7 @@ public:
     ComPtr<ID3D12Resource> cpuSideresource;
     ComPtr<ID3D12DescriptorHeap> srvDescHeap;
     ComPtr<ID3D12DescriptorHeap> rtvDescHeap;
+    ComPtr<ID3D12DescriptorHeap> dsvDescHeap;
 
     D3D12_RESOURCE_STATES currentState;
 
@@ -26,6 +28,15 @@ public:
     void updateAndValidateStatus(ID3D12GraphicsCommandList *commandList);
     bool needsValidation();
 
+    void setName(OmegaCommon::StrRef name) override{
+        ATL::CStringW wstr(name.data());
+        resource->SetName(wstr);
+    }
+
+    void *native() override {
+        return (void *)resource.Get();
+    }
+
     explicit GED3D12Texture(
             const GETextureType & type,
             const GETextureUsage & usage,
@@ -34,6 +45,7 @@ public:
             ID3D12Resource *cpuSideRes,
             ID3D12DescriptorHeap *descHeap,
             ID3D12DescriptorHeap *rtvDescHeap,
+            ID3D12DescriptorHeap *dsvDescHeap,
             D3D12_RESOURCE_STATES & currentState);
 };
 

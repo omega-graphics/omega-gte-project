@@ -19,9 +19,6 @@ _NAMESPACE_BEGIN_
         bool firstRenderPass = true;
         bool closed = false;
 
-        bool hasMultisampleDesc;
-        GERenderTarget::RenderPassDesc::MultisampleResolveDesc *multisampleResolveDesc = nullptr;
-
         friend class GED3D12CommandQueue;
 
         struct {
@@ -39,6 +36,17 @@ _NAMESPACE_BEGIN_
        unsigned getRootParameterIndexOfResource(unsigned id,omegasl_shader &shader);
        D3D12_RESOURCE_STATES getRequiredResourceStateForResourceID(unsigned & id,omegasl_shader &shader);
     public:
+
+        bool multisampleResolvePass = false;
+
+        void setName(OmegaCommon::StrRef name) override{
+            ATL::CStringW wstr(name.data());
+            commandList->SetName(wstr.GetString());
+        }
+
+        void *native() override {
+            return (void *)commandList.Get();
+        }
 
         void startBlitPass() override;
         void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest) override;
@@ -88,6 +96,14 @@ _NAMESPACE_BEGIN_
         friend class GED3D12Engine;
         friend class GED3D12CommandBuffer;
     public:
+        void setName(OmegaCommon::StrRef name) override{
+            ATL::CStringW wstr(name.data());
+            commandQueue->SetName(wstr);
+        }
+
+        void *native() override {
+            return (void *)commandQueue.Get();
+        }
         ID3D12GraphicsCommandList6 * getLastCommandList();
         void commitToGPU() override;
         void commitToGPUAndWait() override;

@@ -19,7 +19,9 @@ _NAMESPACE_BEGIN_
         GENativeRenderTarget *nRenderTarget = nullptr;
         GETextureRenderTarget *tRenderTarget = nullptr;
         typedef GERenderTarget::RenderPassDesc::ColorAttachment ColorAttachment;
+        typedef GERenderTarget::RenderPassDesc::DepthStencilAttachment DepthStencilAttachment;
         ColorAttachment *colorAttachment;
+        DepthStencilAttachment depthStencilAttachment;
         bool multisampleResolve = false;
         typedef GERenderTarget::RenderPassDesc::MultisampleResolveDesc MultisampleResolveDesc;
         MultisampleResolveDesc resolveDesc;

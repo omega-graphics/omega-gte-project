@@ -7,6 +7,7 @@
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
 #include <iostream>
+#include <atlstr.h>
 
 #include <wrl.h>
 
@@ -29,6 +30,15 @@ _NAMESPACE_BEGIN_
         ComPtr<ID3D12DescriptorHeap> bufferDescHeap;
 
         D3D12_RESOURCE_STATES currentState;
+
+        void setName(OmegaCommon::StrRef name) override{
+            ATL::CStringW wstr(name.data());
+            buffer->SetName(wstr);
+        }
+
+        void *native() override {
+            return (void *)buffer.Get();
+        }
 
         size_t size() override{
             return buffer->GetDesc().Width;

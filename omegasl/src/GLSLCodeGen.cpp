@@ -75,6 +75,12 @@ namespace omegasl {
             else if(t == ast::builtins::uint_type){
                 out << "uint";
             }
+            else if(t == ast::builtins::uint2_type){
+                out << "uvec2";
+            }
+            else if(t == ast::builtins::uint3_type){
+                out << "uvec3";
+            }
             else {
                 out << t->name;
             }

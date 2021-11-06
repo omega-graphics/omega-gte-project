@@ -113,6 +113,9 @@ _NAMESPACE_BEGIN_
                 renderTarget =  NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,metalDrawable.handle()).texture;
             }
             renderPassDesc.colorAttachments[0].texture =renderTarget;
+            if(!desc.depthStencilAttachment.disabled){
+                renderPassDesc.depthAttachment.texture = renderPassDesc.stencilAttachment.texture = renderTarget;
+            }
         }
         else if(desc.tRenderTarget){
             auto *t_rt = (GEMetalTextureRenderTarget *)desc.tRenderTarget;
@@ -132,6 +135,9 @@ _NAMESPACE_BEGIN_
             renderPassDesc.renderTargetWidth = renderTarget.width;
             renderPassDesc.renderTargetHeight = renderTarget.height;
             renderPassDesc.colorAttachments[0].texture = renderTarget;
+            if(!desc.depthStencilAttachment.disabled){
+                renderPassDesc.depthAttachment.texture = renderPassDesc.stencilAttachment.texture = renderTarget;
+            }
         }
         else {
             DEBUG_STREAM("Failed to Create GERenderPass");
@@ -169,6 +175,56 @@ _NAMESPACE_BEGIN_
                 break;
             }
         }
+
+        if(!desc.depthStencilAttachment.disabled){
+            renderPassDesc.depthAttachment.clearDepth = (double)desc.depthStencilAttachment.clearDepth;
+            renderPassDesc.stencilAttachment.clearStencil = desc.depthStencilAttachment.clearStencil;
+            switch (desc.depthStencilAttachment.depthloadAction) {
+                case GERenderPassDescriptor::DepthStencilAttachment::Load : {
+                    renderPassDesc.depthAttachment.loadAction = MTLLoadActionLoad;
+                    renderPassDesc.depthAttachment.storeAction = MTLStoreActionDontCare;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadPreserve : {
+                    renderPassDesc.depthAttachment.loadAction = MTLLoadActionLoad;
+                    renderPassDesc.depthAttachment.storeAction = MTLStoreActionStore;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::Clear : {
+                    renderPassDesc.depthAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDesc.depthAttachment.storeAction = MTLStoreActionStore;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::Discard : {
+                    renderPassDesc.depthAttachment.loadAction = MTLLoadActionDontCare;
+                    renderPassDesc.depthAttachment.storeAction = MTLStoreActionDontCare;
+                     break;
+                }
+            }
+            switch (desc.depthStencilAttachment.stencilLoadAction) {
+                case GERenderPassDescriptor::DepthStencilAttachment::Load : {
+                    renderPassDesc.stencilAttachment.loadAction = MTLLoadActionLoad;
+                    renderPassDesc.stencilAttachment.storeAction = MTLStoreActionDontCare;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::LoadPreserve : {
+                    renderPassDesc.stencilAttachment.loadAction = MTLLoadActionLoad;
+                    renderPassDesc.stencilAttachment.storeAction = MTLStoreActionStore;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::Clear : {
+                    renderPassDesc.stencilAttachment.loadAction = MTLLoadActionClear;
+                    renderPassDesc.stencilAttachment.storeAction = MTLStoreActionStore;
+                    break;
+                }
+                case GERenderPassDescriptor::DepthStencilAttachment::Discard : {
+                    renderPassDesc.stencilAttachment.loadAction = MTLLoadActionDontCare;
+                    renderPassDesc.stencilAttachment.storeAction = MTLStoreActionDontCare;
+                    break;
+                }
+            }
+        }
+
         rp = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) renderCommandEncoderWithDescriptor:renderPassDesc];
         if(needsBarrier){
             /// Ensure texture is ready to render to when fragment stage begins.

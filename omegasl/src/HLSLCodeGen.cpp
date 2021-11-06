@@ -168,6 +168,12 @@ namespace omegasl {
             else if(_ty == ast::builtins::uint_type){
                 out << "uint";
             }
+            else if(_ty == ast::builtins::uint2_type){
+                out << "uint2";
+            }
+            else if(_ty == ast::builtins::uint3_type){
+                out << "uint3";
+            }
             else {
                 out << _ty->name;
             }
@@ -427,6 +433,15 @@ namespace omegasl {
                         if(p_it->attributeName.has_value()){
                             if(p_it->attributeName.value() == ATTRIBUTE_VERTEX_ID){
                                 shaderDesc.vertexShaderInputDesc.useVertexID = true;
+                            }
+                            else if(p_it->attributeName.value() == ATTRIBUTE_GLOBALTHREAD_ID){
+                                shaderDesc.computeShaderParamsDesc.useGlobalThreadID = true;
+                            }
+                            else if(p_it->attributeName.value() == ATTRIBUTE_LOCALTHREAD_ID){
+                                shaderDesc.computeShaderParamsDesc.useLocalThreadID = true;
+                            }
+                            else if(p_it->attributeName.value() == ATTRIBUTE_THREADGROUP_ID){
+                                shaderDesc.computeShaderParamsDesc.useThreadGroupID = true;
                             }
                             shaderOut << ":";
                             writeAttribute(p_it->attributeName.value(),shaderOut);

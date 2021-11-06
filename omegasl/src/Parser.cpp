@@ -896,6 +896,8 @@ namespace omegasl {
                         }
                     }
 
+                    unsigned paramIndex = 0;
+
                     for(auto & p : _decl->params){
                         auto p_type = resolveTypeWithExpr(p.typeExpr);
                         if(p_type == nullptr){
@@ -909,18 +911,28 @@ namespace omegasl {
                         }
 
                         if(p.attributeName.has_value()){
-                            if(p.attributeName == ATTRIBUTE_VERTEX_ID){
-                                if(shaderType != ast::ShaderDecl::Vertex){
-                                    std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " in this context." << std::endl;
+                            AttributeContext context = shaderType == ast::ShaderDecl::Vertex? AttributeContext::VertexShaderArgument : shaderType == ast::ShaderDecl::Fragment? AttributeContext::FragmentShaderArgument : AttributeContext::ComputeShaderArgument;
+                            if(!isValidAttributeInContext(p.attributeName.value(),context)){
+                                std::cout << "Attribute `" << p.attributeName.value() << "` is not valid in parameter context." << std::endl;
+                                return false;
+                            }
+                            if(shaderType == ast::ShaderDecl::Compute){
+                                if(p.attributeName.value() == ATTRIBUTE_GLOBALTHREAD_ID && paramIndex != 0){
+                                    std::cout << "Attribute `" << ATTRIBUTE_GLOBALTHREAD_ID << "` must be the first parameter in a compute shader" << std::endl;
                                     return false;
                                 }
-                                else if(_decl->params.size() > 1){
-                                    std::cout << "Cannot use " << ATTRIBUTE_VERTEX_ID << " in this context. (When using this attribute on a parameter, there may be only one parameter for the parent function.)" << std::endl;
+                                else if(p.attributeName.value() == ATTRIBUTE_LOCALTHREAD_ID && paramIndex != 1){
+                                    std::cout << "Attribute `" << ATTRIBUTE_LOCALTHREAD_ID << "` must be the second parameter in a compute shader" << std::endl;
+                                    return false;
+                                }
+                                else if(p.attributeName.value() == ATTRIBUTE_THREADGROUP_ID && paramIndex != 2){
+                                    std::cout << "Attribute `" << ATTRIBUTE_THREADGROUP_ID << "` must be the last parameter in a compute shader" << std::endl;
                                     return false;
                                 }
                             }
                         }
                         currentContext->variableMap.insert(std::make_pair(p.name,p.typeExpr));
+                        paramIndex += 1;
                     }
 
                     /// 3. Check function block.
@@ -930,11 +942,29 @@ namespace omegasl {
                         return false;
                     }
 
+
+
                     /// 4. Check return types.
+                    /// (Vertex shaders can return internal struct types while, fragment shaders return float4 and compute shaders do not return any value.)
+                    if(shaderType == ast::ShaderDecl::Fragment){
+                        if(!_decl->returnType->compare(ast::TypeExpr::Create(ast::builtins::float4_type))){
+                            std::cout << "Fragment shader `" << _decl->name << "` must return a float4, not " << _decl->returnType->name << std::endl;
+                            return false;
+                        }
+                    }
+
+                    if(shaderType == ast::ShaderDecl::Compute){
+                        if(!_decl->returnType->compare(ast::TypeExpr::Create(ast::builtins::void_type))){
+                            std::cout << "Compute shader `" << _decl->name << "` must return void, not " << _decl->returnType->name << std::endl;
+                            return false;
+                        }
+                    }
+
                     if(!_decl->returnType->compare(eval_result)){
                         std::cout << "In Function Return Type: Failed to match type." << "(" << _decl->returnType->name << " vs. " << eval_result->name << ")" << std::endl;
                         return false;
                     }
+
 
                     /// 5. Check returntype is struct type and add struct to shader context;
                     auto t = resolveTypeWithExpr(eval_result);

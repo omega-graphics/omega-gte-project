@@ -26,7 +26,9 @@ public:
     };
     void commitAndPresent() override;
     void reset();
+    void notifyCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) override;
     void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
+    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) override;
 };
 
 class GEMetalTextureRenderTarget : public GETextureRenderTarget {
@@ -40,7 +42,9 @@ public:
     };
     SharedHandle<GETexture> underlyingTexture() override;
     void commit() override;
+    void notifyCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) override;
     void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer) override;
+    void submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) override;
 };
 
 _NAMESPACE_END_

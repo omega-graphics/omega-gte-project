@@ -77,6 +77,8 @@ namespace omegasl {
 #define KW_TY_DOUBLE3 KW_TY("double3")
 #define KW_TY_DOUBLE4 KW_TY("double4")
 #define KW_TY_UINT KW_TY("uint")
+#define KW_TY_UINT2 KW_TY("uint2")
+#define KW_TY_UINT3 KW_TY("uint3")
 #define KW_TY_BUFFER KW_TY("buffer")
 #define KW_TY_TEXTURE1D KW_TY("texture1d")
 #define KW_TY_TEXTURE2D KW_TY("texture2d")

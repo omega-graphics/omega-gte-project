@@ -79,15 +79,24 @@ void GERenderTarget::CommandBuffer::endRenderPass(){
 void GERenderTarget::CommandBuffer::startComputePass(SharedHandle<GEComputePipelineState> & pipelineState){
     GEComputePassDescriptor comp;
     commandBuffer->startComputePass(comp);
+    commandBuffer->setComputePipelineState(pipelineState);
 };
 
 void GERenderTarget::CommandBuffer::endComputePass(){
     commandBuffer->finishComputePass();
 };
 
-// void GERenderTarget::CommandBuffer::schedule(){
-//     commandBuffer->commitToQueue();
-// };
+void GERenderTarget::CommandBuffer::bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned int id) {
+    commandBuffer->bindResourceAtComputeShader(buffer,id);
+}
+
+void GERenderTarget::CommandBuffer::bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int id) {
+    commandBuffer->bindResourceAtComputeShader(texture,id);
+}
+
+void GERenderTarget::CommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
+    commandBuffer->dispatchThreads(x,y,z);
+}
 
 void GERenderTarget::CommandBuffer::reset(){
     commandBuffer->reset();

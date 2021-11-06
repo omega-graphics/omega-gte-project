@@ -47,6 +47,8 @@ namespace omegasl {
             DECLARE_BUILTIN_TYPE(void_type);
             DECLARE_BUILTIN_TYPE(int_type);
             DECLARE_BUILTIN_TYPE(uint_type);
+            DECLARE_BUILTIN_TYPE(uint2_type);
+            DECLARE_BUILTIN_TYPE(uint3_type);
             DECLARE_BUILTIN_TYPE(float_type);
             DECLARE_BUILTIN_TYPE(float2_type);
             DECLARE_BUILTIN_TYPE(float3_type);

@@ -147,8 +147,10 @@ struct OMEGAGTE_EXPORT TETessellationResult {
         void translate(float x,float y,float z,const GEViewport & viewport);
         void rotate(float pitch,float yaw,float roll);
         void scale(float w,float h,float l);
+        unsigned vertexCount();
     };
     std::vector<TEMesh> meshes;
+    unsigned totalVertexCount();
 };
 /**
  

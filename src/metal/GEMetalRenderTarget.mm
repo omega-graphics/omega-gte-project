@@ -27,6 +27,16 @@ void GEMetalNativeRenderTarget::reset(){
     currentDrawable = NSObjectHandle{ NSOBJECT_CPP_BRIDGE [metalLayer nextDrawable]};
 };
 
+void GEMetalNativeRenderTarget::notifyCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> &commandBuffer,
+                                                    SharedHandle<GEFence> &fence) {
+    commandQueue->notifyCommandBuffer(commandBuffer->commandBuffer,fence);
+}
+
+void GEMetalNativeRenderTarget::submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> &commandBuffer,
+                                                    SharedHandle<GEFence> &fence) {
+    commandQueue->submitCommandBuffer(commandBuffer->commandBuffer,fence);
+}
+
 void GEMetalNativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){
     if(commandBuffer->commandBuffer)
         commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
@@ -48,6 +58,16 @@ void GEMetalTextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer>
     if(commandBuffer->commandBuffer)
         commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
 };
+
+void GEMetalTextureRenderTarget::notifyCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> &commandBuffer,
+                                                     SharedHandle<GEFence> &fence) {
+    commandQueue->notifyCommandBuffer(commandBuffer->commandBuffer,fence);
+}
+
+void GEMetalTextureRenderTarget::submitCommandBuffer(SharedHandle<GERenderTarget::CommandBuffer> &commandBuffer,
+                                                     SharedHandle<GEFence> &fence) {
+    commandQueue->submitCommandBuffer(commandBuffer->commandBuffer,fence);
+}
 
 void GEMetalTextureRenderTarget::commit(){
     commandQueue->commitToGPU();

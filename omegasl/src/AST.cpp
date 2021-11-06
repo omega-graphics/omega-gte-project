@@ -18,6 +18,8 @@ namespace omegasl::ast {
         Type *float4_type;
 
         Type *uint_type;
+        Type *uint2_type;
+        Type *uint3_type;
 
         Type *buffer_type;
         Type *texture1d_type;
@@ -53,6 +55,8 @@ namespace omegasl::ast {
                 float4_type = new Type{KW_TY_FLOAT4,global_scope};
 
                 uint_type = new Type{KW_TY_UINT,global_scope};
+                uint2_type = new Type{KW_TY_UINT2,global_scope};
+                uint3_type = new Type{KW_TY_UINT3,global_scope};
 
                 buffer_type = new Type{KW_TY_BUFFER,global_scope,true,{"type"}};
                 texture1d_type = new Type{KW_TY_TEXTURE1D,global_scope};
@@ -109,6 +113,8 @@ namespace omegasl::ast {
                 delete float3_type;
                 delete float4_type;
                 delete uint_type;
+                delete uint2_type;
+                delete uint3_type;
                 delete buffer_type;
                 delete texture1d_type;
                 delete texture2d_type;

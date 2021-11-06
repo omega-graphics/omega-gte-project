@@ -108,6 +108,19 @@ TETessellationParams TETessellationParams::GraphicsPath3D(unsigned int vectorPat
     return params;
 };
 
+unsigned int TETessellationResult::TEMesh::vertexCount() {
+    auto polygonCount = vertexPolygons.size();
+    return polygonCount * 3;
+}
+
+unsigned int TETessellationResult::totalVertexCount() {
+    unsigned vertexCount = 0;
+    for(auto & m : meshes){
+        vertexCount += m.vertexCount();
+    }
+    return vertexCount;
+}
+
 
 SharedHandle<OmegaTessellationEngine> OmegaTessellationEngine::Create(){
     return std::make_shared<OmegaTessellationEngine>();

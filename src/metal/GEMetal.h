@@ -55,8 +55,7 @@ public:
 
 struct GEMetalSamplerState : public GESamplerState {
     NSSmartPtr samplerState;
-    void setName(OmegaCommon::StrRef name) override;
-    void *native() override {
+    void *native() {
         return const_cast<void *>(samplerState.handle());
     }
     GEMetalSamplerState(NSSmartPtr & samplerState);

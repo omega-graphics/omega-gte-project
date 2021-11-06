@@ -55,21 +55,6 @@ struct omegasl_shader_static_sampler_desc {
     unsigned int max_anisotropy;
 };
 
-struct omegasl_shader_layout_desc {
-    omegasl_shader_layout_desc_type type;
-    unsigned gpu_relative_loc;
-    omegasl_shader_layout_desc_io_mode io_mode;
-    size_t location;
-    size_t offset;
-    omegasl_shader_static_sampler_desc sampler_desc;
-};
-
-typedef enum : int {
-    OMEGASL_SHADER_VERTEX,
-    OMEGASL_SHADER_FRAGMENT,
-    OMEGASL_SHADER_COMPUTE
-} omegasl_shader_type;
-
 typedef enum : int {
     //Int Types
     OMEGASL_INT,
@@ -99,9 +84,61 @@ typedef enum : int {
     OMEGASL_FLOAT4x1,
     OMEGASL_FLOAT4x2,
     OMEGASL_FLOAT4x3,
-    OMEGASL_FLOAT4x4
+    OMEGASL_FLOAT4x4,
+
+    OMEGASL_DOUBLE,
+    OMEGASL_DOUBLE2,
+    OMEGASL_DOUBLE3,
+    OMEGASL_DOUBLE4
 
 } omegasl_data_type;
+
+struct omegasl_shader_constant_desc {
+    omegasl_data_type type;
+    union V {
+        float f;
+        double d;
+        int i;
+        unsigned int ui;
+    } value;
+    static omegasl_shader_constant_desc make_float(float f){
+        omegasl_shader_constant_desc::V st{};
+        st.f = f;
+        return {OMEGASL_FLOAT,st};
+    };
+    static omegasl_shader_constant_desc make_double(double d){
+        omegasl_shader_constant_desc::V st{};
+        st.d = d;
+        return {OMEGASL_DOUBLE,st};
+    };
+    static omegasl_shader_constant_desc make_int(int i){
+        omegasl_shader_constant_desc::V st{};
+        st.i = i;
+        return {OMEGASL_INT,st};
+    };
+    static omegasl_shader_constant_desc make_uint(unsigned int ui){
+        omegasl_shader_constant_desc::V st{};
+        st.ui = ui;
+        return {OMEGASL_UINT,st};
+    };
+};
+
+struct omegasl_shader_layout_desc {
+    omegasl_shader_layout_desc_type type;
+    unsigned gpu_relative_loc;
+    omegasl_shader_layout_desc_io_mode io_mode;
+    size_t location;
+    size_t offset;
+    omegasl_shader_static_sampler_desc sampler_desc;
+    omegasl_shader_constant_desc constant_desc;
+};
+
+typedef enum : int {
+    OMEGASL_SHADER_VERTEX,
+    OMEGASL_SHADER_FRAGMENT,
+    OMEGASL_SHADER_COMPUTE
+} omegasl_shader_type;
+
 
 struct omegasl_vertex_shader_param_desc {
     CString name;
@@ -115,6 +152,10 @@ struct omegasl_vertex_shader_input_desc {
     unsigned nParam = 0;
 };
 
+struct omegasl_compute_shader_params_desc {
+    bool useGlobalThreadID = false,useLocalThreadID = false,useThreadGroupID = false;
+};
+
 struct omegasl_compute_shader_threadgroup_desc {
     unsigned x = 0,y = 0,z = 0;
 };
@@ -124,6 +165,7 @@ struct omegasl_shader {
     omegasl_shader_type type;
     CString name;
     omegasl_vertex_shader_input_desc vertexShaderInputDesc;
+    omegasl_compute_shader_params_desc computeShaderParamsDesc;
     omegasl_compute_shader_threadgroup_desc threadgroupDesc;
     omegasl_shader_layout_desc *pLayout;
     unsigned nLayout;

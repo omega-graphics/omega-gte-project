@@ -19,7 +19,10 @@ using namespace metal;
     class MetalCodeGen : public CodeGen {
         void *mtl_device = nullptr;
 
-        std::ofstream shaderOut;
+        std::ostringstream stringOut;
+        std::ofstream fileOut;
+
+        std::ostream & shaderOut;
 
         std::map<std::string,std::string> generatedFuncs;
         std::map<std::string,std::string> generatedStructs;
@@ -27,7 +30,12 @@ using namespace metal;
         MetalCodeOpts & metalCodeOpts;
 
     public:
-        MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts & metalCodeOpts): CodeGen(opts),metalCodeOpts(metalCodeOpts){
+        explicit MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts & metalCodeOpts):
+        CodeGen(opts),shaderOut(fileOut),metalCodeOpts(metalCodeOpts){
+
+        }
+        explicit MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts & metalCodeOpts,std::ostringstream & stringOut):
+                CodeGen(opts), stringOut(std::move(stringOut)),shaderOut(stringOut),metalCodeOpts(metalCodeOpts){
 
         }
         inline void writeTypeExpr(ast::TypeExpr *t,std::ostream & out){
@@ -42,6 +50,12 @@ using namespace metal;
             }
             else if(_t == builtins::uint_type){
                 out << "uint";
+            }
+            else if(_t == builtins::uint2_type){
+                out << "simd_uint2";
+            }
+            else if(_t == builtins::uint3_type){
+                out << "simd_uint3";
             }
             else if(_t == builtins::float_type){
                 out << "simd_float";
@@ -248,7 +262,13 @@ using namespace metal;
                     level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
                     auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
-                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metal").str(),std::ios::out);
+                    if(opts.runtimeCompile){
+                        stringOut.str("");
+                    }
+                    else {
+                        fileOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metal").str(),
+                                     std::ios::out);
+                    }
                     shaderOut << defaultHeaders;
 
                     std::vector<std::string> used_type_list;
@@ -480,6 +500,12 @@ using namespace metal;
                             if(p.attributeName.value() == ATTRIBUTE_VERTEX_ID){
                                 shadermap_entry.vertexShaderInputDesc.useVertexID = true;
                             }
+                            else if(p.attributeName.value() == ATTRIBUTE_GLOBALTHREAD_ID){
+                                shadermap_entry.computeShaderParamsDesc.useGlobalThreadID = true;
+                            }
+                            else if(p.attributeName.value() == ATTRIBUTE_THREADGROUP_ID){
+                                shadermap_entry.computeShaderParamsDesc.useThreadGroupID = true;
+                            }
                             shaderOut << "[[";
                             writeAttributeName(p.attributeName.value(),shaderOut);
                             shaderOut << "]]";
@@ -496,7 +522,12 @@ using namespace metal;
 
                     generateBlock(*_decl->block);
 
-                    shaderOut.close();
+                    if(opts.runtimeCompile){
+
+                    }
+                    else {
+                        fileOut.close();
+                    }
                     break;
                 }
                 default : {

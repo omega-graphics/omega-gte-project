@@ -34,9 +34,9 @@ class MetalNativeRenderTargetTEContext : public OmegaTessellationEngineContext {
     //     },std::move(prom));
     //     return fut;
     // };
-    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params,GEViewport * viewport){
-
-    };
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise, GEViewport *viewport = nullptr) override {
+        return {};
+    }
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
     //     return _tessalatePriv(params,viewport);
     // };
@@ -92,15 +92,18 @@ class MetalTextureRenderTargetTEContext : public OmegaTessellationEngineContext 
 
         };
     };
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise, GEViewport *viewport = nullptr) override {
+        return {};
+    }
     MetalTextureRenderTargetTEContext(SharedHandle<GEMetalTextureRenderTarget> target):target(target){};
 };
 
 SharedHandle<OmegaTessellationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){
-    return std::make_shared<MetalNativeRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalNativeRenderTarget>(renderTarget));
+    return (SharedHandle<OmegaTessellationEngineContext>) new MetalNativeRenderTargetTEContext(std::dynamic_pointer_cast<GEMetalNativeRenderTarget>(renderTarget));
 };
 
 SharedHandle<OmegaTessellationEngineContext> CreateTextureRenderTargetTEContext(SharedHandle<GETextureRenderTarget> &renderTarget){
-    return std::make_shared<MetalTextureRenderTargetTEContext>(std::dynamic_pointer_cast<GEMetalTextureRenderTarget>(renderTarget));
+    return (SharedHandle<OmegaTessellationEngineContext>) new MetalTextureRenderTargetTEContext(std::dynamic_pointer_cast<GEMetalTextureRenderTarget>(renderTarget));
 };
 
 

@@ -33,7 +33,7 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessellationEngineContext {
         };
     };
     // std::future<TETessellationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GEViewport * viewport){
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params,GTEPolygonFrontFaceRotation direction, GEViewport * viewport){
         return {};
     };
     // TETessellationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
@@ -50,13 +50,13 @@ class D3D12TextureRenderTargetTEContext : public OmegaTessellationEngineContext 
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
-            auto desc = target->renderTarget->GetDesc();
+            auto desc = target->texture->resource->GetDesc();
             GEViewport geViewport {0,0,(float)desc.Width,(float)desc.Height};
             translateCoordsDefaultImpl(x,y,z,&geViewport,x_result,y_result,z_result);
         };
     };
     // std::future<TETessellationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};
-    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GEViewport * viewport){
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GTEPolygonFrontFaceRotation direction,GEViewport * viewport){
         return {};
     };
     // TETessellationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){};

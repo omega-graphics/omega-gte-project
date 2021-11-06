@@ -181,6 +181,12 @@ struct omegasl_shader {
 
 #include <omega-common/common.h>
 
+#include "omegaGTE/GTEBase.h"
+
+_NAMESPACE_BEGIN_
+struct GTEDevice;
+_NAMESPACE_END_
+
 #if _WIN32
 
 #ifdef OMEGAGTE__BUILD__
@@ -217,7 +223,7 @@ public:
         static std::shared_ptr<Source> fromFile(OmegaCommon::FS::Path path);
         static std::shared_ptr<Source> fromString(OmegaCommon::String & buffer);
     };
-    static std::shared_ptr<OmegaSLCompiler> Create();
+    static std::shared_ptr<OmegaSLCompiler> Create(OmegaGTE::SharedHandle<OmegaGTE::GTEDevice> & device);
     virtual std::shared_ptr<omegasl_shader_lib> compile(std::initializer_list<std::shared_ptr<Source>> sources) = 0;
 };
 

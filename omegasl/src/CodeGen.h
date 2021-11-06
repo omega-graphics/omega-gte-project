@@ -19,8 +19,6 @@ namespace omegasl {
     class InterfaceGen;
 
     struct CodeGen {
-    private:
-        std::ostringstream shaderOutRuntime;
     public:
         struct ResourceStore {
         private:
@@ -84,7 +82,7 @@ namespace omegasl {
          * @note
          * This function is only called when compiling omegasl on runtime.
          * */
-        virtual void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef & name) = 0;
+        virtual void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & name) = 0;
         void linkShaderObjects(){
             OmegaCommon::StrRef libname = OmegaCommon::FS::Path(opts.outputLib).dir();
             std::ofstream out(OmegaCommon::FS::Path(opts.outputLib).str(), std::ios::out | std::ios::binary);

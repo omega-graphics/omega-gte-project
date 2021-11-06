@@ -134,7 +134,7 @@ _NAMESPACE_BEGIN_
     };
 
     /// @brief Provides command synchronization across multiple command queues.
-    class  OMEGAGTE_EXPORT GEFence {};
+    class  OMEGAGTE_EXPORT GEFence : public GTEResource {};
 
     /// @brief Describes a Texture Sampler
     struct OMEGAGTE_EXPORT SamplerDescriptor {
@@ -177,6 +177,9 @@ _NAMESPACE_BEGIN_
     protected:
         virtual SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime = false) = 0;
     public:
+        /// @brief Returns the Native Device.
+        /// @returns On Windows, it returns ID3D12Device *, For Darwin, it returns a id<MTLDevice> ,and for Android and Linux it returns a VkDevice.
+        virtual void * underlyingNativeDevice() = 0;
         /** 
         @brief Creates an Instance of the Omega Graphics Engine  
         (NEVER CALL THIS FUNCTION! Please invoke GTE::Init())

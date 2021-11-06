@@ -54,6 +54,13 @@ _NAMESPACE_BEGIN_
     class GED3D12Fence : public GEFence {
     public:
         ComPtr<ID3D12Fence> fence;
+        void setName(OmegaCommon::StrRef name) override{
+            ATL::CStringW str(name.data(),name.size());
+            fence->SetName(str);
+        }
+        void *native() override {
+            return fence.Get();
+        };
         explicit GED3D12Fence(ID3D12Fence *fence):fence(fence){};
     };
 
@@ -89,6 +96,9 @@ _NAMESPACE_BEGIN_
         explicit GED3D12Engine(SharedHandle<GTED3D12Device> device);
         ComPtr<ID3D12Debug1> debug_interface;
         ComPtr<ID3D12Device8> d3d12_device;
+        void * underlyingNativeDevice() override {
+            return d3d12_device.Get();
+        }
         // ComPtr<ID3D12DescriptorHeap> descriptorHeapForRes;
         static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
         // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);

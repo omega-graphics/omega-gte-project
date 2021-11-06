@@ -19,13 +19,20 @@
 namespace omegasl {
 
     class HLSLCodeGen final : public CodeGen {
-        std::ofstream shaderOut;
+        std::ostream & shaderOut;
+        std::ofstream fileOut;
+        std::ostringstream stringOut;
         HLSLCodeOpts & hlslCodeOpts;
 
         OmegaCommon::Map<OmegaCommon::String,OmegaCommon::String> generatedStructs;
 
     public:
-        HLSLCodeGen(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts): CodeGen(opts),hlslCodeOpts(hlslCodeOpts){}
+        explicit HLSLCodeGen(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts): CodeGen(opts),shaderOut(fileOut),hlslCodeOpts(hlslCodeOpts){
+
+        }
+        explicit HLSLCodeGen(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts,std::ostringstream & out): CodeGen(opts),shaderOut(stringOut),hlslCodeOpts(hlslCodeOpts),stringOut(std::move(out)){
+
+        }
         void generateExpr(ast::Expr *expr) override {
             switch (expr->type) {
                 case BINARY_EXPR : {
@@ -229,7 +236,12 @@ namespace omegasl {
                 }
                 case SHADER_DECL : {
                     auto _decl = (ast::ShaderDecl *)decl;
-                    shaderOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".hlsl").str());
+                    if(opts.runtimeCompile) {
+                        stringOut.str("");
+                    }
+                    else {
+                        fileOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".hlsl").str());
+                    }
 
                     omegasl_shader shaderDesc {};
                     /// 1. Write Structs for Shader
@@ -455,7 +467,10 @@ namespace omegasl {
 
                     auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".cso").str();
 
-                    shaderOut.close();
+                    if(!opts.runtimeCompile) {
+                        fileOut.close();
+                    }
+
                     shaderMap.insert(std::make_pair(object_file,shaderDesc));
                     break;
                 }
@@ -480,8 +495,9 @@ namespace omegasl {
             auto res = dxc_process.wait();
         }
 
-        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &source, const OmegaCommon::StrRef &name) override {
+        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name) override {
 #ifdef TARGET_DIRECTX
+            auto source = stringOut.str();
             ID3DBlob *blob;
             OmegaCommon::String target;
             if(type == ast::ShaderDecl::Vertex){

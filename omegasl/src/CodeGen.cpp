@@ -8,7 +8,7 @@ namespace omegasl {
         if(decl->type == SHADER_DECL){
             auto _decl = (ast::ShaderDecl *)decl;
             if(opts.runtimeCompile){
-                compileShaderOnRuntime(_decl->shaderType,shaderOutRuntime.str(),_decl->name);
+                compileShaderOnRuntime(_decl->shaderType,_decl->name);
             }
             else {
                 compileShader(_decl->shaderType,_decl->name,opts.tempDir,opts.tempDir);

@@ -16,7 +16,9 @@ _NAMESPACE_BEGIN_
         void *getSwapChain() override;
         SharedHandle<CommandBuffer> commandBuffer() override;
         void commitAndPresent() override;
+        void notifyCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & waitFence) override;
         void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer) override;
+        void submitCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & signalFence) override;
          ComPtr<ID3D12DescriptorHeap> rtvDescHeap;
          ComPtr<ID3D12DescriptorHeap> dsvDescHeap;
           unsigned frameIndex;
@@ -40,6 +42,9 @@ _NAMESPACE_BEGIN_
         SharedHandle<GED3D12Texture> texture;
         void commit() override;
         SharedHandle<CommandBuffer> commandBuffer() override;
+        void notifyCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & waitFence) override;
+        void submitCommandBuffer(SharedHandle<CommandBuffer> & cb) override;
+        void submitCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & signalFence) override;
     };
 _NAMESPACE_END_
 

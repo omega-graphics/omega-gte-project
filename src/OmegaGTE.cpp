@@ -4,7 +4,13 @@ _NAMESPACE_BEGIN_
 
 GTE Init(SharedHandle<GTEDevice> & device){
     auto ge = OmegaGraphicsEngine::Create(device);
+#ifdef RUNTIME_SHADER_COMP_SUPPORT
+    return {ge, OmegaTessellationEngine::Create(),OmegaSLCompiler::Create(device)};
+#else
     return {ge, OmegaTessellationEngine::Create()};
+#endif
+
+
 };
 
 GTE InitWithDefaultDevice(){

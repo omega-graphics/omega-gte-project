@@ -20,9 +20,19 @@ _NAMESPACE_BEGIN_
         return (void *)swapChain.Get();
     };
 
+    void
+    GED3D12NativeRenderTarget::notifyCommandBuffer(SharedHandle<CommandBuffer> &cb, SharedHandle<GEFence> &waitFence) {
+        commandQueue->notifyCommandBuffer(cb->commandBuffer,waitFence);
+    }
+
     void GED3D12NativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer){
         commandQueue->submitCommandBuffer(commandBuffer->commandBuffer);
     };
+
+    void GED3D12NativeRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &cb,
+                                                        SharedHandle<GEFence> &signalFence) {
+        commandQueue->submitCommandBuffer(cb->commandBuffer,signalFence);
+    }
 
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12NativeRenderTarget::commandBuffer(){
         std::ostringstream ss;
@@ -64,6 +74,20 @@ _NAMESPACE_BEGIN_
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12TextureRenderTarget::commandBuffer(){
         return SharedHandle<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Texture,commandQueue->getAvailableBuffer()));
     };
+
+    void GED3D12TextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &cb) {
+        commandQueue->submitCommandBuffer(cb->commandBuffer);
+    }
+
+    void GED3D12TextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &cb,
+                                                         SharedHandle<GEFence> &signalFence) {
+        commandQueue->submitCommandBuffer(cb->commandBuffer,signalFence);
+    }
+
+    void
+    GED3D12TextureRenderTarget::notifyCommandBuffer(SharedHandle<CommandBuffer> &cb, SharedHandle<GEFence> &waitFence) {
+        commandQueue->notifyCommandBuffer(cb->commandBuffer,waitFence);
+    }
 
     void GED3D12TextureRenderTarget::commit(){
         HRESULT hr;

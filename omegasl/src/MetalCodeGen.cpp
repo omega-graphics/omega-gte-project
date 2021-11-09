@@ -17,7 +17,6 @@ using namespace metal;
     #endif
 
     class MetalCodeGen : public CodeGen {
-        void *mtl_device = nullptr;
 
         std::ostringstream stringOut;
         std::ofstream fileOut;
@@ -547,11 +546,12 @@ using namespace metal;
 
 
         }
-        void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef & source,const OmegaCommon::StrRef &name) override {
+        void compileShaderOnRuntime(ast::ShaderDecl::Type type,const OmegaCommon::StrRef &name) override {
             #ifdef TARGET_METAL
-                if(mtl_device != nullptr){
+            auto source = stringOut.str();
+                if(metalCodeOpts.mtl_device != nullptr){
                     auto & _m = shaderMap[name.data()];
-                    compileMTLShader(mtl_device,source.size(),source.data(), &_m.data);
+                    compileMTLShader(metalCodeOpts.mtl_device,source.size(),source.data(), &_m.data);
                 }
             #endif
         }

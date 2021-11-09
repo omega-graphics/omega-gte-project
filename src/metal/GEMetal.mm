@@ -422,7 +422,13 @@ _NAMESPACE_BEGIN_
 
 
 
-    GEMetalFence::GEMetalFence(NSSmartPtr & event):metalEvent(event){};
+    GEMetalFence::GEMetalFence(NSSmartPtr & event):metalEvent(event){
+
+    };
+
+    void GEMetalFence::setName(OmegaCommon::StrRef name) {
+        [NSOBJECT_OBJC_BRIDGE(id<MTLEvent>,metalEvent.handle()) setLabel:[NSString stringWithUTF8String:name.data()]];
+    }
 
     GEMetalSamplerState::GEMetalSamplerState(NSSmartPtr &samplerState): samplerState(samplerState) {
 
@@ -501,6 +507,9 @@ _NAMESPACE_BEGIN_
             return SharedHandle<GTEShader>(_shader);
         }
     public:
+        void * underlyingNativeDevice() override {
+            return const_cast<void *>(metalDevice.handle());
+        }
         GEMetalEngine(SharedHandle<GTEDevice> & __device){
             __strong id<MTLDevice> device = ((GTEMetalDevice *)__device.get())->device;
             if(device == nil){

@@ -1,7 +1,7 @@
 
-#include "glm/fwd.hpp"
+
 #include "vulkan/vulkan_core.h"
-#include <X11/X.h>
+
 #include <stdint.h>
 #define VMA_IMPLEMENTATION 1
 
@@ -1074,8 +1074,11 @@ _NAMESPACE_BEGIN_
             vkCreateXlibSurfaceKHR(instance, &xlibSurfaceCreateInfoKhr, nullptr, &surfaceKhr);
 #endif
 
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-        }
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+            VkAndroidSurfaceCreateInfoKHR androidSurfaceCreateInfoKhr {VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR};
+            androidSurfaceCreateInfoKhr.window = desc.window;
+            androidSurfaceCreateInfoKhr.pNext = nullptr;
+            androidSurfaceCreateInfoKhr.flags = 0;
 #endif
 
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice,surfaceKhr,&capabilitiesKhr);

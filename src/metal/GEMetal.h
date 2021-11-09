@@ -50,7 +50,11 @@ public:
 class GEMetalFence : public GEFence {
 public:
     NSSmartPtr metalEvent;
-    GEMetalFence(NSSmartPtr & event);
+    void setName(OmegaCommon::StrRef name) override;
+    void *native() override{
+        return const_cast<void*>(metalEvent.handle());
+    }
+    explicit GEMetalFence(NSSmartPtr & event);
 };
 
 struct GEMetalSamplerState : public GESamplerState {

@@ -554,7 +554,7 @@ namespace omegasl {
             auto rc = glslc_process.wait();
 
         }
-        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &source, const OmegaCommon::StrRef &name) override {
+        void compileShaderOnRuntime(ast::ShaderDecl::Type type, const OmegaCommon::StrRef &name) override {
             #ifdef TARGET_VULKAN
                 shaderc_shader_kind shader_kind;
                 switch (type) {

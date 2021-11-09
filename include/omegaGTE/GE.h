@@ -21,6 +21,11 @@
 #ifdef VULKAN_TARGET_X11
 #include <X11/Xlib.h>
 #endif
+
+#ifdef VULKAN_TARGET_ANDROID
+#include <android/native_window.h>
+#endif
+
 #define DEBUG_ENGINE_PREFIX "GEVulkanEngine_Internal"
 #endif
 
@@ -286,6 +291,7 @@ _NAMESPACE_BEGIN_
         unsigned height;
 #endif
 #ifdef VULKAN_TARGET_ANDROID
+        ANativeWindow *window;
 #endif
 #endif
     };

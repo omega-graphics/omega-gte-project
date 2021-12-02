@@ -1,6 +1,7 @@
 #import "GEMetalRenderTarget.h"
 #include "GEMetal.h"
 #import "GEMetalCommandQueue.h"
+#include "GEMetalTexture.h"
 
 _NAMESPACE_BEGIN_
 
@@ -21,6 +22,7 @@ SharedHandle<GERenderTarget::CommandBuffer> GEMetalNativeRenderTarget::commandBu
 void GEMetalNativeRenderTarget::commitAndPresent(){
     auto mtlqueue = (GEMetalCommandQueue *)commandQueue.get();
     mtlqueue->commitToGPUAndPresent(currentDrawable);
+    [metalLayer setNeedsDisplay];
 };
 
 void GEMetalNativeRenderTarget::reset(){
@@ -51,7 +53,7 @@ GEMetalTextureRenderTarget::GEMetalTextureRenderTarget(SharedHandle<GETexture> &
 
 
 SharedHandle<GERenderTarget::CommandBuffer> GEMetalTextureRenderTarget::commandBuffer(){
-    return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,GERenderTarget::CommandBuffer::Native,commandQueue->getAvailableBuffer()));
+    return std::shared_ptr<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,GERenderTarget::CommandBuffer::Texture,commandQueue->getAvailableBuffer()));
 };
 
 void GEMetalTextureRenderTarget::submitCommandBuffer(SharedHandle<CommandBuffer> &commandBuffer){
@@ -70,6 +72,11 @@ void GEMetalTextureRenderTarget::submitCommandBuffer(SharedHandle<GERenderTarget
 }
 
 void GEMetalTextureRenderTarget::commit(){
+    texturePtr->needsBarrier = true;
+    auto lastCommandBuffer = std::dynamic_pointer_cast<GEMetalCommandBuffer>(((GEMetalCommandQueue *)commandQueue.get())->commandBuffers.back());
+    id<MTLResourceStateCommandEncoder> resStateEncoder = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,lastCommandBuffer->buffer.handle()) resourceStateCommandEncoder];
+    [resStateEncoder updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,texturePtr->resourceBarrier.handle())];
+    [resStateEncoder endEncoding];
     commandQueue->commitToGPU();
 };
 

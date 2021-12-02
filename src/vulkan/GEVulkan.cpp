@@ -905,6 +905,15 @@ _NAMESPACE_BEGIN_
         VkPipeline pipeline;
 
         vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&createInfo,nullptr,&pipeline);
+
+        if(desc.name.size() > 0){
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_PIPELINE;
+            nameInfoExt.objectHandle = pipeline;
+            nameInfoExt.pObjectName = desc.name.data();
+            vkSetDebugUtilsObjectNameEXT(device,&nameInfoExt);
+        }
       
         return SharedHandle<GERenderPipelineState>(new GEVulkanRenderPipelineState(desc.vertexFunc,
                                                                                    desc.fragmentFunc,
@@ -939,6 +948,15 @@ _NAMESPACE_BEGIN_
          
 
          VkPipeline pipeline;
+
+        if(desc.name.size() > 0){
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_PIPELINE;
+            nameInfoExt.objectHandle = pipeline;
+            nameInfoExt.pObjectName = desc.name.data();
+            vkSetDebugUtilsObjectNameEXT(device,&nameInfoExt);
+        }
          auto result = vkCreateComputePipelines(device,VK_NULL_HANDLE,1,&pipeline_desc,nullptr,&pipeline);
          if(!VK_RESULT_SUCCEEDED(result)){
             exit(1);
@@ -1040,6 +1058,15 @@ _NAMESPACE_BEGIN_
         VkSampler sampler;
 
         vkCreateSampler(device,&samplerCreateInfo,nullptr,&sampler);
+
+        if(desc.name.size() > 0){
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_SAMPLER;
+            nameInfoExt.objectHandle = sampler;
+            nameInfoExt.pObjectName = desc.name.data();
+            vkSetDebugUtilsObjectNameEXT(device,&nameInfoExt);
+        }
 
         return SharedHandle<GESamplerState>(new GEVulkanSamplerState(this,sampler));
     }

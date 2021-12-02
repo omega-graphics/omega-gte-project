@@ -7,6 +7,15 @@
 #include <cstdint>
 
 _NAMESPACE_BEGIN_
+    void GEVulkanCommandBuffer::setName(OmegaCommon::StrRef name) {
+                VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+                nameInfoExt.pNext = nullptr;
+                nameInfoExt.objectType = VK_OBJECT_TYPE_COMMAND_BUFFER;
+                nameInfoExt.objectHandle = (uint64_t)commandBuffer;
+                nameInfoExt.pObjectName = name.data();
+                vkSetDebugUtilsObjectNameEXT(parentQueue->engine->device,&nameInfoExt);
+    }
+
     unsigned int GEVulkanCommandBuffer::getBindingForResourceID(unsigned int &id, omegasl_shader &shader) {\
         ArrayRef<omegasl_shader_layout_desc> layoutDesc {shader.pLayout,shader.pLayout + shader.nLayout};
         for(auto & l : layoutDesc){

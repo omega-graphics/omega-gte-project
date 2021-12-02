@@ -2,6 +2,8 @@
 #include "../omegasl/src/CodeGen.h"
 #include "../omegasl/src/Parser.h"
 
+#include "OmegaGTE.h"
+
 #ifdef RUNTIME_SHADER_COMP_SUPPORT
 
 
@@ -30,16 +32,20 @@ class OmegaSLCompilerImpl : public OmegaSLCompiler {
     OmegaGTE::SharedHandle<OmegaGTE::GTEDevice> device;
     std::shared_ptr<omegasl::CodeGen> gen;
     std::shared_ptr<omegasl::Parser> parser;
+    omegasl::CodeGenOpts genOpts;
+    std::ostringstream sourceBuf;
+#if defined(TARGET_METAL)
+    omegasl::MetalCodeOpts metalCodeOpts;
+#endif
 public:
-    explicit OmegaSLCompilerImpl(OmegaGTE::SharedHandle<OmegaGTE::GTEDevice> & device):device(device){
+    explicit OmegaSLCompilerImpl(OmegaGTE::SharedHandle<OmegaGTE::GTEDevice> & device):device(device), genOpts({false,true,}){
         omegasl::ast::builtins::Initialize();
-        omegasl::CodeGenOpts genOpts {false,true};
 #if defined(TARGET_DIRECTX)
         omegasl::HLSLCodeOpts hlslCodeOpts {""};
         gen = omegasl::HLSLCodeGenMake(genOpts,hlslCodeOpts);
 #elif defined(TARGET_METAL)
-        omegasl::MetalCodeOpts metalCodeOpts {"",};
-        gen = omegasl::MetalCodeGenMake(genOpts,metalCodeOpts);
+        metalCodeOpts = omegasl::MetalCodeOpts {"",const_cast<void *>(device->native())};
+        gen = omegasl::MetalCodeGenMakeRuntime(genOpts,metalCodeOpts,sourceBuf);
 #endif
         parser = std::make_shared<omegasl::Parser>(gen);
 

@@ -445,6 +445,11 @@ _NAMESPACE_BEGIN_
             Node * pt_a = other.first;
             first = new Node(new Pt_Ty(*(pt_a->pt)));
             Node *next = first->next;
+            if(other.first->next == nullptr){
+                this->len = other.len;
+                this->numPoints = other.numPoints;
+                return;
+            }
             Node *pt_b = other.first->next;
             next = new Node(new Pt_Ty(*(pt_b->pt)));
             unsigned idx = other.len-1;
@@ -573,14 +578,14 @@ _NAMESPACE_BEGIN_
     template<class Ty,unsigned column,unsigned row>
    class Matrix {
    public:
-       typedef Ty * row_pointer;
-       typedef row_pointer * column_pointer;
+       typedef typename std::array<Ty,row>::iterator row_pointer;
+       typedef typename std::array<std::array<Ty,row>,column>::iterator column_pointer;
        typedef unsigned size_type;
 
        class row_pointer_wrapper {
             row_pointer pt;
        public:
-            row_pointer_wrapper(row_pointer _pt):pt(_pt){}
+           explicit row_pointer_wrapper(row_pointer _pt):pt(_pt){}
 
 //            row_pointer_wrapper(const row_pointer_wrapper &) = delete;
 
@@ -610,10 +615,12 @@ _NAMESPACE_BEGIN_
             }
        };
 
+
+
        class row_pointer_wrapper_iterator {
            column_pointer pt;
        public:
-           row_pointer_wrapper_iterator(column_pointer _pt):pt(_pt){
+           explicit row_pointer_wrapper_iterator(column_pointer _pt):pt(_pt){
 
            }
            void operator +=(size_type n){
@@ -633,36 +640,29 @@ _NAMESPACE_BEGIN_
 
        typedef row_pointer_wrapper_iterator iterator;
     private:
-        column_pointer _data;
+        std::array<std::array<Ty,row>,column> _data;
 
-        inline void alloc_matrix_mem(column_pointer & dest){
-            dest = new row_pointer [column];
-            column_pointer _data_it = dest;
-            unsigned _c = column;
-            while(_c > 0){
-                *_data_it = new Ty[row];
-                ++_data_it;
-                --_c;
-            }
+        inline void alloc_matrix_mem(column_pointer dest){
+//            dest = new row_pointer [column];
+//            column_pointer _data_it = dest;
+//            unsigned _c = column;
+//            while(_c > 0){
+//                *_data_it = 0;
+//                ++_data_it;
+//                --_c;
+//            }
         }
 
         Matrix(){
             /// Alloc Matrix Mem
-            alloc_matrix_mem(_data);
+            alloc_matrix_mem(nullptr);
 
             /// Set all Matrix vals to 0
-            column_pointer _data_it = _data;
-            unsigned _c = column;
-            while(_c > 0){
-                row_pointer _row_it = *_data_it;
-                unsigned _r = row;
-                while(_r > 0){
-                    *_row_it = 0;
-                    --_r;
-                }
 
-                ++_data_it;
-                --_c;
+            for(unsigned i = 0;i < column;i++){
+                for(unsigned j = 0;j < row;j++){
+                    _data[i][j] = 0;
+                }
             }
         };
 
@@ -672,12 +672,14 @@ _NAMESPACE_BEGIN_
             column_pointer _data_it_f = from;
             unsigned _c = _column;
             while(_c > 0){
-                row_pointer _row_it = *_data_it;
-                row_pointer _row_it_f = *_data_it_f;
+                row_pointer _row_it = _data_it->begin();
+                row_pointer _row_it_f = _data_it_f->begin();
                 unsigned _r = _row;
                 while(_r > 0){
                     *_row_it = *_row_it_f;
                     --_r;
+                    ++_row_it;
+                    ++_row_it_f;
                 }
 
                 ++_data_it;
@@ -687,18 +689,18 @@ _NAMESPACE_BEGIN_
         }
    public:
        inline iterator begin(){
-            return {_data};
+            return {_data.begin()};
         }
         inline iterator end(){
-            return {_data + column};
+            return {_data.end()};
         }
        inline row_pointer_wrapper at(size_type idx){
            assert(idx < column && "Cannot index column pointer at index");
-           return row_pointer_wrapper(_data[idx]);
+           return row_pointer_wrapper(_data[idx].data());
        }
        inline row_pointer_wrapper at(size_type idx) const{
            assert(idx < column && "Cannot index column pointer at index");
-           return row_pointer_wrapper{_data[idx]};
+           return row_pointer_wrapper{_data[idx].data()};
        }
 
        inline row_pointer_wrapper operator[](size_type idx){
@@ -727,13 +729,13 @@ _NAMESPACE_BEGIN_
            else {
                row_to_cpy = n_row;
            }
-           copy_data_to<col_to_cpy,row_to_cpy>(_data,n._data);
+           copy_data_to<col_to_cpy,row_to_cpy>(_data.begin(),n._data.begin());
            return n;
        }
 
        template<unsigned o_column,unsigned o_row>
-        Matrix(const Matrix<Ty,o_column,o_row> & other){
-            alloc_matrix_mem(_data);
+        explicit Matrix(const Matrix<Ty,o_column,o_row> & other){
+            alloc_matrix_mem(nullptr);
             unsigned col_to_cpy,row_to_cpy;
             /// Downsizing Matrix Column Count
             if(o_column > column){
@@ -750,28 +752,30 @@ _NAMESPACE_BEGIN_
             else {
                 row_to_cpy = o_row;
             }
-            copy_data_to(other._data,_data);
+            copy_data_to<column,row>(other._data.begin(),_data.begin());
         };
        template<unsigned o_column,unsigned o_row>
-        Matrix(Matrix<Ty,o_column,o_row> && other){
-            alloc_matrix_mem(_data);
+       explicit Matrix(Matrix<Ty,o_column,o_row> && other){
+            alloc_matrix_mem(nullptr);
             unsigned col_to_cpy,row_to_cpy;
-            /// Downsizing Matrix Column Count
 
-            copy_data_to<column,row>(other._data,_data);
+            copy_data_to<o_column,o_row>(other._data.begin(),_data.begin());
         };
 
         /// Construct a Matrix from a Vector2D
-        Matrix(const Vector2D_Base<Ty> & vec){
+        explicit Matrix(Vector2D_Base<Ty> & vec){
             static_assert(row == 1 && column == 2 && "Cannot construct Matrix of size from Vector2D");
-            alloc_matrix_mem(_data);
-
+            alloc_matrix_mem(_data.data());
+            this->operator[](0).operator[](0) = vec.getI();
+            this->operator[](1).operator[](0) = vec.getJ();
         }
         /// Construct a Matrix from a Vector3D
-        Matrix(const Vector3D_Base<Ty> & vec){
+        explicit Matrix(Vector3D_Base<Ty> & vec){
             static_assert(row == 1 && column == 3 && "Cannot construct Matrix of size from Vector2D");
-            alloc_matrix_mem(_data);
-
+            alloc_matrix_mem(_data.data());
+            this->operator[](0).operator[](0) = vec.getI();
+            this->operator[](1).operator[](0) = vec.getJ();
+            this->operator[](2).operator[](0) = vec.getK();
         }
 
        /** @brief Create an empty Matrix with the specified width and height.
@@ -791,16 +795,7 @@ _NAMESPACE_BEGIN_
            }
            return m;
        };
-       ~Matrix(){
-           unsigned _c = column;
-           column_pointer _data_it = _data;
-           while(_c > 0){
-                delete [] (row_pointer)(*_data_it);
-                --_c;
-                ++_data_it;
-           };
-           delete [] _data;
-       };
+       ~Matrix() = default;
    };
 
     template<unsigned c,unsigned r>
@@ -856,7 +851,9 @@ _NAMESPACE_BEGIN_
         unsigned w,h,d;
     };
 
+    /// @brief Memory allocated on a GTEDevice.
     struct OMEGAGTE_EXPORT GTEResource {
+        /// @brief Set the name of the Resource
         virtual void setName(OmegaCommon::StrRef name) = 0;
         /// @brief Retrieves the underlying native type of this resource.
         virtual void *native() = 0;

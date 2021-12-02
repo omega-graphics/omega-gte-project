@@ -7,20 +7,50 @@
 #import <QuartzCore/QuartzCore.h>
 #include <iostream>
 
+OmegaCommon::String shaders = R"(
+
+struct Vertex {
+    float4 pos;
+    float4 color;
+};
+
+struct VertexRaster internal {
+    float4 pos : Position;
+    float4 color : Color;
+};
+
+buffer<Vertex> v_buffer : 0;
+
+[in v_buffer]
+vertex VertexRaster vertexFunc(uint v_id : VertexID){
+    Vertex v = v_buffer[v_id];
+    VertexRaster raster;
+    raster.pos = v.pos;
+    raster.color = v.color;
+    return raster;
+}
+
+
+fragment float4 fragFunc(VertexRaster raster){
+    return raster.color;
+}
+
+)";
+
 static OmegaGTE::GTE gte;
 static OmegaGTE::SharedHandle<OmegaGTE::GTEShaderLibrary> funcLib;
 static OmegaGTE::SharedHandle<OmegaGTE::GEBufferWriter> bufferWriter;
 static OmegaGTE::SharedHandle<OmegaGTE::GERenderPipelineState> renderPipeline;
 static OmegaGTE::SharedHandle<OmegaGTE::GENativeRenderTarget> nativeRenderTarget = nullptr;
 static OmegaGTE::SharedHandle<OmegaGTE::OmegaTessellationEngineContext> tessContext;
-static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
+//static OmegaGTE::SharedHandle<OmegaGTE::GETexture> texture;
 
 
 void formatGPoint3D(std::ostream & os,OmegaGTE::GPoint3D & pt){
     os << "{ x:" << pt.x << ", y:" << pt.y << ", z:" << pt.z << "}";
 };
 
-static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> &coord){
+static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<4> &coord){
     auto pos_vec = OmegaGTE::FVec<4>::Create();
     pos_vec[0][0] = pt.x;
     pos_vec[1][0] = pt.y;
@@ -31,7 +61,7 @@ static void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> &coord){
 
     bufferWriter->structBegin();
     bufferWriter->writeFloat4(pos_vec);
-    bufferWriter->writeFloat2(coord);
+    bufferWriter->writeFloat4(coord);
     bufferWriter->structEnd();
     bufferWriter->sendToBuffer();
     
@@ -49,11 +79,9 @@ static void render(id<MTLDevice> dev){
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessellationParams::Rect(rect));
 
 
-    auto coord = OmegaGTE::FVec<2>::Create();
-    coord[0][0] = 0.f;
-    coord[1][0] = 0.f;
+    auto coord = OmegaGTE::makeColor(1.f,0.f,0.f,1.f);
 
-    size_t structSize = OmegaGTE::omegaSLStructSize({OMEGASL_FLOAT4,OMEGASL_FLOAT2});
+    size_t structSize = OmegaGTE::omegaSLStructSize({OMEGASL_FLOAT4,OMEGASL_FLOAT4});
 
     std::cout << "STRUCT SIZE:" << structSize << std::endl;
 
@@ -79,19 +107,19 @@ static void render(id<MTLDevice> dev){
 
             writeVertex(tri.a.pt,coord);
 
-            coord[0][0] = 0.f;
-            coord[1][0] = 1.f;
+//            coord[0][0] = 0.f;
+//            coord[1][0] = 1.f;
 
             writeVertex(tri.b.pt,coord);
 
-            coord[0][0] = 1.f;
-            coord[1][0] = 0.f;
+//            coord[0][0] = 1.f;
+//            coord[1][0] = 0.f;
 
             writeVertex(tri.c.pt,coord);
 
-            otherSide = true;
-            coord[0][0] = 1.f;
-            coord[1][0] = 1.f;
+//            otherSide = true;
+//            coord[0][0] = 1.f;
+//            coord[1][0] = 1.f;
         };
     };
 
@@ -110,7 +138,6 @@ static void render(id<MTLDevice> dev){
     commandBuffer->startRenderPass(renderPass);
     commandBuffer->setRenderPipelineState(renderPipeline);
     commandBuffer->bindResourceAtVertexShader(vertexBuffer,0);
-    commandBuffer->bindResourceAtFragmentShader(texture,1);
     commandBuffer->drawPolygons(OmegaGTE::GERenderTarget::CommandBuffer::Triangle,6,0);
     commandBuffer->endRenderPass();
     NSLog(@"Ended Render Pass");
@@ -142,25 +169,6 @@ static void render(id<MTLDevice> dev){
         // regLayer.backgroundColor = [NSColor blueColor].CGColor;
         view.layer = metalLayer;
         // view.layer = regLayer;
-
-        NSImage *image = [[NSImage alloc] initByReferencingFile:@"test.png"];
-
-        CGImageRef img = [image CGImageForProposedRect:nil context:nil hints:nil];
-
-
-        OmegaGTE::TextureDescriptor textureDescriptor {};
-        textureDescriptor.type = OmegaGTE::GETexture::Texture2D;
-        textureDescriptor.usage = OmegaGTE::GETexture::ToGPU;
-        textureDescriptor.pixelFormat = OmegaGTE::TexturePixelFormat::RGBA8Unorm;
-        textureDescriptor.width = 320;
-        textureDescriptor.height = 424;
-        textureDescriptor.storage_opts = OmegaGTE::Shared;
-
-        texture = gte.graphicsEngine->makeTexture(textureDescriptor);
-
-        CFDataRef data = CGDataProviderCopyData(CGImageGetDataProvider(img));
-        const uint8_t *ptr = CFDataGetBytePtr(data);
-        texture->copyBytes((void *)ptr, CGImageGetWidth(img));
 
 
     
@@ -223,7 +231,9 @@ int main(int argc,const char * argv[]){
     
     gte = OmegaGTE::InitWithDefaultDevice();
 
-   funcLib = gte.graphicsEngine->loadShaderLibrary("./shaders.omegasllib");
+    auto compiledLib = gte.omegaSlCompiler->compile({OmegaSLCompiler::Source::fromString(shaders)});
+
+   funcLib = gte.graphicsEngine->loadShaderLibraryRuntime(compiledLib);
 
    bufferWriter = OmegaGTE::GEBufferWriter::Create();
 

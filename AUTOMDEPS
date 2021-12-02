@@ -19,7 +19,8 @@
             "branch":"default",
             "dest":"$(external_lib_path)/vulkan-memory-allocator",
             "platforms":[
-                "linux"
+                "linux",
+                "android"
             ]
         },
         {
@@ -28,14 +29,16 @@
             "branch":"default",
             "dest":"$(external_lib_path)/glm",
             "platforms":[
-                "linux"
+                "linux",
+                "android"
             ]
         },
         {
             "type":"system",
             "path":"mkdir temp && curl https://sdk.lunarg.com/sdk/download/latest/linux/vulkan-sdk.tar.gz --output ./temp/vulkan-sdk.tar.gz",
             "platforms":[
-                "linux"
+                "linux",
+                "android"
             ]
         },
         {
@@ -43,14 +46,16 @@
             "tarfile":"./temp/vulkan-sdk.tar.gz",
             "dest":"$(external_lib_path)/vulkan_sdk",
             "platforms":[
-                "linux"
+                "linux",
+                "android"
             ]
         },
         {
             "type":"system",
             "path":"rm -r ./temp",
             "platforms":[
-                "linux"
+                "linux",
+                "android"
             ]
         }
     ]

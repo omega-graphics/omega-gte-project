@@ -5,6 +5,9 @@
 
 #import <Metal/Metal.h>
 
+#ifndef OMEGAGTE_METAL_GEMETALTEXTURE_H
+#define OMEGAGTE_METAL_GEMETALTEXTURE_H
+
 _NAMESPACE_BEGIN_
 
 class GEMetalTexture : public GETexture {
@@ -14,6 +17,7 @@ class GEMetalTexture : public GETexture {
     bool needsBarrier = false;
 
     friend class GEMetalCommandBuffer;
+    friend class GEMetalTextureRenderTarget;
 public:
     void setName(OmegaCommon::StrRef name) override {
         NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,texture.handle()).label = [[NSString alloc] initWithUTF8String:name.data()];
@@ -30,3 +34,5 @@ public:
 };
 
 _NAMESPACE_END_
+
+#endif

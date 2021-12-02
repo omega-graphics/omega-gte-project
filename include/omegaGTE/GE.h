@@ -240,10 +240,6 @@ _NAMESPACE_BEGIN_
         */
         virtual SharedHandle<GEHeap> makeHeap(const HeapDescriptor & desc) = 0;
         
-        /**
-         @brief Creates a GETextureSampler
-         */
-        
 
         /**
          @brief Creates a GERenderPipelineState from a RenderPipelineDescriptor.
@@ -258,8 +254,26 @@ _NAMESPACE_BEGIN_
          @returns SharedHandle<GEComputePipelineState>
         */
         virtual SharedHandle<GEComputePipelineState> makeComputePipelineState(ComputePipelineDescriptor & desc) = 0;
+
+        /**
+          @brief Creates a GENativeRenderTarget from a NativeRenderTargetDescriptor.
+          @param[in] desc The Native Render Target Descriptor
+          @returns SharedHandle<GENativeRenderTarget>
+         */
         virtual SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor & desc) = 0;
+
+        /**
+          @brief Creates a GETextureRenderTarget from a TextureRenderTargetDescriptor.
+          @param[in] desc The Texture Render Target Descriptor
+          @returns SharedHandle<GENativeRenderTarget>
+         */
         virtual SharedHandle<GETextureRenderTarget> makeTextureRenderTarget(const TextureRenderTargetDescriptor & desc) = 0;
+
+        /**
+          @brief Creates a GECommmandQueue with a maximum number of usable command buffers.
+          @param[in] maxBufferCount The command buffers to allocate.
+          @returns SharedHandle<GECommandQueue>
+         */
         virtual SharedHandle<GECommandQueue> makeCommandQueue(unsigned maxBufferCount) = 0;
     };
 

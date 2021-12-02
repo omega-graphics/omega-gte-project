@@ -44,6 +44,7 @@ protected:
 
     };
 public:
+    virtual const void *native() = 0;
     virtual ~GTEDevice() = default;
 };
 

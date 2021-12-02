@@ -19,7 +19,7 @@ version = "0.3"
 extensions = ["sphinx.ext.viewcode"]
 
 # html_theme_path = ["_themes"]
-html_theme = "classic"
+html_theme = "alabaster"
 
 
 

@@ -26,6 +26,9 @@ _NAMESPACE_BEGIN_
     struct GTEMetalDevice : public GTEDevice {
         __strong id<MTLDevice> device;
         GTEMetalDevice(Type type,const char *name,GTEDeviceFeatures & features,id<MTLDevice> _device): GTEDevice(type,name,features),device(_device){}
+        const void * native() override {
+            return device;
+        }
         ~GTEMetalDevice() = default;
     };
 
@@ -502,6 +505,9 @@ _NAMESPACE_BEGIN_
 
             }
             NSSmartPtr func = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLLibrary>,library.handle()) newFunctionWithName:str] };
+            func.assertExists();
+
+
             auto _shader = new GEMetalShader(library,func);
             _shader->internal = *shaderDesc;
             return SharedHandle<GTEShader>(_shader);
@@ -521,7 +527,7 @@ _NAMESPACE_BEGIN_
             MTLCaptureDescriptor *captureDesc = [[MTLCaptureDescriptor alloc] init];
             captureDesc.captureObject = device;
             captureDesc.destination = MTLCaptureDestinationGPUTraceDocument;
-            captureDesc.outputURL = [NSURL fileURLWithPath:@"./2DTest.gputrace"];
+            captureDesc.outputURL = [NSURL fileURLWithPath:@"./Trace.gputrace"];
             NSError *error;
             BOOL res = [manager startCaptureWithDescriptor:captureDesc error:&error];
 
@@ -557,7 +563,9 @@ _NAMESPACE_BEGIN_
             auto & threadgroup_desc = desc.computeFunc->internal.threadgroupDesc;
 
             MTLComputePipelineDescriptor *pipelineDescriptor = [[MTLComputePipelineDescriptor alloc] init];
-            pipelineDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            if(desc.name.size() > 0) {
+                pipelineDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            }
             pipelineDescriptor.maxTotalThreadsPerThreadgroup = (threadgroup_desc.x * threadgroup_desc.y * threadgroup_desc.z);
 
 
@@ -596,7 +604,9 @@ _NAMESPACE_BEGIN_
         SharedHandle<GERenderPipelineState> makeRenderPipelineState(RenderPipelineDescriptor &desc) override{
             metalDevice.assertExists();
             MTLRenderPipelineDescriptor *pipelineDesc = [[MTLRenderPipelineDescriptor alloc] init];
-            pipelineDesc.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            if(desc.name.size() > 0) {
+                pipelineDesc.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            }
 
             bool hasDepthStencilState = desc.depthAndStencilDesc.enableDepth || desc.depthAndStencilDesc.enableStencil;
             NSSmartPtr depthStencilState = NSObjectHandle{nullptr};
@@ -694,7 +704,7 @@ _NAMESPACE_BEGIN_
             metalDevice.assertExists();
             SharedHandle<GETexture> texture;
             if(desc.renderToExistingTexture){
-                texture = texture;
+                texture = desc.texture;
             }
             else {
                 TextureDescriptor textureDescriptor {
@@ -791,7 +801,9 @@ _NAMESPACE_BEGIN_
 
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override {
             MTLSamplerDescriptor *mtlSamplerDescriptor = [[MTLSamplerDescriptor alloc] init];
-            mtlSamplerDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            if(desc.name.size() > 0) {
+                mtlSamplerDescriptor.label = [[NSString alloc] initWithUTF8String:desc.name.data()];
+            }
 
             switch (desc.filter) {
                 case SamplerDescriptor::Filter::Linear : {

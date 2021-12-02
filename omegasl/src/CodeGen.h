@@ -177,6 +177,7 @@ namespace omegasl {
             unsigned idx = 0;
             for(auto & s_pair : shaderMap){
                 memcpy(res->shaders + idx,&s_pair.second,sizeof(omegasl_shader));
+                idx += 1;
             }
             return res;
         }
@@ -261,6 +262,7 @@ namespace omegasl {
     std::shared_ptr<CodeGen> GLSLCodeGenMake(CodeGenOpts &opts,GLSLCodeOpts &glslCodeOpts);
     std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts,HLSLCodeOpts &hlslCodeOpts);
     std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts);
+    std::shared_ptr<CodeGen> MetalCodeGenMakeRuntime(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts,std::ostringstream & out);
 
 
 }

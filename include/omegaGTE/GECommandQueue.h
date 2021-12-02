@@ -28,20 +28,20 @@ _NAMESPACE_BEGIN_
     };
 
     /// @brief Describes a Compute Pass
-    struct  OMEGAGTE_EXPORT GEComputePassDescriptor {
-
-    };
+    struct  OMEGAGTE_EXPORT GEComputePassDescriptor {};
 
     /**
-     A Reusable interface for directly uploading commands to a GPU.
+     @brief A Reusable interface for directly uploading data and commands to a GTEDevice.
      */
-    class  OMEGAGTE_EXPORT GECommandBuffer : public GTEResource {
+    class  OMEGAGTE_EXPORT GECommandBuffer :
+            public GTEResource {
+
         friend class GERenderTarget::CommandBuffer;
     protected:
         typedef GERenderTarget::CommandBuffer::PolygonType RenderPassDrawPolygonType;
     private:
          /**
-         Render Pass
+         Render Pass (For usage, please use the GERenderTarget::CommandBuffer instead.)
          */
         virtual void startRenderPass(const GERenderPassDescriptor & desc) = 0;
         virtual void setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState) = 0;
@@ -67,11 +67,27 @@ _NAMESPACE_BEGIN_
     public:
 
         /**
-        Blit Pass
+         @brief Start a Blit Pass
         */
         virtual void startBlitPass() = 0;
+        /**
+          @brief Copy a GETexture from one texture to another.
+          @param[in] src The Source Texture
+          @param[in] dest The Destination Texture
+         */
         virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest) = 0;
+
+        /**
+         @brief Copy a region of a GETexture from one texture to another.
+         @param[in] src The Source Texture
+         @param[in] dest The Destination Texture
+         @param[in] region The Region of the Source Texture to Copy
+        */
         virtual void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) = 0;
+
+        /**
+         @brief Finish a Blit Pass.
+         */
         virtual void finishBlitPass() = 0;
 
         /// @brief Starts a Compute Pass.
@@ -104,16 +120,23 @@ _NAMESPACE_BEGIN_
         /// @paragraph This method must be invoked when a dispatch command has been encoded.
         virtual void finishComputePass() = 0;
 
+        /// @brief Reset and deallocate commands in this command buffer.
+        /// @note This method MUST be called after it is committed before uploading more commands.
         virtual void reset() = 0;
-        virtual ~GECommandBuffer(){};
+
+        virtual ~GECommandBuffer() = default;
     };
 
     class  OMEGAGTE_EXPORT GECommandQueue : public GTEResource {
         unsigned size;
     protected:
         unsigned currentlyOccupied = 0;
-        GECommandQueue(unsigned size);
+        explicit GECommandQueue(unsigned size);
     public:
+
+        /// @brief Gets the next usable command buffer allocated for this command queue.
+        /// @note This method returns the first command buffer that has not been yet used by the user.
+        /// @returns A SharedHandle<GECommandBuffer>.
         virtual SharedHandle<GECommandBuffer> getAvailableBuffer() = 0;
         unsigned getSize();
 
@@ -123,19 +146,24 @@ _NAMESPACE_BEGIN_
         /// @paragraph Allows sync between command buffers in different queues.
         virtual void notifyCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer,SharedHandle<GEFence> & waitFence) = 0;
 
-        /// @brief Submits command buffer to Queue.
+        /// @brief Submits command buffer to the queue.
         /// @param commandBuffer The GECommandBuffer to submit
         /// @paragraph Does not sync between commandBuffers
         virtual void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer) = 0;
 
-        /// @brief Submits command buffer to Queue and encodes a signal event on completion.
+        /// @brief Submits command buffer to the queue and encodes a signal event on completion.
         /// @param commandBuffer The GECommandBuffer to submit
         /// @param signalFence The GEFence to signal.
         /// @paragraph Allows sync between command buffers in different queues.
         virtual void submitCommandBuffer(SharedHandle<GECommandBuffer> & commandBuffer,SharedHandle<GEFence> & signalFence) = 0;
+
+        /// @brief Schedules all enqueued command buffers to GTEDevice for sequential execution.
         virtual void commitToGPU() = 0;
+
+        /// @brief Schedules all enqueued command buffers to GTEDevice for sequential execution and waits for all command buffers to be completed.
         virtual void commitToGPUAndWait() = 0;
-        virtual ~GECommandQueue(){};
+
+        virtual ~GECommandQueue() = default;
     };
 _NAMESPACE_END_
 

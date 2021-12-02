@@ -68,6 +68,13 @@ _NAMESPACE_BEGIN_
         void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest, const TextureRegion &region, const GPoint3D &destCoord) override;
         void finishBlitPass() override;
         void reset() override;
+
+        void setName(OmegaCommon::StrRef name) override;
+
+        void *native() override {
+            return (void *)commandBuffer;
+        }
+
         GEVulkanCommandBuffer(VkCommandBuffer & commandBuffer,GEVulkanCommandQueue *parentQueue);
         ~GEVulkanCommandBuffer() override = default;
     };
@@ -90,11 +97,23 @@ _NAMESPACE_BEGIN_
         void commitToGPU() override;
         void commitToGPUPresent(VkPresentInfoKHR * info);
         void commitToGPUAndWait() override;
-        void present();
         VkCommandBuffer &getLastCommandBufferInQueue();
         SharedHandle<GECommandBuffer> getAvailableBuffer() override;
+
+        void setName(OmegaCommon::StrRef name) override {
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_COMMAND_POOL;
+            nameInfoExt.objectHandle = commandPool;
+            nameInfoExt.pObjectName = name.data();
+            vkSetDebugUtilsObjectNameEXT(engine->device,&nameInfoExt);
+        };
+
+        void *native() override {
+            return (void *)commandPool;
+        }
         GEVulkanCommandQueue(GEVulkanEngine *engine,unsigned size);
-        ~GEVulkanCommandQueue();
+        ~GEVulkanCommandQueue() override;
     };
 _NAMESPACE_END_
 

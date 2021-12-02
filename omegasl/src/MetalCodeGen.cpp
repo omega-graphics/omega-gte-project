@@ -34,7 +34,7 @@ using namespace metal;
 
         }
         explicit MetalCodeGen(CodeGenOpts &opts,MetalCodeOpts & metalCodeOpts,std::ostringstream & stringOut):
-                CodeGen(opts), stringOut(std::move(stringOut)),shaderOut(stringOut),metalCodeOpts(metalCodeOpts){
+                CodeGen(opts), stringOut(std::move(stringOut)),shaderOut(this->stringOut),metalCodeOpts(metalCodeOpts){
 
         }
         inline void writeTypeExpr(ast::TypeExpr *t,std::ostream & out){
@@ -260,14 +260,18 @@ using namespace metal;
                     shaderDecl = true;
                     level_count = 0;
                     auto *_decl = (ast::ShaderDecl *)decl;
-                    auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
+                    OmegaCommon::String object_file;
+
                     if(opts.runtimeCompile){
+                        object_file = _decl->name;
                         stringOut.str("");
                     }
                     else {
+                        object_file =  OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metallib").str();
                         fileOut.open(OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".metal").str(),
                                      std::ios::out);
                     }
+
                     shaderOut << defaultHeaders;
 
                     std::vector<std::string> used_type_list;
@@ -559,5 +563,9 @@ using namespace metal;
 
     std::shared_ptr<CodeGen> MetalCodeGenMake(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts){
         return std::make_shared<MetalCodeGen>(opts,metalCodeOpts);
+    };
+
+    std::shared_ptr<CodeGen> MetalCodeGenMakeRuntime(CodeGenOpts &opts,MetalCodeOpts &metalCodeOpts,std::ostringstream & out){
+        return std::make_shared<MetalCodeGen>(opts,metalCodeOpts,out);
     };
 }

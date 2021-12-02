@@ -144,17 +144,23 @@ _NAMESPACE_BEGIN_
             /// @brief Finish Encoding a Render Pass.
             /// @paragraph This method must be called once a draw command has been encoded into the Render Pass.
             void endRenderPass();
-            
+
+            /// @see GECommandBuffer
             void startComputePass(SharedHandle<GEComputePipelineState> & computePipelineState);
 
+            /// @see GECommandBuffer
             void bindResourceAtComputeShader(SharedHandle<GEBuffer> & buffer,unsigned id);
 
+            /// @see GECommandBuffer
             void bindResourceAtComputeShader(SharedHandle<GETexture> & texture,unsigned id);
 
+            /// @see GECommandBuffer
             void dispatchThreads(unsigned x, unsigned y, unsigned z);
 
+            /// @see GECommandBuffer
             void endComputePass();
-            
+
+            /// @see GECommandBuffer
             void reset();
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;

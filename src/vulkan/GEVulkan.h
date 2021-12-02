@@ -97,12 +97,26 @@ _NAMESPACE_BEGIN_
         VmaAllocation alloc;
         VmaAllocationInfo alloc_info;
 
+        void setName(OmegaCommon::StrRef name) override {
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_BUFFER;
+            nameInfoExt.objectHandle = buffer;
+            nameInfoExt.pObjectName = name.data();
+            vkSetDebugUtilsObjectNameEXT(engine->device,&nameInfoExt);
+        }
+
+        void *native() override {
+            return (void *)buffer;
+        }
+
         /// Sync 2.0 Extension
 
         VkAccessFlags2KHR priorAccess2;
         VkPipelineStageFlags2KHR priorPipelineAccess2;
 
         // Standard Sync
+
 
         VkAccessFlags priorAccess;
         VkPipelineStageFlags priorPipelineAccess;
@@ -134,6 +148,19 @@ _NAMESPACE_BEGIN_
 
         VkEvent event;
 
+        void setName(OmegaCommon::StrRef name) override {
+            VkDebugUtilsObjectNameInfoEXT nameInfoExt {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            nameInfoExt.pNext = nullptr;
+            nameInfoExt.objectType = VK_OBJECT_TYPE_FENCE;
+            nameInfoExt.objectHandle = fence;
+            nameInfoExt.pObjectName = name.data();
+            vkSetDebugUtilsObjectNameEXT(engine->device,&nameInfoExt);
+        }
+
+        void *native() override {
+            return (void *)fence;
+        }
+
         GEVulkanFence(GEVulkanEngine *engine,VkFence fence):engine(engine),fence(fence){
 
         }
@@ -147,6 +174,7 @@ _NAMESPACE_BEGIN_
         GEVulkanEngine *engine;
 
         VkSampler sampler;
+
         GEVulkanSamplerState(GEVulkanEngine *engine,VkSampler sampler):engine(engine),sampler(sampler){
 
         }

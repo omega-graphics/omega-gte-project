@@ -16,6 +16,9 @@ _NAMESPACE_BEGIN_
 
 struct GTED3D12Device : public GTEDevice {
     Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
+    const void * native() override {
+        return (const void *)adapter.Get();
+    }
     GTED3D12Device(GTEDevice::Type type,const char *name,GTEDeviceFeatures & features,IDXGIAdapter1 *adapter) : GTEDevice(type,name,features),adapter(adapter){
 
     };
@@ -720,7 +723,12 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_cpu_handle (renderTargetHeap->GetCPUDescriptorHandleForHeapStart());
         
         RECT rc;
-        GetClientRect(desc.hwnd,&rc);
+        if(desc.isHwnd) {
+            GetClientRect(desc.hwnd, &rc);
+        }
+        else {
+            rc = RECT {0,0,(LONG)desc.width,(LONG)desc.height};
+        }
         DXGI_SWAP_CHAIN_DESC1 swapChaindesc {};
         swapChaindesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         // swapChaindesc.AlphaMode = DXGI_ALPHA_MODE_PREMULTIPLIED;
@@ -736,8 +744,13 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
          swapChaindesc.SampleDesc.Quality = 0;
 
         auto commandQueue = makeCommandQueue(64);
-
-        auto swapChain = createSwapChainFromHWND(desc.hwnd,&swapChaindesc,commandQueue);
+        IDXGISwapChain3 *swapChain;
+        if(desc.isHwnd) {
+            swapChain = createSwapChainFromHWND(desc.hwnd, &swapChaindesc, commandQueue);
+        }
+        else {
+            swapChain = createSwapChainForComposition(&swapChaindesc,commandQueue);
+        }
        
 
         std::vector<ID3D12Resource *> rtvs;
@@ -767,7 +780,20 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     };
 
     SharedHandle<GETextureRenderTarget> GED3D12Engine::makeTextureRenderTarget(const TextureRenderTargetDescriptor &desc){
-        return nullptr;   
+        SharedHandle<GETexture> texture;
+        if(desc.renderToExistingTexture){
+            texture = desc.texture;
+        }
+        else {
+            TextureDescriptor targetDesc {};
+            targetDesc.usage = GETexture::RenderTarget;
+            targetDesc.type = GETexture::Texture2D;
+            targetDesc.width = desc.region.w;
+            targetDesc.height = desc.region.h;
+            texture = makeTexture(targetDesc);
+        }
+        auto commandQueue = makeCommandQueue(64);
+        return SharedHandle<GETextureRenderTarget>(new GED3D12TextureRenderTarget(std::dynamic_pointer_cast<GED3D12Texture>(texture),commandQueue));
     };
 
     SharedHandle<GECommandQueue> GED3D12Engine::makeCommandQueue(unsigned int maxBufferCount){
@@ -777,14 +803,14 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
     SharedHandle<GETexture> GED3D12Engine::makeTexture(const TextureDescriptor &desc){
         HRESULT hr;
         D3D12_RESOURCE_DESC d3d12_desc;
-        D3D12_RESOURCE_STATES res_states;
+        D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_COMMON;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC res_view_desc;
         D3D12_UNORDERED_ACCESS_VIEW_DESC uav_view_desc;
         D3D12_DEPTH_STENCIL_VIEW_DESC dsv_view_desc;
 
-        bool isUAV = bool(desc.usage == GETexture::FromGPU || desc.usage == GETexture::GPUAccessOnly);
-        bool isSRV = bool(desc.usage == GETexture::ToGPU || desc.usage == GETexture::GPUAccessOnly);
+        bool isUAV = bool(desc.usage == GETexture::FromGPU || desc.usage == GETexture::GPUAccessOnly || desc.usage == GETexture::RenderTarget);
+        bool isSRV = bool(desc.usage == GETexture::ToGPU || desc.usage == GETexture::GPUAccessOnly || desc.usage == GETexture::RenderTarget);
         bool isDSV =  bool(desc.usage == GETexture::RenderTargetAndDepthStencil || desc.usage == GETexture::GPUAccessOnly);
 
         if(desc.usage == GETexture::RenderTargetAndDepthStencil && desc.type == GETexture::Texture3D){
@@ -861,7 +887,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             d3d12_desc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat,desc.width,desc.height,1,desc.mipLevels,desc.sampleCount);
             if(isUAV){
                 uav_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-                uav_view_desc.Texture2D.MipSlice = desc.mipLevels;
+                uav_view_desc.Texture2D.MipSlice = desc.mipLevels - 1;
                 uav_view_desc.Texture2D.PlaneSlice = 0;
             }
 
@@ -886,7 +912,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                 } else {
                     dsv_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
                 }
-                dsv_view_desc.Texture2D.MipSlice = desc.mipLevels;
+                dsv_view_desc.Texture2D.MipSlice = desc.mipLevels - 1;
             }
 
 
@@ -909,7 +935,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
            if(isUAV){
                 uav_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
-                uav_view_desc.Texture3D.MipSlice = desc.mipLevels;
+                uav_view_desc.Texture3D.MipSlice = desc.mipLevels - 1;
                 uav_view_desc.Texture3D.FirstWSlice = 0;
                 uav_view_desc.Texture3D.WSize = desc.depth;
            }
@@ -941,6 +967,10 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         else if(desc.usage == GETexture::ToGPU) {
             heap_prop = CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD );
             d3d12_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        }
+        else if(desc.usage == GETexture::RenderTarget){
+            heap_prop = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+            d3d12_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
         /// Create Texture Resource
@@ -974,7 +1004,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc;
 
-        if(desc.usage == GETexture::GPUAccessOnly){
+        if(isSRV && isUAV){
             descHeapDesc.NumDescriptors = 2;
         }
         else {
@@ -984,7 +1014,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         descHeapDesc.NodeMask = d3d12_device->GetNodeCount();
 
-        if(desc.usage == GETexture::ToGPU || desc.usage == GETexture::FromGPU) {
+        if(isSRV || isUAV) {
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
             hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc, IID_PPV_ARGS(&descHeap));
@@ -1013,13 +1043,14 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         if(desc.usage == GETexture::RenderTarget || desc.usage == GETexture::RenderTargetAndDepthStencil){
             descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        
+            descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
             hr = d3d12_device->CreateDescriptorHeap(&descHeapDesc,IID_PPV_ARGS(&rtvDescHeap));
             if(FAILED(hr)){
                 DEBUG_STREAM("Failed to Create RTV Desc Heap");
             };
 
             d3d12_device->CreateRenderTargetView(texture,&view_desc,rtvDescHeap->GetCPUDescriptorHandleForHeapStart());
+            descHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         };
 
         ID3D12DescriptorHeap *dsvDescHeap = nullptr;
@@ -1205,6 +1236,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                     CD3DX12_STATIC_SAMPLER_DESC desc;
                     desc.Init(l.gpu_relative_loc,filter, convertAddressMode(l.sampler_desc.u_address_mode),
                               convertAddressMode(l.sampler_desc.v_address_mode), convertAddressMode(l.sampler_desc.w_address_mode));
+                    desc.RegisterSpace = s.type == OMEGASL_SHADER_FRAGMENT? 1 : 0;
                     staticSamplers.push_back(desc);
                     continue;
                 }

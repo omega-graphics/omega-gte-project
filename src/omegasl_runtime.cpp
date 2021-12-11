@@ -42,7 +42,7 @@ public:
         omegasl::ast::builtins::Initialize();
 #if defined(TARGET_DIRECTX)
         omegasl::HLSLCodeOpts hlslCodeOpts {""};
-        gen = omegasl::HLSLCodeGenMake(genOpts,hlslCodeOpts);
+        gen = omegasl::HLSLCodeGenMakeRuntime(genOpts,hlslCodeOpts,sourceBuf);
 #elif defined(TARGET_METAL)
         metalCodeOpts = omegasl::MetalCodeOpts {"",const_cast<void *>(device->native())};
         gen = omegasl::MetalCodeGenMakeRuntime(genOpts,metalCodeOpts,sourceBuf);

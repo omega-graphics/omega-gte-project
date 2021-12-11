@@ -642,7 +642,7 @@ _NAMESPACE_BEGIN_
     private:
         std::array<std::array<Ty,row>,column> _data;
 
-        inline void alloc_matrix_mem(column_pointer dest){
+        inline void alloc_matrix_mem(Ty * dest){
 //            dest = new row_pointer [column];
 //            column_pointer _data_it = dest;
 //            unsigned _c = column;
@@ -696,11 +696,11 @@ _NAMESPACE_BEGIN_
         }
        inline row_pointer_wrapper at(size_type idx){
            assert(idx < column && "Cannot index column pointer at index");
-           return row_pointer_wrapper(_data[idx].data());
+           return row_pointer_wrapper {_data[idx].begin()};
        }
        inline row_pointer_wrapper at(size_type idx) const{
            assert(idx < column && "Cannot index column pointer at index");
-           return row_pointer_wrapper{_data[idx].data()};
+           return row_pointer_wrapper{_data[idx].begin()};
        }
 
        inline row_pointer_wrapper operator[](size_type idx){
@@ -765,14 +765,14 @@ _NAMESPACE_BEGIN_
         /// Construct a Matrix from a Vector2D
         explicit Matrix(Vector2D_Base<Ty> & vec){
             static_assert(row == 1 && column == 2 && "Cannot construct Matrix of size from Vector2D");
-            alloc_matrix_mem(_data.data());
+//            alloc_matrix_mem(_data.data());
             this->operator[](0).operator[](0) = vec.getI();
             this->operator[](1).operator[](0) = vec.getJ();
         }
         /// Construct a Matrix from a Vector3D
         explicit Matrix(Vector3D_Base<Ty> & vec){
             static_assert(row == 1 && column == 3 && "Cannot construct Matrix of size from Vector2D");
-            alloc_matrix_mem(_data.data());
+//            alloc_matrix_mem(_data.data());
             this->operator[](0).operator[](0) = vec.getI();
             this->operator[](1).operator[](0) = vec.getJ();
             this->operator[](2).operator[](0) = vec.getK();

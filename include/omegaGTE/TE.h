@@ -32,7 +32,7 @@ struct OMEGAGTE_EXPORT TETessellationParams {
     void * params;
     friend class OmegaTessellationEngineContext;
 public:
-    struct Attachment {
+    struct OMEGAGTE_EXPORT Attachment {
         typedef enum : int {
             TypeColor,
             TypeTexture2D,

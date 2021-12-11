@@ -104,7 +104,7 @@ _NAMESPACE_BEGIN_
                 if(l.type == OMEGASL_SHADER_TEXTURE1D_DESC || l.type == OMEGASL_SHADER_TEXTURE2D_DESC || l.type == OMEGASL_SHADER_TEXTURE3D_DESC){
                     if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
                         if(shader.type == OMEGASL_SHADER_FRAGMENT){
-                            state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                            state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
                         }
                         else {
                             state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;

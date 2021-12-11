@@ -359,30 +359,16 @@ namespace omegasl {
                                 layoutDesc.sampler_desc.v_address_mode = res_desc->staticSamplerDesc->vAddressMode;
                                 layoutDesc.sampler_desc.w_address_mode = res_desc->staticSamplerDesc->wAddressMode;
                                 layoutDesc.sampler_desc.max_anisotropy = res_desc->staticSamplerDesc->maxAnisotropy;
-                                shaderOut << "{" << std::endl;
-                                shaderOut << INDENT << "Filter=";
-                                switch (layoutDesc.sampler_desc.filter) {
-                                    case OMEGASL_SHADER_SAMPLER_LINEAR_FILTER : {
-                                        shaderOut << "MIN_MAG_MIP_LINEAR";
-                                        break;
-                                    }
-                                    case OMEGASL_SHADER_SAMPLER_POINT_FILTER : {
-                                        shaderOut << "MIN_MAG_MIP_LINEAR";
-                                        break;
-                                    }
+                                layoutDesc.location = res_desc->registerNumber;
+                                shaderOut << ": register(s" << s_resource_count << ",space";
+                                if(shaderDesc.type == OMEGASL_SHADER_FRAGMENT){
+                                    shaderOut << "1";
                                 }
-                                shaderOut << std::endl;
-                                shaderOut << INDENT << "AddressU=";
-                                convertAddressMode(layoutDesc.sampler_desc.u_address_mode,shaderOut);
-                                shaderOut << std::endl;
-                                shaderOut << INDENT << "AddressV=";
-                                convertAddressMode(layoutDesc.sampler_desc.v_address_mode,shaderOut);
-                                shaderOut << std::endl;
-                                shaderOut << INDENT << "AddressW=";
-                                convertAddressMode(layoutDesc.sampler_desc.w_address_mode,shaderOut);
-                                shaderOut << std::endl;
-                                shaderOut << INDENT << "MaxAnisotropy=" << layoutDesc.sampler_desc.max_anisotropy << std::endl;
-                                shaderOut << "};" << std::endl;
+                                else {
+                                    shaderOut << "0";
+                                }
+                                shaderOut << ");" << std::endl;
+                                s_resource_count += 1;
                             }
                         }
 
@@ -465,8 +451,13 @@ namespace omegasl {
                     }
                     generateBlock(*_decl->block);
 
-                    auto object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".cso").str();
-
+                    OmegaCommon::String object_file;
+                    if(!opts.runtimeCompile) {
+                        object_file = OmegaCommon::FS::Path(opts.tempDir).append(_decl->name).concat(".cso").str();
+                    }
+                    else {
+                        object_file = _decl->name;
+                    }
                     if(!opts.runtimeCompile) {
                         fileOut.close();
                     }
@@ -501,14 +492,16 @@ namespace omegasl {
             ID3DBlob *blob;
             OmegaCommon::String target;
             if(type == ast::ShaderDecl::Vertex){
-                target = "vs_5_0";
+                target = "vs_5_1";
             }
             else if(type == ast::ShaderDecl::Fragment){
-                target = "ps_5_0";
+                target = "ps_5_1";
             }
             else if(type == ast::ShaderDecl::Compute){
-                target = "cs_5_0";
+                target = "cs_5_1";
             }
+
+            ID3DBlob *errorBlob;
 
             D3DCompile(source.data(),
                        source.size(),
@@ -517,10 +510,16 @@ namespace omegasl {
                        D3D_COMPILE_STANDARD_FILE_INCLUDE,
                        name.data(),
                        target.data(),
-                       NULL,
+                       D3DCOMPILE_DEBUG,
                        NULL
                        ,&blob,
-                       nullptr);
+                       &errorBlob);
+
+            if(errorBlob != nullptr){
+                std::cout << "OMEGASL COMPILE ERROR: D3D ERROR:" << (char *)errorBlob->GetBufferPointer() << std::endl;
+
+//                exit(1);
+            }
 
             auto & shaderEntry = shaderMap[name.data()];
             shaderEntry.data = blob->GetBufferPointer();
@@ -531,6 +530,10 @@ namespace omegasl {
 
     std::shared_ptr<CodeGen> HLSLCodeGenMake(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts){
         return std::make_shared<HLSLCodeGen>(opts,hlslCodeOpts);
+    }
+
+    std::shared_ptr<CodeGen> HLSLCodeGenMakeRuntime(CodeGenOpts &opts,HLSLCodeOpts & hlslCodeOpts,std::ostringstream & out){
+        return std::make_shared<HLSLCodeGen>(opts,hlslCodeOpts,out);
     }
 
 

@@ -40,11 +40,17 @@ _NAMESPACE_BEGIN_
         SharedHandle<GED3D12CommandQueue> commandQueue;
     public:
         SharedHandle<GED3D12Texture> texture;
+        explicit GED3D12TextureRenderTarget(
+                SharedHandle<GED3D12Texture> texture,
+                SharedHandle<GECommandQueue> & commandQueue);
+
         void commit() override;
         SharedHandle<CommandBuffer> commandBuffer() override;
+        void *nativeCommandQueue() override;
         void notifyCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & waitFence) override;
         void submitCommandBuffer(SharedHandle<CommandBuffer> & cb) override;
         void submitCommandBuffer(SharedHandle<CommandBuffer> & cb,SharedHandle<GEFence> & signalFence) override;
+        SharedHandle<GETexture> underlyingTexture() override;
     };
 _NAMESPACE_END_
 

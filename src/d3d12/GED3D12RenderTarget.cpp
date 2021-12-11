@@ -71,6 +71,13 @@ _NAMESPACE_BEGIN_
             frameIndex = swapChain->GetCurrentBackBufferIndex();
     };
 
+    GED3D12TextureRenderTarget::GED3D12TextureRenderTarget(SharedHandle<GED3D12Texture> texture,
+                                                           SharedHandle<GECommandQueue> & commandQueue)
+                                                           : texture(texture),
+                                                           commandQueue(std::dynamic_pointer_cast<GED3D12CommandQueue>(commandQueue)),engine(nullptr) {
+
+    }
+
     SharedHandle<GERenderTarget::CommandBuffer> GED3D12TextureRenderTarget::commandBuffer(){
         return SharedHandle<GERenderTarget::CommandBuffer>(new GERenderTarget::CommandBuffer(this,CommandBuffer::GERTType::Texture,commandQueue->getAvailableBuffer()));
     };
@@ -94,5 +101,13 @@ _NAMESPACE_BEGIN_
         commandQueue->commitToGPU();
         /// TODO: Fence.
     };
+
+    void *GED3D12TextureRenderTarget::nativeCommandQueue() {
+        return commandQueue->native();
+    }
+
+    SharedHandle<GETexture> GED3D12TextureRenderTarget::underlyingTexture() {
+        return std::static_pointer_cast<GETexture>(texture);
+    }
 
 _NAMESPACE_END_

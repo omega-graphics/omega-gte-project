@@ -755,7 +755,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
 
         std::vector<ID3D12Resource *> rtvs;
 
-        CD3DX12_CPU_DESCRIPTOR_HANDLE dsv_cpu_handle;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsv_cpu_handle{};
         if(desc.allowDepthStencilTesting) {
             dsv_cpu_handle = dsvDescHeap->GetCPUDescriptorHandleForHeapStart();
         }

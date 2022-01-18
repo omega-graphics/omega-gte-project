@@ -167,6 +167,7 @@ protected:
     virtual void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result) = 0;
     inline void _tessalatePriv(const TETessellationParams & params,GTEPolygonFrontFaceRotation frontFaceRotation, GEViewport * viewport,TETessellationResult & result);
 public:
+    OMEGACOMMON_CLASS("OmegaGTE.OmegaTessellationEngineContext")
     // Default Value: 0.01 radians.
     void setArcStep(float newArcStep){
         arcStep = newArcStep;
@@ -208,6 +209,7 @@ public:
 */
 class OMEGAGTE_EXPORT OmegaTessellationEngine {
 public:
+    OMEGACOMMON_CLASS("OmegaGTE.OmegaTessellationEngine")
   /**
    NEVER CALL THIS FUNCTION! Please invoke GTE::Init()
   */

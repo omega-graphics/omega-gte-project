@@ -65,6 +65,7 @@ _NAMESPACE_BEGIN_
          Compute Pass
         */
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.GECommandBuffer")
 
         /**
          @brief Start a Blit Pass
@@ -133,6 +134,7 @@ _NAMESPACE_BEGIN_
         unsigned currentlyOccupied = 0;
         explicit GECommandQueue(unsigned size);
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.GECommandQueue")
 
         /// @brief Gets the next usable command buffer allocated for this command queue.
         /// @note This method returns the first command buffer that has not been yet used by the user.

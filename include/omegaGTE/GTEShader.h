@@ -16,6 +16,7 @@ struct GTEShaderLibrary {
 size_t OMEGAGTE_EXPORT omegaSLStructSize(OmegaCommon::Vector<omegasl_data_type> fields) noexcept;
 
 struct OMEGAGTE_EXPORT GEBufferWriter {
+    OMEGACOMMON_CLASS("OmegaGTE.GEBufferWriter")
     virtual void setOutputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
     virtual void structBegin() = 0;
     virtual void writeFloat(float & v) = 0;
@@ -29,6 +30,7 @@ struct OMEGAGTE_EXPORT GEBufferWriter {
 };
 
 struct OMEGAGTE_EXPORT GEBufferReader {
+    OMEGACOMMON_CLASS("OmegaGTE.GEBufferReader")
     virtual void setInputBuffer(SharedHandle<GEBuffer> & buffer) = 0;
     virtual void setStructLayout(OmegaCommon::Vector<omegasl_data_type> fields) = 0;
     virtual void structBegin() = 0;

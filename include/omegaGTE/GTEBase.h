@@ -136,7 +136,7 @@ _NAMESPACE_BEGIN_
     class  Vector2D_Base {
         Num_Ty i;
         Num_Ty j;
-        public:
+    public:
         Vector2D_Base(Num_Ty _i,Num_Ty _j):i(_i),j(_j){
 
         };
@@ -200,6 +200,7 @@ _NAMESPACE_BEGIN_
     typedef Vector2D_Base<float,float> FVector2D;
     typedef Vector2D_Base<int,float> IVector2D;
 
+
     template<class Num_Ty,typename Angle_Ty = float>
     class  Vector3D_Base : protected Vector2D_Base<Num_Ty,Angle_Ty> {
         typedef Vector2D_Base<Num_Ty,Angle_Ty> parent;
@@ -214,6 +215,11 @@ _NAMESPACE_BEGIN_
             v.k = sin(angle_h) * mag;
             return v;
         };
+
+        using parent::getI;
+
+        using parent::getJ;
+
         Num_Ty & getK(){
             return k;
         };
@@ -860,5 +866,72 @@ _NAMESPACE_BEGIN_
     };
 
 _NAMESPACE_END_
+
+namespace OmegaCommon {
+    /// @brief Formatter of FVector2D
+    template<>
+    struct FormatProvider<OmegaGTE::FVector2D> {
+        static void format(std::ostream & out,OmegaGTE::FVector2D & object){
+            out << "OmegaGTE.FVector2D {" << object.getI() << "i, " << object.getJ() << "j}" << std::flush; 
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::FVector3D> {
+        static void format(std::ostream & out,OmegaGTE::FVector3D & object){
+            out << "OmegaGTE.FVector3D {" << object.getI() << "i, " << object.getJ() << "j, " << object.getK() << "k}" << std::flush; 
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::GVectorPath2D> {
+        static void format(std::ostream & out,OmegaGTE::GVectorPath2D & object){
+            out << "OmegaGTE.GVectorPath2D";
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::GVectorPath3D> {
+        static void format(std::ostream & out,OmegaGTE::GVectorPath3D & object){
+            out << "OmegaGTE.GVectorPath3D";
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::FVec<2>>{
+        static void format(std::ostream & out,OmegaGTE::FVec<2> & object){
+            out << "OmegaGTE.FVec<2> [" << object[0][0] << "," << object[1][0] << "]";
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::FVec<3>>{
+        static void format(std::ostream & out,OmegaGTE::FVec<3> & object){
+            out << "OmegaGTE.FVec<3> [" << object[0][0] << "," << object[1][0] << "," << object[2][0] <<  "]";
+        }
+    };
+
+    template<>
+    struct FormatProvider<OmegaGTE::FVec<4>>{
+        static void format(std::ostream & out,OmegaGTE::FVec<4> & object){
+            out << "OmegaGTE.FVec<4> [" << object[0][0] << "," << object[1][0] << "," << object[2][0] << "," << object[3][0] << "]";
+        }
+    };
+
+    // template<>
+    // struct FormatProvider<OmegaGTE::FMatrix<2,2>>{
+        
+    // };
+
+    // template<>
+    // struct FormatProvider<OmegaGTE::FMatrix<3,3>>{
+        
+    // };
+
+    // template<>
+    // struct FormatProvider<OmegaGTE::FMatrix<4,4>>{
+        
+    // };
+}
 
 #endif

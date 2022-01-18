@@ -16,6 +16,7 @@ _NAMESPACE_BEGIN_
      * @brief A Buffer that contains texel data arranged in regular rows.*/
     class  OMEGAGTE_EXPORT GETexture : public GTEResource {
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.GETexture")
         typedef enum : unsigned char {
             Texture1D,
             Texture2D,

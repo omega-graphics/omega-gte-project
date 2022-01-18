@@ -107,6 +107,7 @@ _NAMESPACE_BEGIN_
         bool checkCanRead();
         explicit GEBuffer(const BufferDescriptor::Usage & usage);
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.GEBuffer");
         virtual size_t size() = 0;
         virtual ~GEBuffer() = default;
     };
@@ -122,6 +123,7 @@ _NAMESPACE_BEGIN_
 
     class  OMEGAGTE_EXPORT GEHeap {
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.GEHeap")
         virtual size_t currentSize() = 0;
         /**
          @brief Creates a GEBuffer from a BufferDescriptor.
@@ -139,7 +141,7 @@ _NAMESPACE_BEGIN_
     };
 
     /// @brief Provides command synchronization across multiple command queues.
-    class  OMEGAGTE_EXPORT GEFence : public GTEResource {};
+    class  OMEGAGTE_EXPORT GEFence : public GTEResource { public: OMEGACOMMON_CLASS("OmegaGTE.GEFence")};
 
     /// @brief Describes a Texture Sampler
     struct OMEGAGTE_EXPORT SamplerDescriptor {
@@ -172,7 +174,7 @@ _NAMESPACE_BEGIN_
 
     };
 
-    class OMEGAGTE_EXPORT GESamplerState {};
+    class OMEGAGTE_EXPORT GESamplerState { public: OMEGACOMMON_CLASS("OmegaGTE.GESamplerState")};
 
     /**
      @brief The Omega Graphics Engine
@@ -182,6 +184,7 @@ _NAMESPACE_BEGIN_
     protected:
         virtual SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime = false) = 0;
     public:
+        OMEGACOMMON_CLASS("OmegaGTE.OmegaGraphicsEngine")
         /// @brief Returns the Native Device.
         /// @returns On Windows, it returns ID3D12Device *, For Darwin, it returns a id<MTLDevice> ,and for Android and Linux it returns a VkDevice.
         virtual void * underlyingNativeDevice() = 0;

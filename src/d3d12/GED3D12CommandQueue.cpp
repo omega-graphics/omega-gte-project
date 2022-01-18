@@ -315,7 +315,10 @@ _NAMESPACE_BEGIN_
             currentTarget.texture = textureRenderTarget;
         };
         rt_desc.cpuDescriptor = cpu_handle;
-        ds_desc.cpuDescriptor = ds_cpu_handle;
+        
+        if(!desc.depthStencilAttachment.disabled){
+            ds_desc.cpuDescriptor = ds_cpu_handle;
+        }
 
         if(desc.multisampleResolve){
             rt_desc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;

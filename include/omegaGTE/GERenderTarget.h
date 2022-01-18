@@ -86,6 +86,8 @@ _NAMESPACE_BEGIN_
           
         public:
 
+            OMEGACOMMON_CLASS("OmegaGTE.GECommandBuffer")
+
             void setName(OmegaCommon::StrRef name) override;
 
             void * native() override;
@@ -171,6 +173,7 @@ _NAMESPACE_BEGIN_
     };
     class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {
         public:
+         OMEGACOMMON_CLASS("OmegaGTE.GENativeRenderTarget")
         virtual void commitAndPresent() = 0;
 //        virtual void commitAndWait() = 0;
         #ifdef _WIN32 
@@ -180,6 +183,7 @@ _NAMESPACE_BEGIN_
      };
      class  OMEGAGTE_EXPORT GETextureRenderTarget : public GERenderTarget {
          public:
+         OMEGACOMMON_CLASS("OmegaGTE.GETextureRenderTarget")
          virtual void commit() = 0;
          virtual SharedHandle<GETexture> underlyingTexture() = 0;
      };

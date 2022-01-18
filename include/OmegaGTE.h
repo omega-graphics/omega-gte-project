@@ -44,6 +44,7 @@ protected:
 
     };
 public:
+     OMEGACOMMON_CLASS("OmegaGTE.GTEDevice")
     virtual const void *native() = 0;
     virtual ~GTEDevice() = default;
 };

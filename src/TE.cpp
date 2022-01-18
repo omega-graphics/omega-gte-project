@@ -461,15 +461,19 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
                     else {
                         inner_path = &object->path;
                     }
-
-                    if(inner_path->size() == 2){
-
-                    }
-                    else if(inner_path->size() > 1) {
+                    
+                    if(inner_path->size() > 2) {
 
                         GVectorPath2D trace_path{*inner_path};
-                        GVectorPath2D trace_path_record{trace_path.firstPt()};
+                        GVectorPath2D trace_path__t{inner_path->firstPt()};
+                        OmegaCommon::Vector<std::pair<GPoint2D,float>> trace_path_record;
+                        TETessellationResult::TEMesh fill_mesh;
+                        fill_mesh.topology = TETessellationResult::TEMesh::TopologyTriangle;
+
                         while (trace_path.size() > 3) {
+                            float cross_result = 0;
+
+                            /// 1. Calculate Fill Direction of Polygon 
                             for (auto path_it = trace_path.begin(); path_it != trace_path.end(); path_it.operator++()) {
                                 GPoint2D a, b, c;
 
@@ -483,12 +487,84 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
                                     c = *(*path_it).pt_B;
                                 }
                                 FVector3D vec_a{b.x - a.x, b.y - a.y, 0.f}, vec_b{c.x - b.x, c.y - b.y, 0.f};
-                                auto res = vec_a.cross(vec_b);
-
+                                auto res = vec_a.cross(vec_b).getK();
+                                trace_path_record.push_back(std::make_pair(b,res));
+                                cross_result += res;
                             }
-                        }
-                    }
 
+                            #define NEXT_ON_PATH(p) ++(p); if(p == trace_path_record.end()){ p = trace_path_record.begin();};
+
+                            /// 2. Fill Polygon recursively,
+                            bool plus_dominant = cross_result > 0,minus_dominant = cross_result < 0;
+
+                            for(auto pt_it = trace_path_record.begin(); pt_it != trace_path_record.end();){
+                                auto first_pt = pt_it->first;
+                                TETessellationResult::TEMesh::Polygon polygon;
+                                // polygon.a.attachment = polygon.b.attachment = polygon.c.attachment = std::make_optional(TETessellationResult::AttachmentData{}); 
+
+                                NEXT_ON_PATH(pt_it);
+
+                                if(plus_dominant){
+                                    if(pt_it->second > 0){
+                                        polygon.a.pt = GPoint3D{first_pt.x,first_pt.y,0.f};
+                                        polygon.b.pt = GPoint3D{pt_it->first.x,pt_it->first.y,0.f};
+
+                                        NEXT_ON_PATH(pt_it);
+
+                                        polygon.c.pt = GPoint3D{pt_it->first.x,pt_it->first.y,0.f};
+                                        fill_mesh.vertexPolygons.push_back(polygon);
+
+                                        trace_path__t.append(first_pt);
+                                        trace_path__t.append(pt_it->first);
+                                    }
+                                    else {
+                                         trace_path__t.append(first_pt);
+                                    }
+                                }
+                                else if(minus_dominant){
+                                    if(pt_it->second < 0){
+                                        polygon.a.pt = GPoint3D{first_pt.x,first_pt.y,0.f};
+                                        polygon.b.pt = GPoint3D{pt_it->first.x,pt_it->first.y,0.f};
+
+                                        NEXT_ON_PATH(pt_it);
+
+                                        polygon.c.pt = GPoint3D{pt_it->first.x,pt_it->first.y,0.f};
+                                        fill_mesh.vertexPolygons.push_back(polygon);
+
+                                        trace_path__t.append(first_pt);
+                                        trace_path__t.append(pt_it->first);
+                                    }
+                                    else {
+                                         trace_path__t.append(first_pt);
+                                    }
+                                }
+                                else {
+                                    trace_path__t.append(first_pt);
+                                    trace_path__t.append(pt_it->first);
+                                     NEXT_ON_PATH(pt_it);
+                                     trace_path__t.append(pt_it->first);
+                                }
+
+                            
+                            }
+
+                            trace_path = trace_path__t;
+                            trace_path__t.reset(trace_path__t.lastPt());
+                        }
+                        TETessellationResult::TEMesh::Polygon polygon;
+                        auto it = trace_path.begin();
+                        auto seg0 = *it;
+                        ++it;
+                        auto seg1 = *it;
+
+                        polygon.a.pt = GPoint3D{seg0.pt_A->x,seg0.pt_A->y,0.f};
+                        polygon.b.pt = GPoint3D{seg0.pt_B->x,seg0.pt_B->y,0.f};
+                        polygon.c.pt = GPoint3D{seg0.pt_B->x,seg0.pt_B->y,0.f};
+                        
+                        fill_mesh.vertexPolygons.push_back(polygon);
+                        result.meshes.push_back(fill_mesh);
+                    }
+                    
                 }
 
             }

@@ -17,6 +17,7 @@ public:
 
     ComPtr<ID3D12Resource> cpuSideresource;
     ComPtr<ID3D12DescriptorHeap> srvDescHeap;
+    ComPtr<ID3D12DescriptorHeap> uavDescHeap;
     ComPtr<ID3D12DescriptorHeap> rtvDescHeap;
     ComPtr<ID3D12DescriptorHeap> dsvDescHeap;
 
@@ -44,6 +45,7 @@ public:
             ID3D12Resource *res,
             ID3D12Resource *cpuSideRes,
             ID3D12DescriptorHeap *descHeap,
+            ID3D12DescriptorHeap *uavDescHeap,
             ID3D12DescriptorHeap *rtvDescHeap,
             ID3D12DescriptorHeap *dsvDescHeap,
             D3D12_RESOURCE_STATES & currentState);

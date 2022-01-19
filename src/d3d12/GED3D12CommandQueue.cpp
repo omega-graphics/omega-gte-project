@@ -74,7 +74,7 @@ _NAMESPACE_BEGIN_
         unsigned idx = 0;
         for(;idx < currentRootSignature->NumParameters;idx++){
             auto & param = currentRootSignature->pParameters[idx];
-            std::cout << "PARAM_TYPE:" << (int)param.ParameterType << std::endl;
+            // std::cout << "PARAM_TYPE:" << (int)param.ParameterType << std::endl;
             if(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV && isSRV){
                 if(param.Descriptor.ShaderRegister == relative_index && param.Descriptor.RegisterSpace == regSpace){
                     break;
@@ -86,7 +86,7 @@ _NAMESPACE_BEGIN_
                 }
             }
             else if(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE && isDescriptorTable) {
-                auto & range = *param.DescriptorTable.pDescriptorRanges;
+                auto & range = param.DescriptorTable.pDescriptorRanges[0];
                 if(range.BaseShaderRegister == relative_index && range.RegisterSpace == regSpace){
                     break;
                 }
@@ -104,7 +104,7 @@ _NAMESPACE_BEGIN_
                 if(l.type == OMEGASL_SHADER_TEXTURE1D_DESC || l.type == OMEGASL_SHADER_TEXTURE2D_DESC || l.type == OMEGASL_SHADER_TEXTURE3D_DESC){
                     if(l.io_mode == OMEGASL_SHADER_DESC_IO_IN){
                         if(shader.type == OMEGASL_SHADER_FRAGMENT){
-                            state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+                            state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                         }
                         else {
                             state = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -486,15 +486,16 @@ _NAMESPACE_BEGIN_
 
         if(d3d12_texture->currentState & D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE){
             /// Use Shader Resource View.
-            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+            cpuDescHandle = d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart();
         }
         else {
             /// Use Unordered Access View
-            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart(),parentQueue->engine->d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+            cpuDescHandle = d3d12_texture->uavDescHeap->GetGPUDescriptorHandleForHeapStart();
         }
-
+        
         commandList->SetDescriptorHeaps(1,d3d12_texture->srvDescHeap.GetAddressOf());
-        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal),cpuDescHandle);
+        unsigned idx = getRootParameterIndexOfResource(index,currentRenderPipeline->vertexShader->internal);
+        commandList->SetGraphicsRootDescriptorTable(idx,cpuDescHandle);
 
     };
 
@@ -550,19 +551,21 @@ _NAMESPACE_BEGIN_
             d3d12_texture->currentState = required_state;
         }
 
-        D3D12_GPU_DESCRIPTOR_HANDLE cpuDescHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE cpuDescHandle {};
 
         if(d3d12_texture->currentState & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE){
             /// Use Shader Resource View.
-            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+            cpuDescHandle = d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart();
         }
         else {
             /// Use Unordered Access View
-            cpuDescHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart(),parentQueue->engine->d3d12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+            cpuDescHandle = d3d12_texture->uavDescHeap->GetGPUDescriptorHandleForHeapStart();
         }
 
         commandList->SetDescriptorHeaps(1,d3d12_texture->srvDescHeap.GetAddressOf());
-         commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal),cpuDescHandle);
+        unsigned rootParam = getRootParameterIndexOfResource(index,currentRenderPipeline->fragmentShader->internal);
+        DEBUG_STREAM("Root Param With Texture:" << rootParam);
+        commandList->SetGraphicsRootDescriptorTable(rootParam,cpuDescHandle);
 
     };
 
@@ -759,6 +762,7 @@ _NAMESPACE_BEGIN_
         auto fence = (GED3D12Fence *)waitFence.get();
         commandQueue->Wait(fence->fence.Get(),1);
         commandQueue->Signal(fence->fence.Get(),0);
+         multiQueueSync = false;
     };
 
     void GED3D12CommandQueue::submitCommandBuffer(SharedHandle<GECommandBuffer> &commandBuffer){
@@ -778,6 +782,7 @@ _NAMESPACE_BEGIN_
         d3d12_buffer->commandList->Close();
         commandQueue->ExecuteCommandLists(1,(ID3D12CommandList *const *)d3d12_buffer->commandList.GetAddressOf());
         commandQueue->Signal(fence->fence.Get(),1);
+        multiQueueSync = false;
     }
 
     void GED3D12CommandBuffer::reset(){

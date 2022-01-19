@@ -166,9 +166,9 @@ _NAMESPACE_BEGIN_
             void reset();
         };
         virtual SharedHandle<CommandBuffer> commandBuffer() = 0;
-        virtual void notifyCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) = 0;
-        virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer) = 0;
-        virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence) = 0;
+        virtual void notifyCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence)  = 0;
+        virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer)  = 0;
+        virtual void submitCommandBuffer(SharedHandle<CommandBuffer> & commandBuffer,SharedHandle<GEFence> & fence)  = 0;
         virtual void *nativeCommandQueue() = 0;
     };
     class  OMEGAGTE_EXPORT GENativeRenderTarget : public GERenderTarget {

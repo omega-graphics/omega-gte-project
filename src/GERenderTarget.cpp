@@ -14,8 +14,8 @@ GERenderTarget::RenderPassDesc::ColorAttachment::ColorAttachment(GERenderTarget:
 
 GERenderTarget::CommandBuffer::CommandBuffer(GERenderTarget *renderTarget,GERTType type,SharedHandle<GECommandBuffer> commandBuffer):
 renderTargetPtr(renderTarget),
-renderTargetTy(type),
-commandBuffer(std::move(commandBuffer)){
+commandBuffer(std::move(commandBuffer)),
+renderTargetTy(type){
     
 };
 

@@ -10,6 +10,7 @@ GED3D12Texture::GED3D12Texture(const GETextureType & type,
                                ID3D12Resource *res,
                                ID3D12Resource *cpuSideRes,
                                ID3D12DescriptorHeap *descHeap,
+                               ID3D12DescriptorHeap *uavDescHeap,
                                ID3D12DescriptorHeap *rtvDescHeap,
                                ID3D12DescriptorHeap *dsvDescHeap,
                                D3D12_RESOURCE_STATES & currentState):
@@ -17,10 +18,11 @@ GED3D12Texture::GED3D12Texture(const GETextureType & type,
                                 resource(res),
                                 cpuSideresource(cpuSideRes),
                                srvDescHeap(descHeap),
+                               uavDescHeap(uavDescHeap),
                                rtvDescHeap(rtvDescHeap),
                                dsvDescHeap(dsvDescHeap),
                                currentState(currentState){
-    if(usage == GPUAccessOnly){
+    if(usage == GPUAccessOnly || usage == RenderTarget){
         onGpu = true;
     }
     else {

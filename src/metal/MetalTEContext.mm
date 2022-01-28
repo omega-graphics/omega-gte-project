@@ -1,5 +1,6 @@
 #include "omegaGTE/TE.h"
 #include "GEMetalRenderTarget.h"
+#include "GEMetalTexture.h"
 // #include "omegaGTE/GTEShaderTypes.h"
 
 #import <simd/simd.h>
@@ -40,9 +41,9 @@ class MetalNativeRenderTargetTEContext : public OmegaTessellationEngineContext {
     // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
     //     return _tessalatePriv(params,viewport);
     // };
-    void translateCoords(float x, float y,float z,GEViewport * viewport,float *x_result, float *y_result,float *z_result){
-        std::cout << viewport << std::endl;
-        if(viewport != 0x00){
+    void translateCoords(float x, float y,float z,GEViewport * viewport,float *x_result, float *y_result,float *z_result) override{
+        // std::cout << viewport << std::endl;
+        if(viewport != nullptr){
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
@@ -62,7 +63,7 @@ class MetalNativeRenderTargetTEContext : public OmegaTessellationEngineContext {
                     *z_result = z / 1.0;
                 }
                 else if(z < 0.0){
-                    *z_result = z / 0.0;
+                    *z_result = z / 1.0;
                 }
                 else {
                     *z_result = z;
@@ -80,22 +81,45 @@ class MetalTextureRenderTargetTEContext : public OmegaTessellationEngineContext 
     // std::future<TETessalationResult> tessalateAsync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
         
     // };
-    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GEViewport * viewport){};
-    // TETessalationResult tessalateSync(const TETessalationParams &params, std::optional<GEViewport> viewport = {}){
-    //     return _tessalatePriv(params,viewport);
-    // };
-    void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result){
+    std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GEViewport * viewport){
+        {};
+    };
+    void translateCoords(float x, float y,float z,GEViewport * viewport, float *x_result, float *y_result,float *z_result) override{
         if(viewport != nullptr){
             translateCoordsDefaultImpl(x,y,z,viewport,x_result,y_result,z_result);
         }
         else {
+            // std::cout << "Yes" << std::endl;
 
+            CGFloat scaleFactor = [NSScreen mainScreen].backingScaleFactor;
+
+            id<MTLTexture> tex = (id<MTLTexture>)target->texturePtr->native();
+
+            CGFloat width = tex.width / scaleFactor;
+            CGFloat height = tex.height / scaleFactor;
+
+            *x_result = x / width;
+            *y_result = y / height;
+
+            if(z_result != nullptr) {
+                if(z > 0.0){
+                    *z_result = z / 1.0;
+                }
+                else if(z < 0.0){
+                    *z_result = z / 1.0;
+                }
+                else {
+                    *z_result = z;
+                };
+            }
         };
     };
     std::future<TETessellationResult> tessalateOnGPU(const TETessellationParams &params, GTEPolygonFrontFaceRotation frontFaceRotation = GTEPolygonFrontFaceRotation::Clockwise, GEViewport *viewport = nullptr) override {
         return {};
     }
-    MetalTextureRenderTargetTEContext(SharedHandle<GEMetalTextureRenderTarget> target):target(target){};
+    MetalTextureRenderTargetTEContext(SharedHandle<GEMetalTextureRenderTarget> target):target(target){
+        
+    };
 };
 
 SharedHandle<OmegaTessellationEngineContext> CreateNativeRenderTargetTEContext(SharedHandle<GENativeRenderTarget> &renderTarget){

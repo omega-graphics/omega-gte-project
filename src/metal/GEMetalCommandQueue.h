@@ -17,6 +17,11 @@ _NAMESPACE_BEGIN_
         id<MTLRenderCommandEncoder> rp = nil;
         id<MTLComputeCommandEncoder> cp = nil;
         id<MTLBlitCommandEncoder> bp = nil;
+
+         #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        id<MTLAccelerationStructureCommandEncoder> ap = nil;
+        #endif
+
         GEMetalCommandQueue *parentQueue = nullptr;
 
         GEMetalRenderPipelineState *renderPipelineState = nullptr;
@@ -42,6 +47,18 @@ _NAMESPACE_BEGIN_
         void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest) override;
         void copyTextureToTexture(SharedHandle<GETexture> &src, SharedHandle<GETexture> &dest, const TextureRegion &region, const GPoint3D &destCoord) override;
         void finishBlitPass() override;
+
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+        void beginAccelStructPass() override;
+        void buildAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure,const GEAccelerationStructDescriptor &desc) override;
+        void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure, const GEAccelerationStructDescriptor &desc) override;
+        void copyAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, SharedHandle<GEAccelerationStruct> &dest) override;
+        void finishAccelStructPass() override;
+
+        void dispatchRays(unsigned int x, unsigned int y, unsigned int z) override;
+
+        #endif
         
         void startRenderPass(const GERenderPassDescriptor &desc) override;
         void setVertexBuffer(SharedHandle<GEBuffer> &buffer) override;
@@ -60,6 +77,9 @@ _NAMESPACE_BEGIN_
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
         void bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned id) override;
         void bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned id) override;
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        void bindResourceAtComputeShader(SharedHandle<GEAccelerationStruct> &accelStruct, unsigned int id) override;
+        #endif
         void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
 

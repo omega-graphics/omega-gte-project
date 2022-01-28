@@ -7,11 +7,8 @@
 #if defined(TARGET_METAL) && defined(__OBJC__)
 @protocol MTLBuffer;
 @protocol MTLFence;
-#endif
 
 _NAMESPACE_BEGIN_
-
-#if defined(TARGET_METAL) && defined(__OBJC__)
 
 struct NSObjectHandle {
     const void *data;
@@ -65,11 +62,24 @@ struct GEMetalSamplerState : public GESamplerState {
     GEMetalSamplerState(NSSmartPtr & samplerState);
 };
 
+#ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+struct GEMetalAccelerationStruct : public GEAccelerationStruct {
+    NSSmartPtr accelStruct;
+    SharedHandle<GEMetalBuffer> scratchBuffer;
+
+    explicit GEMetalAccelerationStruct(NSSmartPtr & accelStruct,
+    SharedHandle<GEMetalBuffer> & scratchBuffer);
+};
+
+#endif
+
 #endif
 
 SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(SharedHandle<GTEDevice> & device);
 _NAMESPACE_END_
 
-#endif
 
+
+#endif
 

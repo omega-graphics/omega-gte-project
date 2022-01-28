@@ -1,4 +1,5 @@
 #import "GEMetalCommandQueue.h"
+#include <memory>
 #import "GEMetalRenderTarget.h"
 #import "GEMetalPipeline.h"
 #import "GEMetal.h"
@@ -10,6 +11,7 @@
 /// @note In Metal, we use id<MTLFence> as a Resource Barrier between different shader stages.
 
 _NAMESPACE_BEGIN_
+
     GEMetalCommandBuffer::GEMetalCommandBuffer(GEMetalCommandQueue *parentQueue):parentQueue(parentQueue),
     buffer({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLCommandQueue>,parentQueue->commandQueue.handle()) commandBuffer]}){
        
@@ -82,7 +84,40 @@ _NAMESPACE_BEGIN_
 
     void GEMetalCommandBuffer::finishBlitPass(){
         [bp endEncoding];
+        bp = nil;
     };
+
+
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+     void GEMetalCommandBuffer::beginAccelStructPass(){
+        ap = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) accelerationStructureCommandEncoder];
+    };
+
+    void GEMetalCommandBuffer::buildAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure,const GEAccelerationStructDescriptor &desc){
+        MTLPrimitiveAccelerationStructureDescriptor *d = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+        auto metal_structure = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(structure);
+        [ap buildAccelerationStructure:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,metal_structure->accelStruct.handle()) 
+            descriptor:d 
+            scratchBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metal_structure->scratchBuffer->metalBuffer.handle()) 
+            scratchBufferOffset:0];
+
+    }
+
+    void GEMetalCommandBuffer::refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure, const GEAccelerationStructDescriptor &desc){
+         MTLPrimitiveAccelerationStructureDescriptor *d = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+         auto metal_structure = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(structure);
+         [ap refitAccelerationStructure:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,metal_structure->accelStruct.handle()) 
+            descriptor:d 
+            destination:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,metal_structure->accelStruct.handle()) scratchBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metal_structure->scratchBuffer->metalBuffer.handle())  scratchBufferOffset:0];
+    };
+
+    void GEMetalCommandBuffer::finishAccelStructPass(){
+        [ap endEncoding];
+        ap = nil;
+    };
+
+    #endif
 
     void GEMetalCommandBuffer::setVertexBuffer(SharedHandle<GEBuffer> &buffer) {
 
@@ -99,6 +134,7 @@ _NAMESPACE_BEGIN_
         NSSmartPtr barrier = NSObjectHandle{nullptr};
 
         if(desc.nRenderTarget != nullptr){
+            NSLog(@"Prepare Render Pass For NativeTarget");
             auto *n_rt = (GEMetalNativeRenderTarget *)desc.nRenderTarget;
             auto metalDrawable = n_rt->getDrawable();
             metalDrawable.assertExists();
@@ -113,11 +149,13 @@ _NAMESPACE_BEGIN_
                 renderTarget =  NSOBJECT_OBJC_BRIDGE(id<CAMetalDrawable>,metalDrawable.handle()).texture;
             }
             renderPassDesc.colorAttachments[0].texture =renderTarget;
+           
             if(!desc.depthStencilAttachment.disabled){
                 renderPassDesc.depthAttachment.texture = renderPassDesc.stencilAttachment.texture = renderTarget;
             }
         }
-        else if(desc.tRenderTarget){
+        else if(desc.tRenderTarget != nullptr){
+            NSLog(@"Prepare Render Pass For TextureTarget");
             auto *t_rt = (GEMetalTextureRenderTarget *)desc.tRenderTarget;
             if(t_rt->texturePtr->needsBarrier){
                 needsBarrier = true;
@@ -226,6 +264,7 @@ _NAMESPACE_BEGIN_
         }
 
         rp = [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) renderCommandEncoderWithDescriptor:renderPassDesc];
+        NSLog(@"Starting Render Pass: %@",rp);
         if(needsBarrier){
             /// Ensure texture is ready to render to when fragment stage begins.
             [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,barrier.handle()) beforeStages:MTLRenderStageFragment];
@@ -235,7 +274,9 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::setRenderPipelineState(SharedHandle<GERenderPipelineState> & pipelineState){
         auto *ps = (GEMetalRenderPipelineState *)pipelineState.get();
         ps->renderPipelineState.assertExists();
+        NSLog(@"Render Pipeline Set: %@",(id<MTLRenderPipelineState>)ps->renderPipelineState.handle());
         [rp setRenderPipelineState:NSOBJECT_OBJC_BRIDGE(id<MTLRenderPipelineState>,ps->renderPipelineState.handle())];
+        
         [rp setFrontFacingWinding:ps->rasterizerState.winding];
         [rp setCullMode:ps->rasterizerState.cullMode];
         [rp setTriangleFillMode:ps->rasterizerState.fillMode];
@@ -251,12 +292,14 @@ _NAMESPACE_BEGIN_
         auto *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
 
+
         if(metalBuffer->needsBarrier){
             [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) beforeStages:MTLRenderStageVertex];
             metalBuffer->needsBarrier = false;
         }
 
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
+         NSLog(@"Binding GEBuffer at Vertex Shader: %@ At Index: %i",NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()),index);
         [rp setVertexBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
 
         if(shaderHasWriteAccessForResource(_id,renderPipelineState->vertexShader->internal)){
@@ -275,6 +318,7 @@ _NAMESPACE_BEGIN_
         }
 
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->vertexShader->internal);
+        NSLog(@"Binding GETexture at Vertex Shader: %@ At Index: %i",NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()),index);
         [rp setVertexTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
         if(shaderHasWriteAccessForResource(_id,renderPipelineState->vertexShader->internal)){
             metalTexture->needsBarrier = true;
@@ -287,12 +331,15 @@ _NAMESPACE_BEGIN_
         auto *metalBuffer = (GEMetalBuffer *)buffer.get();
         metalBuffer->metalBuffer.assertExists();
 
+
         if(metalBuffer->needsBarrier){
             [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalBuffer->resourceBarrier.handle()) beforeStages:MTLRenderStageFragment];
             metalBuffer->needsBarrier = false;
         }
 
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
+
+        NSLog(@"Binding GEBuffer at Fragment Shader: %@ At Index: %i",NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()),index);
         [rp setFragmentBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metalBuffer->metalBuffer.handle()) offset:0 atIndex:index];
         if(shaderHasWriteAccessForResource(_id,renderPipelineState->fragmentShader->internal)){
             metalBuffer->needsBarrier = true;
@@ -304,17 +351,20 @@ _NAMESPACE_BEGIN_
         assert((rp && (cp == nil)) && "Cannot Resource Const on a Fragment Func when not in render pass");
         auto *metalTexture = (GEMetalTexture *)texture.get();
 
+
         if(metalTexture->needsBarrier){
             [rp waitForFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) beforeStages:MTLRenderStageFragment];
             metalTexture->needsBarrier = false;
         }
 
         unsigned index = getResourceLocalIndexFromGlobalIndex(_id,renderPipelineState->fragmentShader->internal);
+        NSLog(@"Binding GETexture at Fragment Shader: %@ At Index: %i",NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()),index);
+
         [rp setFragmentTexture:NSOBJECT_OBJC_BRIDGE(id<MTLTexture>,metalTexture->texture.handle()) atIndex:index];
-        if(shaderHasWriteAccessForResource(_id,renderPipelineState->fragmentShader->internal)){
-            metalTexture->needsBarrier = true;
-            [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) afterStages:MTLRenderStageFragment];
-        }
+        // if(shaderHasWriteAccessForResource(_id,renderPipelineState->fragmentShader->internal)){
+        //     metalTexture->needsBarrier = true;
+        //     [rp updateFence:NSOBJECT_OBJC_BRIDGE(id<MTLFence>,metalTexture->resourceBarrier.handle()) afterStages:MTLRenderStageFragment];
+        // }
     };
 
     void GEMetalCommandBuffer::setViewports(std::vector<GEViewport> viewports){
@@ -378,6 +428,7 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::finishRenderPass(){
         renderPipelineState = nullptr;
         [rp endEncoding];
+        rp = nil;
     };
 
     void GEMetalCommandBuffer::startComputePass(const GEComputePassDescriptor & desc){
@@ -425,6 +476,20 @@ _NAMESPACE_BEGIN_
         }
     }
 
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+    void GEMetalCommandBuffer::bindResourceAtComputeShader(SharedHandle<GEAccelerationStruct> & accelStruct,unsigned int idx){
+         assert(cp != nil && "");
+        auto mtl_accel_struct = (GEMetalAccelerationStruct *)accelStruct.get();
+        [cp setAccelerationStructure:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,mtl_accel_struct->accelStruct.handle()) atBufferIndex:getResourceLocalIndexFromGlobalIndex(idx,computePipelineState->computeShader->internal)];
+    }
+
+    void GEMetalCommandBuffer::dispatchRays(unsigned int x, unsigned int y, unsigned int z){
+        dispatchThreads(x,y,z);
+    }
+
+    #endif
+
     void GEMetalCommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
         assert(cp != nil && "");
         auto & threadgroup_desc = computePipelineState->computeShader->internal.threadgroupDesc;
@@ -434,6 +499,7 @@ _NAMESPACE_BEGIN_
     void GEMetalCommandBuffer::finishComputePass(){
         [cp endEncoding];
         computePipelineState = nullptr;
+        cp = nil;
     };
 
     void GEMetalCommandBuffer::_present_drawable(NSSmartPtr & drawable){
@@ -451,11 +517,11 @@ _NAMESPACE_BEGIN_
                 NSLog(@"Command Buffer Failed to Execute. Error: %@",commandBuffer.error);
             }
             else if(commandBuffer.status == MTLCommandBufferStatusCompleted){
-                NSLog(@"Successfully completed Command Buffer!");
+                NSLog(@"Successfully completed Command Buffer! (Logs: %@) (Warning: %@) Duration:%f",commandBuffer.logs,commandBuffer.error,1000.f * (commandBuffer.GPUEndTime - commandBuffer.GPUStartTime));
             }
          }];
         [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) commit];
-        NSLog(@"Commit to GPU!");
+        // NSLog(@"Commit to GPU!");
     };
 
 //    void GEMetalCommandBuffer::waitForFence(SharedHandle<GEFence> &fence, unsigned int val) {
@@ -475,7 +541,7 @@ _NAMESPACE_BEGIN_
     };
 
     GEMetalCommandBuffer::~GEMetalCommandBuffer(){
-        NSLog(@"Metal Command Buffer Destroy");
+        // NSLog(@"Metal Command Buffer Destroy");
         buffer.assertExists();
         // [NSOBJECT_OBJC_BRIDGE(id<MTLCommandBuffer>,buffer.handle()) autorelease];
     }
@@ -516,17 +582,13 @@ _NAMESPACE_BEGIN_
             auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
             mtlCommandBuffer->_commit();
         };
-//        commandBuffers.clear();
+       commandBuffers.clear();
     };
 
     void GEMetalCommandQueue::commitToGPUAndPresent(NSSmartPtr & drawable){
         auto & b = commandBuffers.back();
         ((GEMetalCommandBuffer *)b.get())->_present_drawable(drawable);
-        for(auto & commandBuffer : commandBuffers){
-            auto mtlCommandBuffer = (GEMetalCommandBuffer *)commandBuffer.get();
-            mtlCommandBuffer->_commit();
-        };
-//        commandBuffers.clear();
+        commitToGPU();
     };
 
     void GEMetalCommandQueue::commitToGPUAndWait() {

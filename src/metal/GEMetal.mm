@@ -92,6 +92,13 @@ _NAMESPACE_BEGIN_
 
     };
 
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+    GEMetalAccelerationStruct::GEMetalAccelerationStruct(NSSmartPtr & accelStruct,
+    SharedHandle<GEMetalBuffer> & scratchBuffer):accelStruct(accelStruct),scratchBuffer(scratchBuffer){
+
+    }
+    #endif
+
     /// @brief Metal Buffer Reader/Writer.
 
     typedef unsigned char MTLByte;
@@ -539,6 +546,32 @@ _NAMESPACE_BEGIN_
             DEBUG_STREAM("GEMetalEngine Successfully Created");
             
         };
+
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+        SharedHandle<GEBuffer> createBoundingBoxesBuffer(OmegaCommon::ArrayRef<GERaytracingBoundingBox> boxes) override {
+            auto buffer = std::dynamic_pointer_cast<GEMetalBuffer>(makeBuffer({BufferDescriptor::Upload,sizeof(MTLAxisAlignedBoundingBox) * boxes.size(),sizeof(MTLAxisAlignedBoundingBox)}));
+            std::vector<MTLAxisAlignedBoundingBox> bb;
+            for(auto & box : boxes){
+                MTLAxisAlignedBoundingBox boundingBox;
+                boundingBox.min = MTLPackedFloat3Make(box.minX,box.minY,box.minZ);
+                boundingBox.max = MTLPackedFloat3Make(box.maxX,box.maxY,box.maxZ);
+                bb.push_back(boundingBox);
+            }
+            void *dataPtr = [NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,buffer->metalBuffer.handle()) contents];
+            memmove(dataPtr,bb.data(),bb.size() * sizeof(MTLAxisAlignedBoundingBox));
+            return std::static_pointer_cast<GEBuffer>(buffer);
+        }
+
+        SharedHandle<GEAccelerationStruct> allocateAccelerationStructure(const GEAccelerationStructDescriptor &desc) override {
+            MTLPrimitiveAccelerationStructureDescriptor *d = [[MTLPrimitiveAccelerationStructureDescriptor alloc]init];
+            auto sizes = [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) accelerationStructureSizesWithDescriptor:d];
+            NSSmartPtr handle = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newAccelerationStructureWithSize:sizes.accelerationStructureSize]};
+            auto buffer = std::dynamic_pointer_cast<GEMetalBuffer>(makeBuffer({BufferDescriptor::GPUOnly,sizes.buildScratchBufferSize}));
+            return (SharedHandle<GEAccelerationStruct>)new GEMetalAccelerationStruct (handle,buffer);
+        }
+        #endif
+
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override{
             metalDevice.assertExists();
             NSSmartPtr commandQueue ({NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newCommandQueueWithMaxCommandBufferCount:maxBufferCount]});
@@ -597,7 +630,7 @@ _NAMESPACE_BEGIN_
         SharedHandle<GENativeRenderTarget> makeNativeRenderTarget(const NativeRenderTargetDescriptor &desc) override{
             metalDevice.assertExists();
             desc.metalLayer.device = NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle());
-            auto commandQueue = makeCommandQueue(100);
+            auto commandQueue = makeCommandQueue(64);
             return std::shared_ptr<GENativeRenderTarget>(new GEMetalNativeRenderTarget(commandQueue,desc.metalLayer));
         };
 
@@ -718,7 +751,7 @@ _NAMESPACE_BEGIN_
 
                 texture = makeTexture(textureDescriptor);
             }
-            auto commandQueue = makeCommandQueue(100);
+            auto commandQueue = makeCommandQueue(64);
             return SharedHandle<GETextureRenderTarget>(new GEMetalTextureRenderTarget(texture,commandQueue));
         };
         SharedHandle<GETexture> makeTexture(const TextureDescriptor &desc) override{
@@ -743,7 +776,7 @@ _NAMESPACE_BEGIN_
                 case GETexture::RenderTarget :
                 case GETexture::RenderTargetAndDepthStencil :
                 case GETexture::MSResolveSrc : {
-                    usage = MTLTextureUsageRenderTarget;
+                    usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                     break;
                 }
             }
@@ -775,7 +808,7 @@ _NAMESPACE_BEGIN_
             mtlDesc.sampleCount = desc.sampleCount;
             mtlDesc.depth = desc.depth;
             mtlDesc.arrayLength = 1;
-            mtlDesc.storageMode = MTLStorageModeShared;
+            mtlDesc.storageMode = MTLStorageModePrivate;
 
             MTLPixelFormat pixelFormat;
             switch (desc.pixelFormat) {
@@ -794,8 +827,10 @@ _NAMESPACE_BEGIN_
             }
 
             mtlDesc.pixelFormat = pixelFormat;
+            mtlDesc.mipmapLevelCount = desc.mipLevels;
 
             NSSmartPtr texture = NSObjectHandle {NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newTextureWithDescriptor:mtlDesc]};
+            texture.assertExists();
             return std::shared_ptr<GETexture>(new GEMetalTexture(desc.type,desc.usage,desc.pixelFormat,texture));
         };
 

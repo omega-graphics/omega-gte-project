@@ -8,8 +8,20 @@
 #endif
 
 #if defined(TARGET_METAL) && defined(__OBJC__)
+#import <Availability.h>
 @class CAMetalLayer;
 #define DEBUG_ENGINE_PREFIX "GEMetalEngine_Internal"
+
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)
+    #if __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_11_0  
+        #define OMEGAGTE_RAYTRACING_SUPPORTED 1
+    #endif
+#elif defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+    #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_14_0 
+        #define OMEGAGTE_RAYTRACING_SUPPORTED 1
+    #endif
+#endif
+
 #endif
 
 #if defined(TARGET_VULKAN)
@@ -37,6 +49,8 @@
 #define OMEGAGTE_GE_H
 
 _NAMESPACE_BEGIN_
+
+
     struct GTE;
     typedef enum : uint8_t {
         Shared,
@@ -176,6 +190,40 @@ _NAMESPACE_BEGIN_
 
     class OMEGAGTE_EXPORT GESamplerState { public: OMEGACOMMON_CLASS("OmegaGTE.GESamplerState")};
 
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+    struct GERaytracingBoundingBox {
+        float minX,minY,minZ,maxX,maxY,maxZ;
+    };
+
+     /// @brief Describes the Layout of a Acceleration Structure.
+    struct OMEGAGTE_EXPORT GEAccelerationStructDescriptor {
+        struct Geometry {
+            enum : int {
+                TRIANGLES,
+                AABB
+            } type;
+            union {
+                struct {
+                    SharedHandle<GEBuffer> buffer;
+                } triangleList;
+                struct {
+                    SharedHandle<GEBuffer> buffer;
+                } aabb;
+            } data;
+        };
+        OmegaCommon::Vector<Geometry> data;
+    public:
+        void addTriangleBuffer(SharedHandle<GEBuffer> & buffer);
+        void addBoundingBoxBuffer(SharedHandle<GEBuffer> & buffer);
+    };
+
+    struct OMEGAGTE_EXPORT GEAccelerationStruct {
+        OMEGACOMMON_CLASS("OmegaGTE.GEAccelerationStruct");
+    };
+
+    #endif
+
     /**
      @brief The Omega Graphics Engine
     */
@@ -209,6 +257,14 @@ _NAMESPACE_BEGIN_
         */
         SharedHandle<GTEShaderLibrary> loadShaderLibraryRuntime(std::shared_ptr<omegasl_shader_lib> & lib);
 #endif
+
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        virtual SharedHandle<GEBuffer> createBoundingBoxesBuffer(OmegaCommon::ArrayRef<GERaytracingBoundingBox> boxes) = 0;
+
+        /// @brief Allocate a Buffer to hold an Acceleration Structure.
+        /// @returns SharedHandle<GEAccelerationStruct>
+        virtual SharedHandle<GEAccelerationStruct> allocateAccelerationStructure(const GEAccelerationStructDescriptor & desc) = 0;
+    #endif
         /**
          @brief Creates a GEFence.
          @returns SharedHandle<GEFence>

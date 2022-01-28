@@ -148,6 +148,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
     switch(params.type){
         case TETessellationParams::TESSALATE_RECT : {
             std::cout << "Tessalate GRect" << std::endl;
+            std::cout << "Viewport: x:" << viewport->x << " y:" << viewport->y << " w:" << viewport->width << " h:" << viewport->height << " " << std::endl;
             GRect *object = (GRect *)params.params;
 
             TETessellationResult::TEMesh mesh {TETessellationResult::TEMesh::TopologyTriangle};

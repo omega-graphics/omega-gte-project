@@ -52,7 +52,7 @@ _NAMESPACE_BEGIN_
 
         void beginAccelStructPass() override;
         void buildAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure,const GEAccelerationStructDescriptor &desc) override;
-        void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure, const GEAccelerationStructDescriptor &desc) override;
+        void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,SharedHandle<GEAccelerationStruct> &dest, const GEAccelerationStructDescriptor &desc) override;
         void copyAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, SharedHandle<GEAccelerationStruct> &dest) override;
         void finishAccelStructPass() override;
 

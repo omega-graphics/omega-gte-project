@@ -681,8 +681,8 @@ _NAMESPACE_BEGIN_
                 depthStencilState = NSObjectHandle{NSOBJECT_CPP_BRIDGE [NSOBJECT_OBJC_BRIDGE(id<MTLDevice>,metalDevice.handle()) newDepthStencilStateWithDescriptor:stencilDepthDesc]};
             }
             
-            auto *vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
-            auto *fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
+            auto vertexFunc = (GEMetalShader *)desc.vertexFunc.get();
+            auto fragmentFunc = (GEMetalShader *)desc.fragmentFunc.get();
             vertexFunc->function.assertExists();
             fragmentFunc->function.assertExists();
 //            pipelineDesc.label = @"RENDER PIPELINE";

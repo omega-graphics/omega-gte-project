@@ -228,6 +228,7 @@ _NAMESPACE_BEGIN_
 
     struct OMEGAGTE_EXPORT GEAccelerationStruct {
         OMEGACOMMON_CLASS("OmegaGTE.GEAccelerationStruct");
+        virtual ~GEAccelerationStruct() = default;
     };
 
     #endif

@@ -104,9 +104,15 @@ _NAMESPACE_BEGIN_
 
     }
 
-    void GEMetalCommandBuffer::refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure, const GEAccelerationStructDescriptor &desc){
+    void GEMetalCommandBuffer::copyAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,
+                                                         SharedHandle<GEAccelerationStruct> &dest) {
+        auto src_struct = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(src), dest_struct = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(dest);
+//        [ap copyAccelerationStructure:]
+    }
+
+    void GEMetalCommandBuffer::refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,SharedHandle<GEAccelerationStruct> &dest, const GEAccelerationStructDescriptor &desc){
          MTLPrimitiveAccelerationStructureDescriptor *d = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-         auto metal_structure = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(structure);
+         auto metal_structure = std::dynamic_pointer_cast<GEMetalAccelerationStruct>(src);
          [ap refitAccelerationStructure:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,metal_structure->accelStruct.handle()) 
             descriptor:d 
             destination:NSOBJECT_OBJC_BRIDGE(id<MTLAccelerationStructure>,metal_structure->accelStruct.handle()) scratchBuffer:NSOBJECT_OBJC_BRIDGE(id<MTLBuffer>,metal_structure->scratchBuffer->metalBuffer.handle())  scratchBufferOffset:0];

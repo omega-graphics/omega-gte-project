@@ -7,6 +7,7 @@
 #if defined(TARGET_METAL) && defined(__OBJC__)
 @protocol MTLBuffer;
 @protocol MTLFence;
+#endif
 
 _NAMESPACE_BEGIN_
 
@@ -70,11 +71,11 @@ struct GEMetalAccelerationStruct : public GEAccelerationStruct {
 
     explicit GEMetalAccelerationStruct(NSSmartPtr & accelStruct,
     SharedHandle<GEMetalBuffer> & scratchBuffer);
+    ~GEMetalAccelerationStruct() override = default;
 };
 
 #endif
 
-#endif
 
 SharedHandle<OmegaGraphicsEngine> CreateMetalEngine(SharedHandle<GTEDevice> & device);
 _NAMESPACE_END_

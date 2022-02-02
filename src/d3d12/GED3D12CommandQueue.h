@@ -53,6 +53,14 @@ _NAMESPACE_BEGIN_
         void copyTextureToTexture(SharedHandle<GETexture> & src,SharedHandle<GETexture> & dest,const TextureRegion & region,const GPoint3D & destCoord) override;
         void finishBlitPass() override;
 
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        void beginAccelStructPass() override;
+        void buildAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, const GEAccelerationStructDescriptor &desc) override;
+        void copyAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, SharedHandle<GEAccelerationStruct> &dest) override;
+        void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,SharedHandle<GEAccelerationStruct> &dest, const GEAccelerationStructDescriptor &desc) override;
+        void finishAccelStructPass() override;
+        #endif
+
         void startRenderPass(const GERenderPassDescriptor &desc) override;
         void setVertexBuffer(SharedHandle<GEBuffer> &buffer) override;
         void setRenderPipelineState(SharedHandle<GERenderPipelineState> &pipelineState) override;
@@ -71,6 +79,10 @@ _NAMESPACE_BEGIN_
         void setComputePipelineState(SharedHandle<GEComputePipelineState> &pipelineState) override;
         void bindResourceAtComputeShader(SharedHandle<GEBuffer> &buffer, unsigned int id) override;
         void bindResourceAtComputeShader(SharedHandle<GETexture> &texture, unsigned int id) override;
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        void bindResourceAtComputeShader(SharedHandle<GEAccelerationStruct> &accelStruct, unsigned int id) override;
+        void dispatchRays(unsigned int x, unsigned int y, unsigned int z) override;
+        #endif
         void dispatchThreads(unsigned int x, unsigned int y, unsigned int z) override;
         void finishComputePass() override;
 

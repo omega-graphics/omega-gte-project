@@ -2,8 +2,16 @@
 
 #include <initializer_list>
 #if defined(TARGET_DIRECTX)
+
 #include <windows.h>
 #include <dxgi1_6.h>
+
+#include <sdkddkver.h>
+/// If Windows Version is Greater then Windows 10 1809 (Redstone 5)
+#if NTDDI_VERSION >= NTDDI_WIN10_RS5
+// #define OMEGAGTE_RAYTRACING_SUPPORTED 1
+#endif
+
 #define DEBUG_ENGINE_PREFIX "GED3D12Engine_Internal"
 #endif
 

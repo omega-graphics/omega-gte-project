@@ -63,7 +63,7 @@ _NAMESPACE_BEGIN_
 
     struct  OMEGAGTE_EXPORT TextureDescriptor {
         GETexture::GETextureType type;
-        StorageOpts storage_opts;
+        StorageOpts storage_opts = Shared;
         GETexture::GETextureUsage usage = GETexture::ToGPU;
         TexturePixelFormat pixelFormat = TexturePixelFormat::RGBA8Unorm;
         unsigned width;

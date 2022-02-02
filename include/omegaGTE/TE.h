@@ -43,14 +43,15 @@ public:
             FVec<4> color;
         } colorData;
         struct {
-            GVectorPath2D uv_map;
+            unsigned width;
+            unsigned height;
         } texture2DData;
         struct {
             GVectorPath3D uvw_map;
         } texture3DData;
 
         static Attachment makeColor(const FVec<4> & color);
-        static Attachment makeTexture2D(const GVectorPath2D & uv_map);
+        static Attachment makeTexture2D(unsigned width,unsigned height);
         static Attachment makeTexture3D(const GVectorPath3D & uvw_map);
     };
 
@@ -151,6 +152,9 @@ struct OMEGAGTE_EXPORT TETessellationResult {
     };
     std::vector<TEMesh> meshes;
     unsigned totalVertexCount();
+    void translate(float x,float y,float z,const GEViewport & viewport);
+    void rotate(float pitch,float yaw,float roll);
+    void scale(float w,float h,float l);
 };
 /**
  

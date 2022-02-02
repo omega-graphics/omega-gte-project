@@ -28,15 +28,15 @@ struct TETessellationParams::GraphicsPath3DParams {
 };
 
 TETessellationParams::Attachment TETessellationParams::Attachment::makeColor(const FVec<4> &color) {
-    return {TypeColor,{color},{GPoint2D {0,0}},{GPoint3D {0,0,0}}};
+    return {TypeColor,{color},{0,0},{GPoint3D {0,0,0}}};
 }
 
-TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture2D(const GVectorPath2D &uv_map) {
-    return {TypeTexture2D, {FVec<4>::Create()},{uv_map},{GPoint3D{0,0,0}}};
+TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture2D(unsigned width,unsigned height) {
+    return {TypeTexture2D, {FVec<4>::Create()},{width,height},{GPoint3D{0,0,0}}};
 }
 
 TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture3D(const GVectorPath3D &uvw_map) {
-    return {TypeTexture3D,{FVec<4>::Create()},{GPoint2D{0,0}},{uvw_map}};
+    return {TypeTexture3D,{FVec<4>::Create()},{0,0},{uvw_map}};
 }
 
 void TETessellationParams::addAttachment(const Attachment &attachment) {
@@ -127,14 +127,14 @@ SharedHandle<OmegaTessellationEngine> OmegaTessellationEngine::Create(){
 };
 
 void OmegaTessellationEngineContext::translateCoordsDefaultImpl(float x, float y, float z, GEViewport * viewport, float *x_result, float *y_result, float *z_result){
-    *x_result = x / viewport->width;
-    *y_result = y / viewport->height;
+    *x_result = (2 * x) / viewport->width;
+    *y_result = (2 *y) / viewport->height;
     if(z_result != nullptr){
         if(z > 0.0){
-            *z_result = z / viewport->farDepth;
+            *z_result = (2 *z) / viewport->farDepth;
         }
         else if(z < 0.0){
-            *z_result = z / viewport->nearDepth;
+            *z_result = (2 *z) / viewport->nearDepth;
         }
         else {
             *z_result = z;
@@ -154,6 +154,7 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
             TETessellationResult::TEMesh mesh {TETessellationResult::TEMesh::TopologyTriangle};
             TETessellationResult::TEMesh::Polygon tri {};
             float x0,x1,y0,y1;
+            float u,v;
             translateCoords(object->pos.x,object->pos.y,0.f,viewport,&x0,&y0,nullptr);
             translateCoords(object->pos.x + object->w,object->pos.y + object->h,0.f,viewport,&x1,&y1,nullptr);
 
@@ -172,14 +173,46 @@ inline void OmegaTessellationEngineContext::_tessalatePriv(const TETessellationP
                 auto & attachment = params.attachments.front();
                 if(attachment.type == TETessellationParams::Attachment::TypeColor){
                     extra = std::make_optional<TETessellationResult::AttachmentData>({attachment.colorData.color,FVec<2>::Create(),FVec<3>::Create()});
+                    tri.a.attachment = tri.b.attachment = tri.c.attachment = extra;
+                }
+                else if(attachment.type == TETessellationParams::Attachment::TypeTexture2D){
+                    
+                    translateCoords(attachment.texture2DData.width,attachment.texture2DData.height,0, viewport,&u,&v,nullptr);
+                    auto texCoord = FVec<2>::Create();
+
+                    texCoord[0][0] = 0;
+                    texCoord[1][0] = 0;
+
+                    extra = std::make_optional<TETessellationResult::AttachmentData>({FVec<4>::Create(),texCoord,FVec<3>::Create()});
+                    tri.b.attachment = extra;
+
+                    texCoord[1][0] = 1;
+                    extra = std::make_optional<TETessellationResult::AttachmentData>({FVec<4>::Create(),texCoord,FVec<3>::Create()});
+                     tri.a.attachment = extra;
+
+                     texCoord[0][0] = 1;
+                      texCoord[1][0] = 1;
+                    extra = std::make_optional<TETessellationResult::AttachmentData>({FVec<4>::Create(),texCoord,FVec<3>::Create()});
+                     tri.c.attachment = extra;
                 }
             }
-            tri.a.attachment = tri.b.attachment = tri.c.attachment = extra;
+            
 
             mesh.vertexPolygons.push_back(tri);
 
             tri.a.pt.x = x1;
             tri.a.pt.y = y1;
+
+            if(!params.attachments.empty()){
+                 auto & attachment = params.attachments.front();
+                 if(attachment.type == TETessellationParams::Attachment::TypeTexture2D){
+                     auto texCoord = FVec<2>::Create();
+                     texCoord[0][0] = 1;
+                     texCoord[1][0] = 0;
+                     extra = std::make_optional<TETessellationResult::AttachmentData>({FVec<4>::Create(),texCoord,FVec<3>::Create()});
+                    tri.a.attachment = extra;
+                 }
+            }
 
             mesh.vertexPolygons.push_back(tri);
 
@@ -620,10 +653,28 @@ OmegaTessellationEngineContext::~OmegaTessellationEngineContext(){
     };
 };
 
+void TETessellationResult::translate(float x,float y,float z,const GEViewport & viewport){
+    for(auto & m : meshes){
+        m.translate(x,y,z,viewport);
+    }
+};
+
+void TETessellationResult::rotate(float pitch,float yaw,float roll){
+    for(auto & m : meshes){
+        m.rotate(pitch,yaw,roll);
+    }
+};
+
+void TETessellationResult::scale(float w,float h,float l){
+    for(auto & m : meshes){
+        m.scale(w,h,l);
+    }
+};
+
 void TETessellationResult::TEMesh::translate(float x, float y, float z,const GEViewport & viewport) {
-    auto _x = x/viewport.width;
-    auto _y = y/viewport.height;
-    auto _z = z/viewport.farDepth;
+    auto _x = (2 * x)/viewport.width;
+    auto _y = (2 * y)/viewport.height;
+    auto _z = (2 * z)/viewport.farDepth;
 
     for(auto & polygon : vertexPolygons){
         polygon.a.pt.x += _x;

@@ -102,7 +102,7 @@ _NAMESPACE_BEGIN_
         
         virtual void copyAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,SharedHandle<GEAccelerationStruct> &dest) = 0;
 
-        virtual void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &structure,const GEAccelerationStructDescriptor & desc) = 0;
+        virtual void refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &src,SharedHandle<GEAccelerationStruct> &dest,const GEAccelerationStructDescriptor & desc) = 0;
 
         /**
          @brief Accleration Pass.
@@ -131,10 +131,14 @@ _NAMESPACE_BEGIN_
         /// @param id The OmegaSL Binding id.
         virtual void bindResourceAtComputeShader(SharedHandle<GETexture> & texture,unsigned id) = 0;
 
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
          /// @brief Binds an Acceleration Structure Resource to a Descriptor in the scope of the Compute Shader.
         /// @param texture The Resource to bind.
         /// @param id The OmegaSL Binding id.
         virtual void bindResourceAtComputeShader(SharedHandle<GEAccelerationStruct> & accelStruct,unsigned id) = 0;
+
+        #endif
 
         /// @brief Executes a Compute Pipeline (Encodes a dispatch command in the Compute Pass).
         /// @param x The Number of ThreadGroups dispatched in the `x` direction.
@@ -142,11 +146,15 @@ _NAMESPACE_BEGIN_
         /// @param z The Number of ThreadGroups dispatched in the `z` direction.
         virtual void dispatchThreads(unsigned x,unsigned y,unsigned z) = 0;
 
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
          /// @brief Executes a Ray Tracing Pipeline (Encodes a dispatch command in the Compute Pass).
         /// @param x The Number of ThreadGroups dispatched in the `x` direction.
         /// @param y The Number of ThreadGroups dispatched in the `y` direction.
         /// @param z The Number of ThreadGroups dispatched in the `z` direction.
         virtual void dispatchRays(unsigned x,unsigned y,unsigned z) = 0;
+
+        #endif
 
         /// @brief Finish encoding a Compute Pass.
         /// @paragraph This method must be invoked when a dispatch command has been encoded.

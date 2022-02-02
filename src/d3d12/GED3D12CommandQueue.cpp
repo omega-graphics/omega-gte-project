@@ -2,7 +2,8 @@
 #include "GED3D12RenderTarget.h"
 #include "GED3D12Pipeline.h"
 #include "GED3D12Texture.h"
-
+#include <d3d12.h>
+#include <memory>
 _NAMESPACE_BEGIN_
 
 #ifndef D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
@@ -200,6 +201,51 @@ _NAMESPACE_BEGIN_
     void GED3D12CommandBuffer::finishBlitPass(){
         inBlitPass = false;
     };
+
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+    void GED3D12CommandBuffer::beginAccelStructPass(){
+
+    }
+
+    void GED3D12CommandBuffer::buildAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, const GEAccelerationStructDescriptor &desc){
+        auto accel_struct = std::dynamic_pointer_cast<GED3D12AccelerationStruct>(src);
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC d;
+        d.SourceAccelerationStructureData = NULL;
+        d.DestAccelerationStructureData = accel_struct->structBuffer->buffer->GetGPUVirtualAddress();
+        d.ScratchAccelerationStructureData = accel_struct->scratchBuffer->buffer->GetGPUVirtualAddress();
+        d.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        d.Inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        d.Inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postBuild;
+        
+        commandList->BuildRaytracingAccelerationStructure(&d,1,&postBuild);
+
+        
+    }
+
+    void GED3D12CommandBuffer::refitAccelerationStructure(SharedHandle<GEAccelerationStruct> &src, SharedHandle<GEAccelerationStruct> &dest, const GEAccelerationStructDescriptor &desc){
+         auto accel_struct_src = std::dynamic_pointer_cast<GED3D12AccelerationStruct>(src);
+         auto accel_struct_dest = std::dynamic_pointer_cast<GED3D12AccelerationStruct>(dest);
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC d;
+        d.SourceAccelerationStructureData = accel_struct_src->structBuffer->buffer->GetGPUVirtualAddress();;
+        d.DestAccelerationStructureData = accel_struct_dest->structBuffer->buffer->GetGPUVirtualAddress();
+        d.ScratchAccelerationStructureData = accel_struct_dest->scratchBuffer->buffer->GetGPUVirtualAddress();
+        d.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        d.Inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        d.Inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC postBuild;
+        
+        commandList->BuildRaytracingAccelerationStructure(&d,1,&postBuild);
+    }
+
+    void GED3D12CommandBuffer::finishAccelStructPass(){
+
+    }
+
+    #endif
 
     void GED3D12CommandBuffer::startRenderPass(const GERenderPassDescriptor &desc){
         inRenderPass = true;
@@ -580,12 +626,11 @@ _NAMESPACE_BEGIN_
             GEViewport & viewport = *viewports_it;
             GRect rect {};
             if(currentTarget.native != nullptr) {
-                RECT rc;
-                GetClientRect(currentTarget.native->hwnd, &rc);
-                rect.pos.x = (float)rc.left;
-                rect.pos.y = (float)rc.top;
-                rect.w = float(rc.right - rc.left);
-                rect.h = float(rc.bottom - rc.top);
+                auto res_desc = currentTarget.native->renderTargets[currentTarget.native->frameIndex]->GetDesc();
+                rect.pos.x = 0;
+                rect.pos.y = 0;
+                rect.w = (float)res_desc.Width;
+                rect.h = (float)res_desc.Height;
             }
             else {
                 rect.pos.x = 0;
@@ -610,12 +655,12 @@ _NAMESPACE_BEGIN_
 
             GRect rect {};
             if(currentTarget.native != nullptr) {
-                RECT rc;
-                GetClientRect(currentTarget.native->hwnd, &rc);
-                rect.pos.x = (float)rc.left;
-                rect.pos.y = (float)rc.top;
-                rect.w = float(rc.right - rc.left);
-                rect.h = float(rc.bottom - rc.top);
+
+                auto res_desc = currentTarget.native->renderTargets[currentTarget.native->frameIndex]->GetDesc();
+                rect.pos.x = 0;
+                rect.pos.y = 0;
+                rect.w = (float)res_desc.Width;
+                rect.h = (float)res_desc.Height;
             }
             else {
                 rect.pos.x = 0;
@@ -700,12 +745,12 @@ _NAMESPACE_BEGIN_
         d3d12_buffer->buffer->GetHeapProperties(&heap_props,&heapFlags);
         commandList->SetDescriptorHeaps(1,d3d12_buffer->bufferDescHeap.GetAddressOf());
         if(heap_props.Type == D3D12_HEAP_TYPE_UPLOAD){
-            commandList->SetGraphicsRootShaderResourceView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+            commandList->SetComputeRootShaderResourceView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
         }
         else if(heap_props.Type == D3D12_HEAP_TYPE_READBACK){
             auto resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_buffer->buffer.Get(),D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             commandList->ResourceBarrier(1,&resource_barrier);
-            commandList->SetGraphicsRootUnorderedAccessView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
+            commandList->SetComputeRootUnorderedAccessView(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_buffer->buffer->GetGPUVirtualAddress());
         }
 
 
@@ -726,14 +771,35 @@ _NAMESPACE_BEGIN_
             auto resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(d3d12_texture->resource.Get(),D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             commandList->ResourceBarrier(1,&resource_barrier);
         }
-        commandList->SetGraphicsRootDescriptorTable(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
+        commandList->SetComputeRootDescriptorTable(getRootParameterIndexOfResource(id,currentComputePipeline->computeShader->internal),d3d12_texture->srvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
     }
+
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+    void GED3D12CommandBuffer::bindResourceAtComputeShader(SharedHandle<GEAccelerationStruct> & accelStruct,unsigned int idx){
+        auto d3d12_buffer = std::dynamic_pointer_cast<GED3D12AccelerationStruct>(accelStruct);
+        commandList->SetComputeRootShaderResourceView(getRootParameterIndexOfResource(idx,currentComputePipeline->computeShader->internal),d3d12_buffer->structBuffer->buffer->GetGPUVirtualAddress());
+    }
+
+    void GED3D12CommandBuffer::dispatchRays(unsigned int x, unsigned int y, unsigned int z){
+         assert(inComputePass && "");
+         D3D12_DISPATCH_RAYS_DESC rays {};
+         rays.Width = x;
+         rays.Height = y;
+         rays.Depth = z;
+         
+         commandList->DispatchRays(&rays);
+    }
+
+    #endif
 
     void GED3D12CommandBuffer::dispatchThreads(unsigned int x, unsigned int y, unsigned int z) {
         assert(inComputePass && "");
         commandList->Dispatch(x,y,z);
     }
+
+   
 
     void GED3D12CommandBuffer::finishComputePass(){
         commandList->ClearState(nullptr);

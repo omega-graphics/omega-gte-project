@@ -1,6 +1,7 @@
 #include "omegaGTE/GE.h"
 
 #include "d3dx12.h"
+#include <d3d12.h>
 #include <dxgi1_4.h>
 #include <dxgi1_6.h>
 #include <d3d12shader.h>
@@ -88,6 +89,15 @@ _NAMESPACE_BEGIN_
 //        SharedHandle<GEBuffer> makeBuffer(const BufferDescriptor &desc) override;
 //        SharedHandle<GETexture> makeTexture3D(const TextureDescriptor &desc) override;
 //    };
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+    struct GED3D12AccelerationStruct : public GEAccelerationStruct {
+        SharedHandle<GED3D12Buffer> structBuffer;
+        SharedHandle<GED3D12Buffer> scratchBuffer;
+        explicit GED3D12AccelerationStruct(
+            SharedHandle<GED3D12Buffer> & structBuffer,
+            SharedHandle<GED3D12Buffer> & scratchBuffer);
+    };
+    #endif
 
     class GED3D12Engine : public OmegaGraphicsEngine {
         SharedHandle<GTEShader> _loadShaderFromDesc(omegasl_shader *shaderDesc,bool runtime) override;
@@ -103,6 +113,10 @@ _NAMESPACE_BEGIN_
         static SharedHandle<OmegaGraphicsEngine> Create(SharedHandle<GTEDevice> & device);
         // SharedHandle<GEShaderLibrary> loadShaderLibrary(FS::Path path);
         // SharedHandle<GEShaderLibrary> loadStdShaderLibrary();
+        #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+        SharedHandle<GEBuffer> createBoundingBoxesBuffer(OmegaCommon::ArrayRef<GERaytracingBoundingBox> boxes) override;
+        SharedHandle<GEAccelerationStruct> allocateAccelerationStructure(const GEAccelerationStructDescriptor &desc) override;
+        #endif
         bool createRootSignatureFromOmegaSLShaders(unsigned shaderN,omegasl_shader *shader,D3D12_ROOT_SIGNATURE_DESC1 * rootSignatureDesc,ID3D12RootSignature **pRootSignature);
         SharedHandle<GEFence> makeFence() override;
         SharedHandle<GESamplerState> makeSamplerState(const SamplerDescriptor &desc) override;

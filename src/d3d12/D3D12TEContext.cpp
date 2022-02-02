@@ -26,9 +26,9 @@ class D3D12NativeRenderTargetTEContext : public OmegaTessellationEngineContext {
         }
         else {
             /// Use Entire Render Target as Viewport.
-            RECT rc;
-            GetClientRect(target->hwnd,&rc);
-            GEViewport geViewport {0,0,float(rc.right - rc.left),float(rc.bottom - rc.top)};
+            auto desc = target->renderTargets[target->frameIndex]->GetDesc();
+            
+            GEViewport geViewport {0,0,(float)desc.Width,(float)desc.Height};
             translateCoordsDefaultImpl(x,y,z,&geViewport,x_result,y_result,z_result);
         };
     };

@@ -9,6 +9,7 @@
 #include <atlstr.h>
 #include <cassert>
 #include <d3d12.h>
+#include <memory>
 
 #include "OmegaGTE.h"
 
@@ -421,11 +422,58 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         ID3D12Fence *f;
         d3d12_device->CreateFence(0,D3D12_FENCE_FLAG_SHARED,IID_PPV_ARGS(&f));
         return SharedHandle<GEFence>(new GED3D12Fence(f));
-    };
+    }
 
     SharedHandle<GEHeap> GED3D12Engine::makeHeap(const HeapDescriptor &desc){
         return nullptr;
-    };
+    }
+
+    #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
+    GED3D12AccelerationStruct::GED3D12AccelerationStruct(SharedHandle<GED3D12Buffer> & structBuffer,
+        SharedHandle<GED3D12Buffer> & scratchBuffer):structBuffer(structBuffer),scratchBuffer(scratchBuffer){
+
+    }
+
+    SharedHandle<GEBuffer> GED3D12Engine::createBoundingBoxesBuffer(OmegaCommon::ArrayRef<GERaytracingBoundingBox> boxes){
+        std::vector<D3D12_RAYTRACING_AABB> aabbs;
+        auto d3d12_buffer = std::dynamic_pointer_cast<GED3D12Buffer>(makeBuffer({BufferDescriptor::Upload,sizeof(D3D12_RAYTRACING_AABB) * boxes.size(),sizeof(D3D12_RAYTRACING_AABB)}));
+        for(auto & b : boxes){
+            D3D12_RAYTRACING_AABB bb {};
+            bb.MinX = b.minX;
+            bb.MinY = b.minY;
+            bb.MinZ = b.minZ;
+
+            bb.MaxX = b.maxX;
+            bb.MaxY = b.maxY;
+            bb.MaxZ = b.maxZ;
+            aabbs.push_back(bb);
+        }
+        CD3DX12_RANGE r(0,0);
+        void *dataPtr;
+        d3d12_buffer->buffer->Map(0,&r,&dataPtr);
+        memmove(dataPtr,aabbs.data(),sizeof(D3D12_RAYTRACING_AABB) * aabbs.size());
+        d3d12_buffer->buffer->Unmap(0,nullptr);
+        return std::static_pointer_cast<GEBuffer>(d3d12_buffer);
+    }
+
+    SharedHandle<GEAccelerationStruct> GED3D12Engine::allocateAccelerationStructure(const GEAccelerationStructDescriptor &desc){
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs {};
+        inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO prebuildInfo {};
+
+        d3d12_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs,&prebuildInfo);
+        
+        auto dataBuffer = std::dynamic_pointer_cast<GED3D12Buffer>(makeBuffer({BufferDescriptor::GPUOnly,prebuildInfo.ResultDataMaxSizeInBytes}));
+        auto scratchBuffer = std::dynamic_pointer_cast<GED3D12Buffer>(makeBuffer({BufferDescriptor::GPUOnly,prebuildInfo.ScratchDataSizeInBytes}));
+   
+        return (SharedHandle<GEAccelerationStruct>)new GED3D12AccelerationStruct(dataBuffer,scratchBuffer);
+    }
+
+    #endif
 
     inline D3D12_COMPARISON_FUNC convertCompareFunc(CompareFunc & func){
         D3D12_COMPARISON_FUNC res;
@@ -1071,6 +1119,8 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
             d3d12_device->CreateDepthStencilView(texture,&dsv_view_desc,dsvDescHeap->GetCPUDescriptorHandleForHeapStart());
         }
 
+        DEBUG_STREAM("Will Return Texture");
+
         return SharedHandle<GETexture>(new GED3D12Texture(desc.type,desc.usage,desc.pixelFormat,texture,cpuSideRes,descHeap,uavDescHeap,rtvDescHeap,dsvDescHeap,res_states));
     };
 
@@ -1240,8 +1290,9 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
                     }
 
                     CD3DX12_STATIC_SAMPLER_DESC desc;
-                    desc.Init(l.gpu_relative_loc,filter, convertAddressMode(l.sampler_desc.u_address_mode),
-                              convertAddressMode(l.sampler_desc.v_address_mode), convertAddressMode(l.sampler_desc.w_address_mode));
+                    desc.Init(l.gpu_relative_loc);
+                    // desc.Init(l.gpu_relative_loc,filter, convertAddressMode(l.sampler_desc.u_address_mode),
+                    //           convertAddressMode(l.sampler_desc.v_address_mode), convertAddressMode(l.sampler_desc.w_address_mode));
                     desc.RegisterSpace = s.type == OMEGASL_SHADER_FRAGMENT? 1 : 0;
                     staticSamplers.push_back(desc);
                     continue;
@@ -1279,6 +1330,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         std::copy(staticSamplers.begin(),staticSamplers.end(),static_samplers);
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc;
+        
         /// @note Always allow input layout regardless of pipeline type.
         desc.Init_1_1(params.size(),root_params,staticSamplers.size(),static_samplers,D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
         ComPtr<ID3DBlob> sigBlob;
@@ -1303,6 +1355,7 @@ OmegaCommon::Vector<SharedHandle<GTEDevice>> enumerateDevices(){
         desc1.NodeMask = d3d12_device->GetNodeCount();
         desc1.NumDescriptors = 1;
         desc1.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        
 
         D3D12_FILTER filter;
 

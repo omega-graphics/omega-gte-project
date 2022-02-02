@@ -45,8 +45,8 @@ void writeVertex(OmegaGTE::GPoint3D & pt,OmegaGTE::FVec<2> & coord){
 void tessalate(){
 
     OmegaGTE::GRect rect {};
-    rect.h = 300;
-    rect.w = 300;
+    rect.h = 100;
+    rect.w = 100;
     rect.pos.x = 0;
     rect.pos.y = 0;
     auto rect_mesh = tessContext->tessalateSync(OmegaGTE::TETessellationParams::Rect(rect));
@@ -127,7 +127,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     /// Load Png Image
 
     Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
-    imageFactory->CreateDecoderFromFilename(L"test.png",NULL,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
+    imageFactory->CreateDecoderFromFilename(L"./test.png",NULL,GENERIC_READ,WICDecodeMetadataCacheOnDemand,&decoder);
 
     IWICBitmapFrameDecode *decoded;
     decoder->GetFrame(0,&decoded);

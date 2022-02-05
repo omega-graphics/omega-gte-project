@@ -93,10 +93,12 @@ _NAMESPACE_BEGIN_
     };
 
     #ifdef OMEGAGTE_RAYTRACING_SUPPORTED
+
     GEMetalAccelerationStruct::GEMetalAccelerationStruct(NSSmartPtr & accelStruct,
     SharedHandle<GEMetalBuffer> & scratchBuffer):accelStruct(accelStruct),scratchBuffer(scratchBuffer){
 
     }
+
     #endif
 
     /// @brief Metal Buffer Reader/Writer.
@@ -570,6 +572,7 @@ _NAMESPACE_BEGIN_
             auto buffer = std::dynamic_pointer_cast<GEMetalBuffer>(makeBuffer({BufferDescriptor::GPUOnly,sizes.buildScratchBufferSize}));
             return (SharedHandle<GEAccelerationStruct>)new GEMetalAccelerationStruct (handle,buffer);
         }
+        
         #endif
 
         SharedHandle<GECommandQueue> makeCommandQueue(unsigned int maxBufferCount) override{

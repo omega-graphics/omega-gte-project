@@ -1,6 +1,11 @@
 #include "omegasl.h"
 
 #include <initializer_list>
+
+#if !defined(TARGET_METAL) & !defined(TARGET_DIRECTX) & !defined(TARGET_VULKAN)
+#error "Cannot Compile/Link OmegaGTE without specifiying Target Platform"
+#endif
+
 #if defined(TARGET_DIRECTX)
 
 #include <windows.h>
@@ -15,9 +20,13 @@
 #define DEBUG_ENGINE_PREFIX "GED3D12Engine_Internal"
 #endif
 
-#if defined(TARGET_METAL) && defined(__OBJC__)
-#import <Availability.h>
+#if defined(TARGET_METAL)
+#include <Availability.h>
+
+#ifdef __OBJC__
 @class CAMetalLayer;
+#endif
+
 #define DEBUG_ENGINE_PREFIX "GEMetalEngine_Internal"
 
 #if defined(__MAC_OS_X_VERSION_MIN_REQUIRED)

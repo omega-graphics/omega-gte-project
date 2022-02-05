@@ -25,7 +25,7 @@ public:
     void *native() override {
         return const_cast<void *>(texture.handle());
     }
-    void copyBytes(void *bytes,size_t len) override;
+    void copyBytes(void *bytes,size_t bytesPerRow) override;
     size_t getBytes(void *bytes, size_t bytesPerRow) override;
     explicit GEMetalTexture(const GETexture::GETextureType &type,
                    const GETexture::GETextureUsage & usage,

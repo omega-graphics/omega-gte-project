@@ -27,72 +27,115 @@ struct TETessellationParams::GraphicsPath3DParams {
     GraphicsPath3DParams(GVectorPath3D *const pathes,unsigned pathCount):pathes(pathes),pathCount(pathCount){};
 };
 
+union TETessellationParams::Data {
+
+    GRect rect;
+
+    GRoundedRect rounded_rect;
+    
+    GCone cone;
+
+    GEllipsoid ellipsoid;
+
+    GraphicsPath2DParams path2D;
+
+    GraphicsPath2DParams path3D;
+
+    ~Data();
+};
+
+void TETessellationParams::DataDelete::operator()(Data *ptr) {
+
+};
+
 TETessellationParams::Attachment TETessellationParams::Attachment::makeColor(const FVec<4> &color) {
-    return {TypeColor,{color},{0,0},{GPoint3D {0,0,0}}};
+    Attachment at{TypeColor};
+    at.colorData.color = color;
+    return at;
 }
 
 TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture2D(unsigned width,unsigned height) {
-    return {TypeTexture2D, {FVec<4>::Create()},{width,height},{GPoint3D{0,0,0}}};
+   Attachment at{TypeTexture2D};
+   at.colorData.color.~Matrix();
+   at.texture2DData.width = width;
+   at.texture2DData.height = height;
+   return at;
 }
 
-TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture3D(const GVectorPath3D &uvw_map) {
-    return {TypeTexture3D,{FVec<4>::Create()},{0,0},{uvw_map}};
+TETessellationParams::Attachment TETessellationParams::Attachment::makeTexture3D(unsigned width,unsigned height,unsigned depth) {
+    Attachment at{TypeTexture3D};
+   at.colorData.color.~Matrix();
+   at.texture3DData.width = width;
+   at.texture3DData.height = height;
+   at.texture3DData.depth = depth;
+   return at;
+}
+
+TETessellationParams::Attachment::~Attachment(){
+    if(type == TypeColor){
+        colorData.color.~Matrix();
+    }
 }
 
 void TETessellationParams::addAttachment(const Attachment &attachment) {
     attachments.push_back(attachment);
 }
 
-TETessellationParams TETessellationParams::Rect(GRect &rect){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::Rect(GRect &rect){
     TETessellationParams params;
-    params.params = &rect;
     params.type = TESSALATE_RECT;
-    return params;
+    params.params.reset(new Data{});
+    params.params.get_deleter().t = params.type;
+    params.params->rect = rect;
+    return std::move(params);
 };
 
-TETessellationParams TETessellationParams::RoundedRect(GRoundedRect &roundedRect){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::RoundedRect(GRoundedRect &roundedRect){
     TETessellationParams params;
-    params.params = &roundedRect;
     params.type = TESSALATE_ROUNDEDRECT;
-    return params;
+    params.params.reset(new Data{});
+    params.params.get_deleter().t = params.type;
+    params.params->rounded_rect = roundedRect;
+    return std::move(params);
 };
 
-TETessellationParams TETessellationParams::RectangularPrism(GRectangularPrism &prism){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::RectangularPrism(GRectangularPrism &prism){
     TETessellationParams params;
-    params.params = &prism;
+    params.params.reset(new Data{});
+    params.params.get_deleter().t = params.type;
     params.type = TESSELLATE_RECTANGULAR_PRISM;
-    return params;
+    return std::move(params);
 };
 
-TETessellationParams TETessellationParams::Pyramid(GPyramid &pyramid){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::Pyramid(GPyramid &pyramid){
     TETessellationParams params;
     params.params = &pyramid;
     params.type = TESSALATE_PYRAMID;
     return params;
 };
 
-TETessellationParams TETessellationParams::Ellipsoid(GEllipsoid &ellipsoid){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::Ellipsoid(GEllipsoid &ellipsoid){
     TETessellationParams params;
     params.params = &ellipsoid;
     params.type = TESSALATE_ELLIPSOID;
     return params;
 };
 
-TETessellationParams TETessellationParams::Cylinder(GCylinder &cylinder){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::Cylinder(GCylinder &cylinder){
     TETessellationParams params;
     params.params = &cylinder;
     params.type = TESSALATE_CYLINDER;
     return params;
 };
 
-TETessellationParams TETessellationParams::Cone(GCone &cone){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::Cone(GCone &cone){
     TETessellationParams params;
     params.params = &cone;
     params.type = TESSALATE_CONE;
     return params;
 };
 
-TETessellationParams TETessellationParams::GraphicsPath2D(GVectorPath2D & path,float strokeWidth,bool contour,bool fill){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::GraphicsPath2D(GVectorPath2D & path,float strokeWidth,bool contour,bool fill){
     TETessellationParams params;
     auto * _params = new GraphicsPath2DParams(path,contour,fill,strokeWidth);
     params.params = _params;
@@ -100,7 +143,7 @@ TETessellationParams TETessellationParams::GraphicsPath2D(GVectorPath2D & path,f
     return params;
 };
 
-TETessellationParams TETessellationParams::GraphicsPath3D(unsigned int vectorPathCount, GVectorPath3D *const vectorPaths){
+std::add_rvalue_reference_t<TETessellationParams> TETessellationParams::GraphicsPath3D(unsigned int vectorPathCount, GVectorPath3D *const vectorPaths){
     TETessellationParams params;
     GraphicsPath3DParams * _params = new GraphicsPath3DParams(vectorPaths,vectorPathCount);
     params.params = _params;
@@ -121,6 +164,8 @@ unsigned int TETessellationResult::totalVertexCount() {
     return vertexCount;
 }
 
+TETessellationParams::~TETessellationParams() = default;
+
 
 SharedHandle<OmegaTessellationEngine> OmegaTessellationEngine::Create(){
     return std::make_shared<OmegaTessellationEngine>();
@@ -128,7 +173,7 @@ SharedHandle<OmegaTessellationEngine> OmegaTessellationEngine::Create(){
 
 void OmegaTessellationEngineContext::translateCoordsDefaultImpl(float x, float y, float z, GEViewport * viewport, float *x_result, float *y_result, float *z_result){
     *x_result = (2 * x) / viewport->width;
-    *y_result = (2 *y) / viewport->height;
+    *y_result = (2 * y) / viewport->height;
     if(z_result != nullptr){
         if(z > 0.0){
             *z_result = (2 *z) / viewport->farDepth;

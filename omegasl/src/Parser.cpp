@@ -64,6 +64,8 @@ namespace omegasl {
     public:
         explicit Sem():
         builtinsTypeMap({
+            
+            ast::builtins::void_type,
             ast::builtins::int_type,
             ast::builtins::uint_type,
 
@@ -740,6 +742,7 @@ namespace omegasl {
                 allTypes.push_back(ast::TypeExpr::Create(KW_TY_VOID));
             }
             else {
+                bool hasReturn = false;
                 for(auto s : block.body){
                     auto res = performSemForStmt(s,funcContext);
                     if(!res){
@@ -749,7 +752,12 @@ namespace omegasl {
 
                     if(s->type == RETURN_DECL){
                         allTypes.push_back(res);
+                        hasReturn = true;
                     }
+                }
+
+                if(!hasReturn){
+                     allTypes.push_back(ast::TypeExpr::Create(KW_TY_VOID));
                 }
             }
             /// Pick first type to check with all others.
@@ -1667,6 +1675,7 @@ namespace omegasl {
         else if(first_tok.type == TOK_NUM_LITERAL){
             auto _e = new ast::LiteralExpr();
             _e->type = LITERAL_EXPR;
+            _e->f_num = std::stof(first_tok.str);
             *expr = _e;
         }
         else if(first_tok.type == TOK_LBRACE){

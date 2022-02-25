@@ -42,6 +42,25 @@ namespace omegasl {
                     generateExpr(_expr->rhs);
                     break;
                 }
+                case LITERAL_EXPR : {
+                    auto _expr = (ast::LiteralExpr *)expr;
+                    if(_expr->isFloat()){
+                         shaderOut << _expr->f_num.value();
+                    }
+                    else if(_expr->isDouble()){
+                        shaderOut << _expr->d_num.value();
+                    }
+                    else if(_expr->isInt()){
+                        shaderOut << _expr->i_num.value();
+                    }
+                    else if(_expr->isUint()) {
+                        shaderOut << _expr->ui_num.value();
+                    }
+                    else if(_expr->isString()){
+                        shaderOut << _expr->str.value();
+                    }
+                    break;
+                }
                 case ID_EXPR : {
                     auto _expr = (ast::IdExpr *)expr;
                     shaderOut << _expr->id << std::flush;

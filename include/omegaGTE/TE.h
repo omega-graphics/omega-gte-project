@@ -2,6 +2,7 @@
 #include <thread>
 #include <future>
 #include <optional> 
+#include <type_traits>
 #include "GE.h"
 
 
@@ -29,7 +30,17 @@ struct OMEGAGTE_EXPORT TETessellationParams {
         TESSALATE_GRAPHICSPATH3D
     } TessalationType;
     TessalationType type;
-    void * params;
+
+    union Data;
+
+    struct DataDelete {
+        TessalationType t;
+    public:
+        void operator()(Data *ptr);
+    };
+
+    std::unique_ptr<Data,DataDelete> params;
+
     friend class OmegaTessellationEngineContext;
 public:
     struct OMEGAGTE_EXPORT Attachment {
@@ -39,88 +50,97 @@ public:
             TypeTexture3D
         } Type;
         Type type;
-        struct {
-            FVec<4> color;
-        } colorData;
-        struct {
-            unsigned width;
-            unsigned height;
-        } texture2DData;
-        struct {
-            GVectorPath3D uvw_map;
-        } texture3DData;
+        union {
+            struct {
+                FVec<4> color = FVec<4>::Create();
+            } colorData;
+            struct {
+                unsigned width;
+                unsigned height;
+            } texture2DData;
+            struct {
+                unsigned width;
+                unsigned height;
+                unsigned depth;
+            } texture3DData;
+        };
+
 
         static Attachment makeColor(const FVec<4> & color);
         static Attachment makeTexture2D(unsigned width,unsigned height);
-        static Attachment makeTexture3D(const GVectorPath3D & uvw_map);
+        static Attachment makeTexture3D(unsigned width,unsigned height,unsigned depth);
+        ~Attachment();
     };
 
     void addAttachment(const Attachment &attachment);
 private:
     OmegaCommon::Vector<Attachment> attachments;
 public:
+  
     /**
       Tessalate a GRect
       @param[in] rect 
       @returns TETessalationParams
     */
-    static TETessellationParams Rect(GRect & rect);
+    static std::add_rvalue_reference_t<TETessellationParams> Rect(GRect & rect);
 
     /**
       Tessalate a GRoundedRect
       @param[in] roundedRect 
       @returns TETessalationParams
     */
-    static TETessellationParams RoundedRect(GRoundedRect & roundedRect);
+    static std::add_rvalue_reference_t<TETessellationParams> RoundedRect(GRoundedRect & roundedRect);
 
     /**
       Tessalate a GRectangularPrism
       @param[in] rectPrism 
       @returns TETessalationParams
     */
-    static TETessellationParams RectangularPrism(GRectangularPrism &rectPrism);
+    static std::add_rvalue_reference_t<TETessellationParams> RectangularPrism(GRectangularPrism &rectPrism);
 
     /**
       Tessalate a GPyramid
       @param[in] pyramid 
       @returns TETessalationParams
     */
-    static TETessellationParams Pyramid(GPyramid &pyramid);
+    static std::add_rvalue_reference_t<TETessellationParams> Pyramid(GPyramid &pyramid);
 
     /**
       Tessalate a GRect
       @param[in] rect 
       @returns TETessalationParams
     */
-    static TETessellationParams Ellipsoid(GEllipsoid & ellipsoid);
+    static std::add_rvalue_reference_t<TETessellationParams> Ellipsoid(GEllipsoid & ellipsoid);
 
     /**
       Tessalate a GCylinder
       @param[in] cylinder 
       @returns TETessalationParams
     */
-    static TETessellationParams Cylinder(GCylinder &cylinder);
+    static std::add_rvalue_reference_t<TETessellationParams> Cylinder(GCylinder &cylinder);
 
     /**
       Tessalate a GCone
       @param[in] cone 
       @returns TETessalationParams
     */
-    static TETessellationParams Cone(GCone &cone);
+    static std::add_rvalue_reference_t<TETessellationParams> Cone(GCone &cone);
 
     /**
       Tessalate 2D vector paths
       @param[in] vectorPaths A small array with *only* 2 GVectorPath2D objects.
       @returns TETessalationParams
     */
-    static TETessellationParams GraphicsPath2D(GVectorPath2D & path,float strokeWidth = 1.f,bool contour = false,bool fill = false);
+    static std::add_rvalue_reference_t<TETessellationParams> GraphicsPath2D(GVectorPath2D & path,float strokeWidth = 1.f,bool contour = false,bool fill = false);
     /**
       Tessalate 3D vector paths
       @param[in] vectorPathCount The number of vectorPathes to tessalate 
       @param[in] vectorPaths An array of GVectorPath3D objects. (Ensure that it has the same length as the `vectorPathCount`)
       @returns TETessalationParams
     */
-    static TETessellationParams GraphicsPath3D(unsigned vectorPathCount,GVectorPath3D * const vectorPaths);
+    static std::add_rvalue_reference_t<TETessellationParams> GraphicsPath3D(unsigned vectorPathCount,GVectorPath3D * const vectorPaths);
+
+    ~TETessellationParams();
 };
 
 /**

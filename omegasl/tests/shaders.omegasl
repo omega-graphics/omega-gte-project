@@ -64,6 +64,12 @@ fragment float4 myFrag2(VertexRaster2 raster){
 }
 
 
+compute(x=10,y=10,z=10) 
+void comp(){
+    float2 f = make_float2(0,0);
+}
+
+
 
 
 

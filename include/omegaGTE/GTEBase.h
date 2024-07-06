@@ -840,13 +840,6 @@ _NAMESPACE_BEGIN_
     }
 
 
-
-    template<class _Ty>
-    using UniqueHandle = std::unique_ptr<_Ty>;
-
-    template<class _Ty>
-    using SharedHandle = std::shared_ptr<_Ty>;
-
     enum class GTEPolygonFrontFaceRotation : int {
         Clockwise,
         CounterClockwise

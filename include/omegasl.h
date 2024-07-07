@@ -223,7 +223,7 @@ public:
         static std::shared_ptr<Source> fromFile(OmegaCommon::FS::Path path);
         static std::shared_ptr<Source> fromString(OmegaCommon::String & buffer);
     };
-    static std::shared_ptr<OmegaSLCompiler> Create(OmegaGTE::SharedHandle<OmegaGTE::GTEDevice> & device);
+    static std::shared_ptr<OmegaSLCompiler> Create(SharedHandle<OmegaGTE::GTEDevice> & device);
     virtual std::shared_ptr<omegasl_shader_lib> compile(std::initializer_list<std::shared_ptr<Source>> sources) = 0;
 };
 
